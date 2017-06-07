@@ -14,7 +14,7 @@ Reqtraq has 3 main components:
   * References exist, Parent requirements exist and not DELETED
   * Required attributes are there and correctly formatted
   * Linkifies documents
-2. Prepush hook: exports tasks to Phabricator
+2. Prepush hook: exports tasks to desired task management tool (supported for Phabricator, JIRA and others need to be added)
 3. Standalone binary:
   * Report generation with filtering
   * Phabricator export
@@ -22,7 +22,13 @@ Reqtraq has 3 main components:
 
 
 
-## Installing Reqtraq
+## How To Build
+## Required Software
+```
+Install Go according to instructions on https://golang.org/doc/install
+```
+
+##Installing Reqtraq
 
 ```
 git clone https://github.com/daedaleanai/reqtraq
