@@ -8,22 +8,27 @@ Instead, it parses documents that are required in the certification process and 
 it needs from there.
 
 Reqtraq has 3 main components:
+
 1. Precommit hook: makes sure the documents have the correct structure and linking:
   * Correctly named
   * Requirements correctly formatted and continuous
   * References exist, Parent requirements exist and not DELETED
   * Required attributes are there and correctly formatted
   * Linkifies documents
-2. Prepush hook: exports tasks to desired task management tool (supported for Phabricator, JIRA and others need to be added)
+
+2. Prepush hook: exports tasks to desired task management tool (supported for Phabricator; JIRA and others need to be added)
+
 3. Standalone binary:
   * Report generation with filtering
   * Phabricator export
   * Web tool
 
+
+
 ## How to install Reqtraq
 ### Dependencies
 ```
-Install Go according to the instructions on https://golang.org/doc/install
+Install Go according to the instructions [here](https://golang.org/doc/install)
 ```
 
 ### Installation 
@@ -54,7 +59,7 @@ Requirement REQ-0-DDLN-SYS-001  Bidirectional tracing.
 ```
 
 #### Report generation
-In report tags such as 'Changelists' and 'Problem Reports' will not work if not integrated with a task manager such as Phrabricator etc. (currently supported for Phabricator, JIRA and others need to be added)
+In report tags such as 'Changelists' and 'Problem Reports' will not work if not integrated with a task manager such as Phrabricator etc. (currently supported for Phabricator; JIRA and others need to be added)
 ```
 $ reqtraq reportdown
 2017/06/06 22:48:12 Creating ./req-down.html (this may take a while)...
