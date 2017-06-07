@@ -1,3 +1,9 @@
+// This file is very daedalean specific and is marked so with the Phabricator build tag. If you want to use another task
+// management system instead of Phabricator, simply copy this file, change the tag below to e.g. Bugzilla or JIRA and
+// re-implement the public methods to
+
+// +build phabricator
+
 // @llr REQ-0-DDLN-SWL-018
 package phabricator
 
