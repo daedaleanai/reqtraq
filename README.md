@@ -8,7 +8,6 @@ Instead, it parses documents that are required in the certification process and 
 it needs from there.
 
 Reqtraq has 3 main components:
-
 1. Precommit hook: makes sure the documents have the correct structure and linking:
   * Correctly named
   * Requirements correctly formatted and continuous
@@ -27,9 +26,8 @@ Reqtraq has 3 main components:
 
 ## How to install Reqtraq
 ### Dependencies
-```
 Install Go according to the instructions [here](https://golang.org/doc/install)
-```
+
 
 ### Installation 
 ```
