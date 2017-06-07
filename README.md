@@ -20,65 +20,65 @@ Reqtraq has 3 main components:
   * Phabricator export
   * Web tool
 
-
-
-## How To Build
-## Required Software
+## How to install Reqtraq
+### Dependencies
 ```
-Install Go according to instructions on https://golang.org/doc/install
+Install Go according to the instructions on https://golang.org/doc/install
 ```
 
-##Installing Reqtraq
+### Installation 
+```
+$ go get github.com/daedaleanai/reqtraq
+$ cd $GOPATH/src/github.com/daedaleanai/reqtraq/reqtraq
+$ go build
+$ go install
+```
 
-```
-git clone https://github.com/daedaleanai/reqtraq
-cd reqtraq/reqtraq
-go build .
-go install .
-```
 ## Using Reqtraq
 Reqtraq is tightly intergrated with Git and Lyx (a Latex WYWIG). In order to successfully use Reqtraq your requirement documents need to be written in Lyx, and each requirement delimited with a lyx Note. See the example documents in the `certdocs` directory for some good templates.
 Reqtraq uses the Git history to figure out the Git commits associated with a requirement and the Phabricator API to assess the completion status of each requirement.
+
 ### Usage examples
 #### Getting the next available requirement ID
 ```
-> reqtraq nextid certdocs/0-DDLN-212-SDD.lyx
+$ cd $GOPATH/src/github.com/daedaleanai/reqtraq/
+$ reqtraq nextid certdocs/0-DDLN-212-SDD.lyx
 REQ-0-DDLN-SWL-019
 ```
 
 #### Parse and List requirements
 ```
-> reqtraq list certdocs/0-DDLN-100-ORD.lyx
+$ reqtraq list certdocs/0-DDLN-100-ORD.lyx
 Requirement REQ-0-DDLN-SYS-001  Bidirectional tracing.
 ...
 ```
 
 #### Report generation
+In report tags such as 'Changelists' and 'Problem Reports' will not work if not integrated with a task manager such as Phrabricator etc. (currently supported for Phabricator, JIRA and others need to be added)
 ```
-> reqtraq reportdown
+$ reqtraq reportdown
 2017/06/06 22:48:12 Creating ./req-down.html (this may take a while)...
 ...
 ```
 Filtering:
 ```
-> reqtraq reportdown --id_filter=".*0-DDLN-SYS.*"
+$ reqtraq reportdown --id_filter=".*0-DDLN-SYS.*"
 2017/06/06 22:51:23 Creating ./req-down.html (this may take a while)...
 2017/06/06 22:51:41 Creating ./req-down-filtered.html (this may take a while)...
 ```
 
 #### Start the web interface
 ```
-> reqtraq web :8080
+$ reqtraq web :8080
 Server started on http://localhost:8080
 ```
 
-
 ## Getting help
 ```
-reqtraq help
+$ reqtraq help
 ```
 Shows general help and a list of commands
 ```
-reqtraq help <command>
+$ reqtraq help <command>
 ```
 Displays help on a specific command.
