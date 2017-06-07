@@ -31,7 +31,7 @@ Install Go according to the instructions [here](https://golang.org/doc/install)
 
 ### Installation 
 ```
-$ go get github.com/daedaleanai/reqtraq
+$ go get github.com/daedaleanai/reqtraq/reqtraq
 $ cd $GOPATH/src/github.com/daedaleanai/reqtraq/reqtraq
 $ go build
 $ go install
