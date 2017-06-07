@@ -26,7 +26,7 @@ Reqtraq has 3 main components:
 
 ```
 git clone https://github.com/daedaleanai/reqtraq
-cd reqtraq
+cd reqtraq/reqtraq
 go build .
 go install .
 ```
