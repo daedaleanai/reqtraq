@@ -23,8 +23,11 @@ Reqtraq has 3 main components:
 
 
 ## Installing Reqtraq
-
+### Dependencies
+	go
+### Installation
 ```
+cd $GOPATH
 git clone https://github.com/daedaleanai/reqtraq
 cd reqtraq/reqtraq
 go build .
