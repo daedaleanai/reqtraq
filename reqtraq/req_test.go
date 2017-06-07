@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/stretchr/testify/assert"
-	"go.daedalean.ai/exp-devtools/lyx"
+	"github.com/daedaleanai/reqtraq/lyx"
 )
 
 func TestReqGraph_AddCodeRef(t *testing.T) {

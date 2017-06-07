@@ -14,9 +14,9 @@ import (
 	"os"
 	"regexp"
 
-	"go.daedalean.ai/exp-devtools/git"
-	"go.daedalean.ai/exp-devtools/linepipes"
-	"go.daedalean.ai/exp-devtools/lyx"
+	"github.com/daedaleanai/reqtraq/git"
+	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/daedaleanai/reqtraq/lyx"
 	"strings"
 )
 

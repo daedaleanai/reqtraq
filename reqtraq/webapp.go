@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"go.daedalean.ai/exp-devtools/git"
+	"github.com/daedaleanai/reqtraq/git"
 )
 
 func serve(addr string) error {

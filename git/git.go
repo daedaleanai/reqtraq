@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.daedalean.ai/exp-devtools/linepipes"
+	"github.com/daedaleanai/reqtraq/linepipes"
 )
 
 var repoNames = make(map[string]string)

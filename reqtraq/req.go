@@ -24,10 +24,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.daedalean.ai/exp-devtools/git"
-	"go.daedalean.ai/exp-devtools/linepipes"
-	"go.daedalean.ai/exp-devtools/lyx"
-	"go.daedalean.ai/exp-devtools/phabricator"
+	"github.com/daedaleanai/reqtraq/git"
+	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/daedaleanai/reqtraq/lyx"
+	"github.com/daedaleanai/reqtraq/phabricator"
 )
 
 const projectName = "Reqtraq" //TODO: avoid hardcoding (used in Tasklists and CreateReqGraph)

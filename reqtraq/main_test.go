@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.daedalean.ai/exp-devtools/git"
+	"github.com/daedaleanai/reqtraq/git"
 
 	"github.com/stretchr/testify/assert"
 )

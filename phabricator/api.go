@@ -12,7 +12,7 @@ import (
 	"github.com/danieldanciu/gonduit/entities"
 	"github.com/danieldanciu/gonduit/requests"
 
-	"go.daedalean.ai/exp-devtools/linepipes"
+	"github.com/daedaleanai/reqtraq/linepipes"
 )
 
 var cachedApiToken string

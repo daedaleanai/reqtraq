@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.daedalean.ai/exp-devtools/lyx"
+	"github.com/daedaleanai/reqtraq/lyx"
 )
 
 // lintLyxReq is called for each requirement while building the req graph
