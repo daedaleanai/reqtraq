@@ -27,11 +27,10 @@ Reqtraq has 3 main components:
 	go
 ### Installation
 ```
-cd $GOPATH
-git clone https://github.com/daedaleanai/reqtraq
-cd reqtraq/reqtraq
-go build .
-go install .
+go get github.com/daedaleanai/reqtraq
+cd $GOPATH/src/github.com/daedaleanai/reqtraq/reqtraq
+go build
+go install
 ```
 ## Using Reqtraq
 Reqtraq is tightly intergrated with Git and Lyx (a Latex WYWIG). In order to successfully use Reqtraq your requirement documents need to be written in Lyx, and each requirement delimited with a lyx Note. See the example documents in the `certdocs` directory for some good templates.
