@@ -37,21 +37,13 @@ var (
 const usage = `
 Syntax:
 
-	reqtraq [pathspec] command [args] [filter [filter....]]
+	reqtraq command <command_args> [flags]
 
 ReqTraq is a requirements tracer.
 
 ReqTraq operates on .lyx documents and source code in a directory tree, usually
 in a git repo.  The .lyx documents are scanned for requirements, and the source code
 for tags referring to them.
-
-
-pathspec is an optional path or set of paths to a directory or file  to avoid ambiguity with commands,
-it has to start with ./, ../ or /.  Directory will be recursively searched for .lyx and source files.
-
-filter is either a REQ-ID or a part of it, optionally with wildcards,
-or an expression of the form +FIELD:<regexp>, where field is one of
-TEXT, PARENTS....
 
 command is one of:
 	help		prints this help message
@@ -63,7 +55,7 @@ command is one of:
 	reportdown 	creates an HTML traceability report from system requirements down to code
 	reportissues	creates an HTML report with all issues found in the requirement documents
 	reportup 	creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements
-	updatetasks	updates the Phabricator tasks associated with the given requirements (requires a Phabricator instance)
+	updatetasks	updates the tasks associated with the given requirements (requires a Phabricator/JIRA/Bugzilla instance)
 	web		starts a local web server to facilitate interaction with reqtraq
 
 
@@ -101,7 +93,7 @@ If the binary exits with a 0 exitcode, the requirement documents are correct. A 
 problems, which are printed to stderr.
 `
 
-const prepushtUsage = `Runs the pre-push checks for the requirement documents in the current repository. Usage:
+const prepushUsage = `Runs the pre-push checks for the requirement documents in the current repository. Usage:
 	reqtraq prepush --certdoc_path=<path>
 Parameters:
 	--certdoc_path: location of certification documents within the current repository
@@ -129,13 +121,13 @@ Parameters:
 	--certdoc_path: location of certification documents within the current repository
 `
 
-const updateTaskUsage = `Updates the Phabricator tasks associated with the given requirements (requires a Phabricator instance). Usage:
+const updateTaskUsage = `Updates the tasks associated with the given requirements (requires a Phabricator/JIRA/Bugzilla instance). Usage:
 	reqtraq updatetasks --certdoc_path=<path>
 Parameters:
 	--certdoc_path: location of certification documents within the current repository
 
 For each requirement the method will:
-	- find the task associated with the requirement, by searching for the requirement ID in the task title using the Phabricator API
+	- find the task associated with the requirement, by searching for the requirement ID in the task title using the taskmgr API
 	- if a task was found and the requirement was not deleted, its title and description are updated
 	- if a task was found and the requirement was deleted, the task is set as INVALID
 	- if the task was not found, it is created and filled in with the following values:
@@ -170,12 +162,12 @@ func showHelp() {
 		fmt.Println(linkifyUsage)
 	case "list":
 		fmt.Println(listUsage)
-	case "next":
+	case "nextid":
 		fmt.Println(nextidUsage)
 	case "precommit":
 		fmt.Println(precommitUsage)
 	case "prepush":
-		fmt.Println(precommitUsage)
+		fmt.Println(prepushUsage)
 	case "reportup", "reportdown", "reportissues":
 		fmt.Println(reportUsage)
 	case "updatetasks":
@@ -193,22 +185,25 @@ func main() {
 	command := flag.Arg(0)
 	if command == "" {
 		command = "help"
-	} else {
-		// See maybe there are more flags after the `action`.
-		remainingArgs := flag.Args()
-		if len(remainingArgs) > 1 {
-			os.Args = append(os.Args[:1], remainingArgs[1:]...)
-		}
-		flag.Parse()
 	}
 
 	var err error
 
 	linepipes.Verbose = *fVerbose
 
-	filter := ReqFilter{} // Filter for report generation
+	// check to see if the command has a second parameter, e.g. list <filename>
+	f := ""
+	remainingArgs := flag.Args()
+	if len(remainingArgs) > 1 {
+		if !strings.HasPrefix(remainingArgs[1], "-") {
+			f = remainingArgs[1]
+		}
+		// See maybe there are more flags after the `action`.
+		os.Args = append(os.Args[:1], remainingArgs[1:]...)
+		flag.Parse()
+	}
 
-	f := flag.Arg(0)
+	filter := ReqFilter{} // Filter for report generation
 	switch command {
 	case "reportdown", "reportup", "reportissues":
 		if len(*fReportTitleFilterString) > 0 {
@@ -232,9 +227,7 @@ func main() {
 	case "help":
 		showHelp()
 		os.Exit(0)
-	case "precommit", "prepush":
-		// do nothing
-	default:
+	case "linkify", "list", "nextid":
 		if f == "" {
 			log.Fatal("Missing file name")
 		}
@@ -258,7 +251,6 @@ func main() {
 			prg, dir, err = buildGraph(*since)
 			if err != nil {
 				log.Println(err)
-				prg = make(reqGraph) //TODO: remove once Lucy/Philipp submit their changes on error handling
 			}
 			defer os.RemoveAll(dir)
 		}
@@ -281,7 +273,7 @@ func main() {
 		for _, v := range reqs {
 			r, err2 := lyx.ParseReq(v)
 			body := strings.Split(r.Attributes["TEXT"], "\n")
-			fmt.Printf("Requirement %s %s\n%s...\n\n", r.ID, body[0],body[1])
+			fmt.Printf("Requirement %s %s\n%s...\n\n", r.ID, body[0], body[1])
 			if err2 != nil {
 				failureCount++
 			}
@@ -384,7 +376,7 @@ func main() {
 			changedReqIds[k] = true
 			fmt.Println("Changed requirement ", k)
 		}
-		if err := rg.UpdatePhabricatorTasks(changedReqIds); err != nil {
+		if err := rg.UpdateTasks(changedReqIds); err != nil {
 			log.Fatal(err)
 		}
 	case "updatetasks": // update all task title/descriptions/attributes based on the requirement documents
@@ -396,7 +388,7 @@ func main() {
 		for k := range rg {
 			reqIds[k] = true
 		}
-		if err := rg.UpdatePhabricatorTasks(reqIds); err != nil {
+		if err := rg.UpdateTasks(reqIds); err != nil {
 			log.Fatal(err)
 		}
 	}

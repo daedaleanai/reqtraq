@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/lyx"
 )
 
@@ -22,7 +23,7 @@ func TestReqGraph_AddCodeRef(t *testing.T) {
 		t.Fatalf("Failure adding code reference %q: %v", id, rg)
 	}
 
-	if v.Level != CODE {
+	if v.Level != config.CODE {
 		t.Errorf("expected level CODE, got %v", v.Level)
 	}
 
@@ -43,7 +44,7 @@ func TestReqGraph_AddReq(t *testing.T) {
 	// if this becomes more complex we can move it into a table of tescases.
 	if expct := (&Req{
 		ID:    "REQ-0-DDLN-SWH-001",
-		Level: HIGH,
+		Level: config.HIGH,
 		Path:  "./0-DDLN-0-SRD.lyx",
 	}); !reflect.DeepEqual(expct, rg["REQ-0-DDLN-SWH-001"]) {
 		t.Errorf("\nexpected %#v,\n   got %#v", expct, rg["REQ-0-DDLN-SWH-001"])
@@ -51,7 +52,7 @@ func TestReqGraph_AddReq(t *testing.T) {
 
 	if expct := (&Req{
 		ID:        "REQ-0-DDLN-SWL-001",
-		Level:     LOW,
+		Level:     config.LOW,
 		Path:      "./0-DDLN-1-SDD.lyx",
 		ParentIds: []string{"REQ-0-DDLN-SWH-001"},
 	}); !reflect.DeepEqual(expct, rg["REQ-0-DDLN-SWL-001"]) {
@@ -87,10 +88,10 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 		id     string
 		expect Req
 	}{
-		{"REQ-0-DDLN-SWH-001", Req{ID: "REQ-0-DDLN-SWH-001", Level: HIGH, Path: "./0-DDLN-0-SRD.lyx", Position: 1}},
+		{"REQ-0-DDLN-SWH-001", Req{ID: "REQ-0-DDLN-SWH-001", Level: config.HIGH, Path: "./0-DDLN-0-SRD.lyx", Position: 1}},
 		{"REQ-0-DDLN-SWL-001", Req{
 			ID:        "REQ-0-DDLN-SWL-001",
-			Level:     LOW,
+			Level:     config.LOW,
 			Path:      "./0-DDLN-1-SDD.lyx",
 			ParentIds: []string{"REQ-0-DDLN-SWH-001"},
 			Position:  1,
@@ -111,7 +112,7 @@ func TestReq_IdFilter(t *testing.T) {
 }
 
 func TestReq_TitleFilter(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWH-001", Body: "The control unit will calculate thrust.\nIt will also do much more."}
+	r := Req{ID: "REQ-0-DDLN-SWH-001", Title: "The control unit will calculate thrust.", Body: "It will also do much more."}
 	filter := ReqFilter{TitleFilter: regexp.MustCompile("thrust")}
 	if !r.Matches(filter, nil) {
 		t.Errorf("expected matching requirement but did not match")
@@ -119,7 +120,7 @@ func TestReq_TitleFilter(t *testing.T) {
 }
 
 func TestReq_TitleFilterNegative(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWH-001", Body: "The control unit will calculate vertical take off speed.\nIt will also output thrust."}
+	r := Req{ID: "REQ-0-DDLN-SWH-001", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."}
 	filter := ReqFilter{TitleFilter: regexp.MustCompile("thrust")}
 	if r.Matches(filter, nil) {
 		t.Errorf("expected mismatching requirement but found match")
@@ -180,7 +181,7 @@ func TestParseLyx(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		reqNo := strconv.Itoa(i + 1)
 		systemReqs[i] = Req{ID: "REQ-123-TEST-SYS-00" + reqNo,
-			Level:    SYSTEM,
+			Level:    config.SYSTEM,
 			Path:     "testdata/valid_system_requirement/123-TEST-100-ORD.lyx",
 			Position: i,
 			Attributes: map[string]string{
@@ -197,13 +198,7 @@ func TestParseLyx(t *testing.T) {
 	}
 }
 
-func TestReq_Title(t *testing.T) {
-	req := Req {ID: "REQ-123-TEST-SYS-002 ", Body:"Requirement title\n Requirement body"}
-	assert.Equal(t, req.Title(), "Requirement title",  "Unexpected requirement title " + req.Title(), req.Body)
-}
-
-
 func TestReq_IsDeleted(t *testing.T) {
-	req := Req {ID: "REQ-123-TEST-SYS-002 ", Body:"DELETED Requirement\n This is the body"}
+	req := Req{ID: "REQ-123-TEST-SYS-002", Title: "DELETED Requirement", Body: "This is the body"}
 	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Body)
 }

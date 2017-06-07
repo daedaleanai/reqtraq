@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/lyx"
 )
 
@@ -23,7 +24,7 @@ func lintLyxReq(fileName string, nReqs int, isReqPresent []bool, r *lyx.Req) []e
 	// figure out req type from doc type
 	fNameComps := strings.Split(fName, "-")
 	docType := fNameComps[len(fNameComps)-1]
-	reqType := lyx.FileTypeToReqType[docType]
+	reqType := config.DocTypeToReqType[docType]
 
 	var errs []error
 	reqIdComps := strings.Split(r.ID, "-")
@@ -50,10 +51,10 @@ func lintLyxReq(fileName string, nReqs int, isReqPresent []bool, r *lyx.Req) []e
 			errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Total number of requirements is %d.", r.ID, nReqs))
 		} else {
 			if currentId < 1 {
-				errs = append(errs, fmt.Errorf("Invalid requirement ID %s: first requirement must be -001.", r.ID))
+				errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID))
 			} else {
 				if isReqPresent[currentId-1] {
-					errs = append(errs, fmt.Errorf("Duplicate requirement %s", r.ID))
+					errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID))
 				}
 				isReqPresent[currentId-1] = true
 			}

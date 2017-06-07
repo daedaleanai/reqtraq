@@ -17,39 +17,17 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/danieldanciu/gonduit/entities"
-
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/daedaleanai/reqtraq/lyx"
-	"github.com/daedaleanai/reqtraq/phabricator"
+	"github.com/daedaleanai/reqtraq/taskmgr"
 )
-
-const projectName = "Reqtraq" //TODO: avoid hardcoding (used in Tasklists and CreateReqGraph)
-
-// RequirementLevel models the four levels of the requirement graph (system, high-level, low-level, code).
-type RequirementLevel int
-
-const (
-	SYSTEM RequirementLevel = iota
-	HIGH
-	LOW
-	CODE
-)
-
-// Maps requirement type (as defined in the Requirement ID) to requirement level
-var ReqTypeToReqLevel = map[string]RequirementLevel{
-	"SYS": SYSTEM,
-	"SWH": HIGH,
-	"HWH": HIGH,
-	"SWL": LOW,
-	"HWL": LOW,
-}
 
 type RequirementStatus int
 
@@ -76,12 +54,13 @@ var (
 //  rationale safety_impact verification urgent important mode provenance
 type Req struct {
 	ID         string // code files do not have an ID, use Path as primary key
-	Level      RequirementLevel
+	Level      config.RequirementLevel
 	Path       string // .lyx or code file this was found in relative to repo root
 	FileHash   string // for code files, the sha1 of the contents
 	ParentIds  []string
 	Parents    []*Req
 	Children   []*Req
+	Title      string
 	Body       string
 	Attributes map[string]string
 	Position   int
@@ -99,7 +78,7 @@ func (r *Req) resolveUp() {
 func (r *Req) resolveDown() RequirementStatus {
 	r.Seen = true
 	r.Status = COMPLETED
-	if r.Level != CODE && len(r.Children) == 0 {
+	if r.Level != config.CODE && len(r.Children) == 0 {
 		r.Status = NOT_STARTED
 	} else {
 		for _, c := range r.Children {
@@ -111,27 +90,9 @@ func (r *Req) resolveDown() RequirementStatus {
 	return r.Status
 }
 
-// Title extracts the first line from the requirement's body
-func (r *Req) Title() string {
-	return strings.TrimSpace(strings.Split(r.Body, "\n")[0])
-}
-
-//TODO(dd): this is ugly. Better to separate title from body in the parsing stage
-// BodyWithoutTitle removes the title from the body string by
-// splitting the body string around the first appearance of
-// a newline character and only returning everything that appears
-// from the second line onwards
-func (r *Req) BodyWithoutTitle() string {
-	fields := strings.SplitN(r.Body, "\n", 2)
-	if len(fields) != 2 {
-		log.Fatal("No valid title in body of requirement with id: ", r.ID)
-	}
-	return fields[1]
-}
-
 // IsDeleted checks if the requirement title starts with 'DELETED'
 func (r *Req) IsDeleted() bool {
-	return strings.HasPrefix(r.Title(), "DELETED")
+	return strings.HasPrefix(r.Title, "DELETED")
 }
 
 func (r *Req) CheckAttributes(as []map[string]string) []error {
@@ -141,7 +102,7 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 			switch k {
 			case "name":
 				if _, ok := r.Attributes[strings.ToUpper(v)]; !ok {
-					if !(r.Level == SYSTEM && strings.ToUpper(v) == "PARENTS") {
+					if !(r.Level == config.SYSTEM && strings.ToUpper(v) == "PARENTS") {
 						errs = append(errs, fmt.Errorf("Requirement '%s' is missing attribute '%s'.\n", r.ID, v))
 					}
 				}
@@ -163,23 +124,24 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 	return errs
 }
 
-func (r *Req) Tasklists() map[string]*entities.ManiphestTask {
-	m := map[string]*entities.ManiphestTask{}
-	project, err1 := phabricator.GetProject(projectName)
+
+func (r *Req) Tasklists() map[string]*taskmgr.Task {
+	m := map[string]*taskmgr.Task{}
+	projectID, err1 := taskmgr.TaskMgr.GetProject(config.ProjectName)
 	if err1 != nil {
 		log.Println(err1)
 		return m
 	}
 	// Find and add primary task corresponding to Req
-	task, err2 := phabricator.FindTask(r.ID, r.Title(), project.PHID)
-	if err2 != nil || task == nil {
+	task, err2 := taskmgr.TaskMgr.FindTask(r.ID, r.Title, projectID)
+	if err2 != nil {
 		log.Println(err2)
 		return m
 	}
 	m[task.ID] = task
 	// Get all tasks that "task" depends on and add them
-	for _, phid := range task.DependsOnTaskPHIDs {
-		subTask, e := phabricator.FindTaskByPHID(phid)
+	for _, phid := range task.DependsOnTaskIDs {
+		subTask, e := taskmgr.TaskMgr.FindTaskByID(phid)
 		if e != nil {
 			log.Println(e)
 			continue
@@ -192,7 +154,7 @@ func (r *Req) Tasklists() map[string]*entities.ManiphestTask {
 // @llr REQ-0-DDLN-SWL-009
 func (r *Req) Changelists() map[string]string {
 	m := map[string]string{}
-	if r.Level == LOW {
+	if r.Level == config.LOW {
 		var paths []string
 		for _, c := range r.Children {
 			paths = append(paths, c.Path)
@@ -222,7 +184,8 @@ func changelistUrlsForFilepath(filepath string) []string {
 
 	matches := reDiffRev.FindAllStringSubmatch(res, -1)
 	if len(matches) < 1 {
-		log.Fatal("Could not find changelist substring for filepath:", filepath)
+		log.Printf("Could not extract differential revision for file: %s", filepath)
+		log.Println("Newly added?")
 	}
 
 	var urls []string
@@ -265,14 +228,17 @@ func CreateReqGraph(certdocPath, codePath string) (reqGraph, error) {
 	err = filepath.Walk(filepath.Join(git.RepoPath(), codePath), func(fileName string, info os.FileInfo, err error) error {
 		switch strings.ToLower(path.Ext(fileName)) {
 		case ".cc", ".c", ".h", ".hh", ".go":
-			id := relativePathToRepo(fileName, git.RepoPath())
-			if id == "" {
-				log.Fatal("Malformed code file path")
-			}
-			err = parseCode(id, fileName, rg)
-			if err != nil {
-				errorResult += err.Error()
-				errorResult += "\n"
+			// TODO (pk,lb): do that in a nicer way without hard-coded folder names
+			if strings.Contains(codePath, "testdata") || !strings.Contains(fileName, "testdata") {
+				id := relativePathToRepo(fileName, git.RepoPath())
+				if id == "" {
+					log.Fatal("Malformed code file path")
+				}
+				err = parseCode(id, fileName, rg)
+				if err != nil {
+					errorResult += err.Error()
+					errorResult += "\n"
+				}
 			}
 		}
 		return nil
@@ -304,22 +270,23 @@ func (rg reqGraph) AddReq(req *lyx.Req, path string) error {
 	if v := rg[req.ID]; v != nil {
 		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
 	}
-	level, ok := ReqTypeToReqLevel[req.ReqType()]
+	level, ok := config.ReqTypeToReqLevel[req.ReqType()]
 	if !ok {
 		log.Fatal("Invalid request type ", req.ReqType())
 	}
 
 	path = strings.TrimPrefix(path, git.RepoPath())
-	rg[req.ID] = &Req{ID: req.ID, Level: level, ParentIds: req.Parents, Path: path, Body: req.Attributes["TEXT"],
-		Attributes: req.Attributes, Position: int(req.Position)}
-	delete(req.Attributes, "TEXT")
+	rg[req.ID] = &Req{ID: req.ID, Level: level, ParentIds: req.Parents, Path: path, Title: req.Attributes["TITLE"],
+		Body: req.Attributes["BODY"], Attributes: req.Attributes, Position: int(req.Position)}
+	delete(req.Attributes, "BODY")
+	delete(req.Attributes, "TITLE")
 	return nil
 }
 
 func (rg reqGraph) CheckAttributes(as []map[string]string) []error {
 	var errs []error
 	for _, req := range rg {
-		if req.Level != CODE {
+		if req.Level != config.CODE {
 			errs = append(errs, req.CheckAttributes(as)...)
 		}
 	}
@@ -377,7 +344,7 @@ func (rg reqGraph) checkReqReferences(certdocPath string) error {
 }
 
 func (rg reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {
-	rg[fileName] = &Req{ID: id, Path: fileName, FileHash: fileHash, ParentIds: reqIds, Level: CODE}
+	rg[fileName] = &Req{ID: id, Path: fileName, FileHash: fileHash, ParentIds: reqIds, Level: config.CODE}
 }
 
 // @llr REQ-0-DDLN-SWL-017
@@ -386,14 +353,14 @@ func (rg reqGraph) Resolve() error {
 	errorResult := ""
 
 	for _, req := range rg {
-		if len(req.ParentIds) == 0 && req.Level != SYSTEM {
+		if len(req.ParentIds) == 0 && req.Level != config.SYSTEM {
 			errorResult += "Requirement " + req.ID + " in file " + req.Path + " has no parents.\n"
 		}
 		for _, parentId := range req.ParentIds {
 			parent := rg[parentId]
 			if parent != nil {
 				if parent.IsDeleted() && !req.IsDeleted() {
-					if req.Level != CODE {
+					if req.Level != config.CODE {
 						errorResult += "Invalid parent of requirement " + req.ID + ": " + parentId + " is deleted.\n"
 					} else {
 						errorResult += "Invalid reference in file " + req.Path + ": " + parentId + " is deleted.\n"
@@ -402,7 +369,7 @@ func (rg reqGraph) Resolve() error {
 				parent.Children = append(parent.Children, req)
 				req.Parents = append(req.Parents, parent)
 			} else {
-				if req.Level != CODE {
+				if req.Level != config.CODE {
 					errorResult += "Invalid parent of requirement " + req.ID + ": " + parentId + " does not exist.\n"
 				} else {
 					errorResult += "Invalid reference in file " + req.Path + ": " + parentId + " does not exist.\n"
@@ -417,7 +384,7 @@ func (rg reqGraph) Resolve() error {
 	}
 
 	for _, req := range rg {
-		if req.Level == SYSTEM {
+		if req.Level == config.SYSTEM {
 			req.resolveDown()
 		}
 	}
@@ -428,7 +395,7 @@ func (rg reqGraph) Resolve() error {
 	}
 
 	for _, req := range rg {
-		if req.Level == CODE {
+		if req.Level == config.CODE {
 			req.resolveUp()
 			req.Position = req.Parents[0].Position
 		}
@@ -440,7 +407,7 @@ func (rg reqGraph) Resolve() error {
 func (rg reqGraph) OrdsByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg {
-		if v.Level == SYSTEM {
+		if v.Level == config.SYSTEM {
 			r = append(r, v)
 		}
 	}
@@ -451,7 +418,7 @@ func (rg reqGraph) OrdsByPosition() []*Req {
 func (rg reqGraph) CodeFilesByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg {
-		if v.Level == CODE {
+		if v.Level == config.CODE {
 			r = append(r, v)
 		}
 	}
@@ -459,8 +426,8 @@ func (rg reqGraph) CodeFilesByPosition() []*Req {
 	return r
 }
 
-// Updates the Phabricator tasks associated with each requirement.For each requirement in rg, the method will:
-// - find the task associated with the requirement, by searching for the requirement ID in the task title using the Phabricator API
+// Updates the tasks associated with each requirement.For each requirement in rg, the method will:
+// - find the task associated with the requirement, by searching for the requirement ID in the task title using the taskmgr API
 // - if a task was found and the requirement was not deleted, its title and description are updated
 // - if a task was found and the requirement was deleted, the task is set as INVALID
 // - if the task was not found, it is created and filled in with the following values:
@@ -471,59 +438,63 @@ func (rg reqGraph) CodeFilesByPosition() []*Req {
 //      Parents: the first parent task (Phabricator doesn't yet support multiple parents in the api)
 // The method performs a breadth-first search of the requirement graph, which ensures that all parent tasks have already
 // been created by the time a child is visited.
-func (rg reqGraph) UpdatePhabricatorTasks(filterIDs map[string]bool) error {
+func (rg reqGraph) UpdateTasks(filterIDs map[string]bool) error {
 	queue := rg.OrdsByPosition()  // breadth-first traversal queue
 	enqueued := map[string]bool{} // set of elements that have already been enqueued for traversal
 	reqIDToTaskPHID := map[string]string{}
-	const projectNameSYS = projectName + "-SYS"
-	const projectNameHLR = projectName + "-HLR"
-	const projectNameLLR = projectName
-	sysProject, err := phabricator.GetOrCreateProject(projectNameSYS, "")
+	const projectNameSYS = config.ProjectName + "-SYS"
+	const projectNameHLR = config.ProjectName + "-HLR"
+	const projectNameLLR = config.ProjectName
+	sysProjectID, err := taskmgr.TaskMgr.GetOrCreateProject(projectNameSYS, "")
 	if err != nil {
 		return err
 	}
 
-	hlrsProject, err := phabricator.GetOrCreateProject(projectNameHLR, sysProject.PHID)
-	if err != nil {
-		return err
-	}
-	llrsProject, err := phabricator.GetOrCreateProject(projectName, hlrsProject.PHID)
+	hlrsProjectID, err := taskmgr.TaskMgr.GetOrCreateProject(projectNameHLR, sysProjectID)
 	if err != nil {
 		return err
 	}
 
-	parentTaskTitle := "Implement " + projectName
-	parentOfAll, err := phabricator.FindTaskByTitle(parentTaskTitle, sysProject.PHID)
+	llrsProjectID, err := taskmgr.TaskMgr.GetOrCreateProject(config.ProjectName, hlrsProjectID)
+	if err != nil {
+		return err
+	}
+
+
+	parentTaskTitle := "Implement " + config.ProjectName
+	parentOfAll, err := taskmgr.TaskMgr.FindTaskByTitle(parentTaskTitle, sysProjectID)
 	if err != nil {
 		return err
 	}
 	parentOfAllPHID := ""
 	if parentOfAll == nil {
 		log.Printf("Creating parent of all requirements: '%s'", parentTaskTitle)
-		parentOfAllPHID, err = phabricator.CreateTask(parentTaskTitle, "Meta-task that incorporates all tasks needed to implement "+projectName,
-			sysProject.PHID, map[string]string{}, []string{})
+
+		parentOfAllPHID, err = taskmgr.TaskMgr.CreateTask(parentTaskTitle, "Meta-task that incorporates all tasks needed to implement "+config.ProjectName,
+			sysProjectID, map[string]string{}, []string{})
 		if err != nil {
 			return fmt.Errorf("Error creating parent of all tasks, %v", err)
 		}
 	} else {
-		parentOfAllPHID = parentOfAll.PHID
+		parentOfAllPHID = parentOfAll.ID
 	}
-	taskLevelToProjectPHID := map[RequirementLevel]string{SYSTEM: sysProject.PHID, HIGH: hlrsProject.PHID, LOW: llrsProject.PHID}
+
+	taskLevelToProjectPHID := map[config.RequirementLevel]string{config.SYSTEM: sysProjectID, config.HIGH: hlrsProjectID, config.LOW: llrsProjectID}
 	for len(queue) > 0 {
 		currentReq := queue[0]
 		queue = queue[1:]
-		if currentReq.Level == CODE {
+		if currentReq.Level == config.CODE {
 			continue
 		}
 		projectPHID := taskLevelToProjectPHID[currentReq.Level]
-		task, err := phabricator.FindTask(currentReq.ID, currentReq.Title(), projectPHID)
+		task, err := taskmgr.TaskMgr.FindTask(currentReq.ID, currentReq.Title, projectPHID)
 		if err != nil {
 			return fmt.Errorf("Error finding task for requirement %s, caused by\n%v", currentReq.ID, err)
 		}
 
 		var parentTaskIDs []string
 
-		if currentReq.Level == SYSTEM {
+		if currentReq.Level == config.SYSTEM {
 			parentTaskIDs = []string{parentOfAllPHID}
 		} else { // HLR or LLR
 			for _, parentReq := range currentReq.Parents {
@@ -539,7 +510,8 @@ func (rg reqGraph) UpdatePhabricatorTasks(filterIDs map[string]bool) error {
 			if task == nil {
 				if !currentReq.IsDeleted() {
 					log.Printf("Creating task for requirement %s", currentReq.ID)
-					taskPHID, err := phabricator.CreateTask(currentReq.ID+": "+currentReq.Title(), currentReq.BodyWithoutTitle(), projectPHID, currentReq.Attributes, parentTaskIDs)
+
+					taskPHID, err := taskmgr.TaskMgr.CreateTask(currentReq.ID+": "+currentReq.Title, currentReq.Body, projectPHID, currentReq.Attributes, parentTaskIDs)
 					if err != nil {
 						return fmt.Errorf("Error creating requirement %s, caused by\n%v", currentReq.ID, err)
 					}
@@ -549,22 +521,23 @@ func (rg reqGraph) UpdatePhabricatorTasks(filterIDs map[string]bool) error {
 				if currentReq.IsDeleted() {
 					if task.Status != "invalid" {
 						log.Printf("Marking task T%s for DELETED requirement %s as invalid", task.ID, currentReq.ID)
-						err = phabricator.DeleteTask(task.ID, currentReq.ID+": "+currentReq.Title(), projectPHID)
+
+						err = taskmgr.TaskMgr.DeleteTask(task.ID, currentReq.ID+": "+currentReq.Title, projectPHID)
 						if err != nil {
 							return fmt.Errorf("Error updating requirement %s, caused by\n%v", currentReq.ID, err)
 						}
 					}
 				} else {
 					log.Printf("Updating task T%s for requirement %s", task.ID, currentReq.ID)
-					err = phabricator.UpdateTask(task.ID, currentReq.ID+": "+currentReq.Title(), currentReq.BodyWithoutTitle(), projectPHID, currentReq.Attributes, parentTaskIDs)
+					err = taskmgr.TaskMgr.UpdateTask(task.ID, currentReq.ID+": "+currentReq.Title, currentReq.Body, projectPHID, currentReq.Attributes, parentTaskIDs)
 					if err != nil {
 						return fmt.Errorf("Error updating requirement %s, caused by\n%v", currentReq.ID, err)
 					}
 				}
 			}
 		}
-		if task!=nil {
-			reqIDToTaskPHID[currentReq.ID] = task.PHID
+		if task != nil {
+			reqIDToTaskPHID[currentReq.ID] = task.ID
 		}
 		for _, childReq := range currentReq.Children {
 			if _, ok := enqueued[childReq.ID]; !ok {
@@ -679,7 +652,7 @@ func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
 	for t, e := range filter {
 		switch t {
 		case TitleFilter:
-			if !e.MatchString(r.Title()) {
+			if !e.MatchString(r.Title) {
 				return false
 			}
 		case IdFilter:

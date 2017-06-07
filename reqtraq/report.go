@@ -13,7 +13,7 @@ func (o Oncer) Once(r *Req) *Req {
 	if !ok {
 		return r
 	}
-	return &Req{ID: r.ID, Body: r.Body, Level: -1}
+	return &Req{ID: r.ID, Title: r.Title, Body: r.Body, Level: -1}
 }
 
 var reportTmpl = template.Must(template.New("").Parse(`
@@ -21,7 +21,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	{{if ne .Level -1 }}
 		<h3><a name="{{ .ID }}"></a>{{ .ID }} {{ .Title }}</h3>
 		{{ if .Body }}
-			<p>{{ .BodyWithoutTitle }}</p>
+			<p>{{ .Body }}</p>
 		{{ end }}
 		{{ if .Attributes }}
 			<ul style="list-style: none; padding: 0; margin: 0;">
@@ -71,9 +71,9 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	<p>Problem Reports:
 		{{ range $k, $v := . }}
 			{{if $v.IsClosed}}
-				<a href="{{ $v.URI }}" target="_blank"> <span class="label label-success">T{{ $v.ID }}</span></a>
+				<a href="{{ $v.URI }}" target="_blank"> <span class="label label-success">T{{ $v.DisplayID }}</span></a>
 			{{else}}
-				<a href="{{ $v.URI }}" target="_blank"> <span class="label label-danger">T{{ $v.ID }}</span></a>
+				<a href="{{ $v.URI }}" target="_blank"> <span class="label label-danger">T{{ $v.DisplayID }}</span></a>
 			{{end}}
 		{{ else }}
 			<span class="text-danger">No problem reports</span>
