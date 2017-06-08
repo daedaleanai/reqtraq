@@ -67,7 +67,7 @@ func RepoPath() string {
 	// See details about "working directory" in https://git-scm.com/docs/githooks
 	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to check Git repository type. Are you running reqtraq in a Git repo?\n", err)
 	}
 	if bare == "true" {
 		log.Fatal("Bare repository.")
