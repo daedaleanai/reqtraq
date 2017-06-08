@@ -26,15 +26,15 @@ Reqtraq has 3 main components:
 
 ## How to install Reqtraq
 ### Dependencies
+  * go 1.8+
+
 Install Go according to the instructions [here](https://golang.org/doc/install)
 
 
-### Installation 
+### Installation
 ```
-$ go get github.com/daedaleanai/reqtraq/reqtraq
-$ cd $GOPATH/src/github.com/daedaleanai/reqtraq/reqtraq
-$ go build
-$ go install
+$ go get github.com/daedaleanai/reqtraq
+$ cd $GOPATH/src/github.com/daedaleanai/reqtraq
 ```
 
 ## Using Reqtraq
