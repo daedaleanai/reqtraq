@@ -9,20 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPreCommitMissingAttributesJson(t *testing.T) {
-	err := precommit("doesntmatter", "", "incorrectReportJsonConfPath")
-	assert.NotNil(t, err, "Invalid json path, should be rejected")
-	assert.Contains(t, err.Error(), "Error while reading json file")
-}
-
-func TestPreCommitInvalidAttributesJson(t *testing.T) {
-	err := precommit("doesntmatter", "", git.RepoPath()+"/reqtraq/testData/invalid_attributes.json")
-	assert.NotNil(t, err, "Invalid json path, should be rejected")
-	assert.Contains(t, err.Error(), "Error while parsing json file")
-}
-
 func TestPreCommitCreateReqGraph(t *testing.T) {
-	err := precommit("reqtraq/testdata/TestPreCommitCreateReqGraph", "reqtraq/testdata/TestPreCommitCreateReqGraph", git.RepoPath()+"/certdocs/attributes.json")
+	err := precommit(git.RepoPath()+"/reqtraq/testdata/TestPreCommitCreateReqGraph", git.RepoPath()+"/reqtraq/testdata/TestPreCommitCreateReqGraph", git.RepoPath()+"/certdocs/attributes.json")
 	assert.NotNil(t, err, "Expected 21 errors, got 0.")
 
 	nLines := strings.Count(err.Error(), "\n")
@@ -58,7 +46,7 @@ func TestPreCommitCreateReqGraph(t *testing.T) {
 }
 
 func TestPreCommitCheckReqReferences(t *testing.T) {
-	err := precommit("reqtraq/testdata/TestPreCommitCheckReqReferences", "reqtraq/testdata/TestPreCommitCheckReqReferences", git.RepoPath()+"/certdocs/attributes.json")
+	err := precommit(git.RepoPath()+"/reqtraq/testdata/TestPreCommitCheckReqReferences", git.RepoPath()+"/reqtraq/testdata/TestPreCommitCheckReqReferences", git.RepoPath()+"/certdocs/attributes.json")
 	assert.NotNil(t, err, "Invalid json path, should be rejected")
 
 	nLines := strings.Count(err.Error(), "\n")

@@ -29,7 +29,7 @@ var (
 	addr                     = flag.String("addr", ":8080", "The ip:port where to serve.")
 	since                    = flag.String("since", "", "The commit representing the start of the range.")
 	at                       = flag.String("at", "", "The commit representing the end of the range.")
-	fCertdocPath             = flag.String("certdoc_path", "certdocs", "Location of certification documents within the current repository.")
+	fCertdocPath             = flag.String("certdoc_path", "certdocs", "Location of certification documents within the *root* of the current repository.")
 	fCodePath                = flag.String("code_path", "", "Location of code files within the current repository")
 	fVerbose                 = flag.Bool("v", false, "Enable verbose logs.")
 )
@@ -402,10 +402,13 @@ func precommit(certdocPath, codePath, reportJsonConfPath string) error {
 	var reportConf JsonConf
 	b, err := ioutil.ReadFile(reportJsonConfPath)
 	if err != nil {
-		return fmt.Errorf("Error while reading json file: ", err)
-	}
-	if err := json.Unmarshal(b, &reportConf); err != nil {
-		return fmt.Errorf("Error while parsing json file: ", err)
+		fmt.Printf("Can't find attributes.json in '%s'. Attributes won't be checked.\n",
+			reportJsonConfPath)
+		reportConf = JsonConf{}
+	} else {
+		if err := json.Unmarshal(b, &reportConf); err != nil {
+			return fmt.Errorf("Error while parsing attributes: ", err)
+		}
 	}
 
 	rg, err := CreateReqGraph(certdocPath, codePath)
