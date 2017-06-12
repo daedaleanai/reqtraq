@@ -24,7 +24,6 @@ import (
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
-	"github.com/daedaleanai/reqtraq/lyx"
 	"github.com/daedaleanai/reqtraq/taskmgr"
 )
 
@@ -65,6 +64,16 @@ type Req struct {
 	Position   int
 	Seen       bool
 	Status     RequirementStatus
+}
+
+// Returns the requirement type for the given requirement, which is one of SYS, SWH, SWL, HWH, HWL or the empty string if
+// the request is not initialized.
+func (r *Req) ReqType() string {
+	parts := ReReqID.FindStringSubmatch(r.ID)
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[3]
 }
 
 func (r *Req) resolveUp() {
@@ -264,21 +273,24 @@ func relativePathToRepo(filePath, repoPath string) string {
 	return fields[1][1:] // omit leading slash
 }
 
-func (rg reqGraph) AddReq(req *lyx.Req, path string) error {
+func (rg reqGraph) AddReq(req *Req, path string) error {
 	if v := rg[req.ID]; v != nil {
 		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
 	}
 	level, ok := config.ReqTypeToReqLevel[req.ReqType()]
 	if !ok {
-		log.Fatal("Invalid request type ", req.ReqType())
+		return fmt.Errorf("Invalid request type: %q", req.ReqType())
 	}
+	req.Level = level
+	req.Path = strings.TrimPrefix(path, git.RepoPath())
 
-	path = strings.TrimPrefix(path, git.RepoPath())
-	body := req.Attributes["TEXT"]
-	title := strings.TrimSpace(strings.SplitN(body, "\n", 2)[0])
-	rg[req.ID] = &Req{ID: req.ID, Level: level, ParentIds: req.Parents, Path: path, Title: title,
-		Body: body, Attributes: req.Attributes, Position: int(req.Position)}
+	req.Body = req.Attributes["TEXT"]
 	delete(req.Attributes, "TEXT")
+	req.Title = strings.TrimSpace(strings.SplitN(req.Body, "\n", 2)[0])
+
+	req.Path = strings.TrimPrefix(path, git.RepoPath())
+
+	rg[req.ID] = req
 	return nil
 }
 
@@ -314,8 +326,8 @@ func (rg reqGraph) checkReqReferences(certdocPath string) error {
 				for lno := 1; scan.Scan(); lno++ {
 					line := scan.Text()
 					// parents have alreay been checked in Resolve(), and we don't throw an eror at the place where the deleted req is defined
-					discardRefToDeleted := reParents.MatchString(line) || lyx.ReReqDeleted.MatchString(line)
-					parmatch := lyx.ReReqID.FindAllStringSubmatchIndex(line, -1)
+					discardRefToDeleted := reParents.MatchString(line) || ReReqDeleted.MatchString(line)
+					parmatch := ReReqID.FindAllStringSubmatchIndex(line, -1)
 
 					for _, ids := range parmatch {
 						reqID := line[ids[0]:ids[1]]
@@ -602,11 +614,11 @@ func parseCode(id, fileName string, graph reqGraph) error {
 
 func ParseLyx(fileName string, graph reqGraph) []error {
 
-	if err := lyx.IsValidDocName(fileName); err != nil {
+	if err := IsValidDocName(fileName); err != nil {
 		return []error{err}
 	}
 
-	reqs, err := lyx.ParseCertdoc(fileName, ioutil.Discard)
+	reqs, err := ParseCertdoc(fileName, ioutil.Discard)
 	if err != nil {
 		return []error{fmt.Errorf("Error parsing %s: %v", fileName, err)}
 	}
@@ -615,7 +627,7 @@ func ParseLyx(fileName string, graph reqGraph) []error {
 
 	var errs []error
 	for i, v := range reqs {
-		r, err := lyx.ParseReq(v)
+		r, err := ParseReq(v)
 		//fmt.Println(i, r, err2)
 		if err != nil {
 			errs = append(errs, err)
@@ -626,7 +638,7 @@ func ParseLyx(fileName string, graph reqGraph) []error {
 			errs = append(errs, errs2...)
 			continue
 		}
-		r.Position = uint32(i)
+		r.Position = i
 		graph.AddReq(r, fileName)
 	}
 

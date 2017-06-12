@@ -13,11 +13,10 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
-	"github.com/daedaleanai/reqtraq/lyx"
-	"strings"
 )
 
 var (
@@ -259,19 +258,19 @@ func main() {
 
 	switch command {
 	case "nextid":
-		nextID, err := lyx.NextId(f)
+		nextID, err := NextId(f)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println(nextID)
 	case "list":
-		reqs, err := lyx.ParseCertdoc(f, ioutil.Discard)
+		reqs, err := ParseCertdoc(f, ioutil.Discard)
 		if err != nil {
 			log.Fatal(err)
 		}
 		failureCount := 0
 		for _, v := range reqs {
-			r, err2 := lyx.ParseReq(v)
+			r, err2 := ParseReq(v)
 			body := strings.Split(r.Attributes["TEXT"], "\n")
 			fmt.Printf("Requirement %s %s\n%s...\n\n", r.ID, body[0], body[1])
 			if err2 != nil {
@@ -290,7 +289,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = lyx.ParseCertdoc(f, o)
+		_, err = ParseCertdoc(f, o)
 
 		if err != nil {
 			log.Fatal(err)

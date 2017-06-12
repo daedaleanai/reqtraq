@@ -1,5 +1,5 @@
 // @llr REQ-0-DDLN-SWL-001
-package lyx
+package main
 
 import (
 	"fmt"
@@ -7,15 +7,6 @@ import (
 	"strings"
 	"unicode"
 )
-
-// Req represents a requirement.
-type Req struct {
-	ID         string
-	Parents    []string
-	ProjectID  string
-	Attributes map[string]string
-	Position   uint32
-}
 
 var (
 	// REQ, project number, project abbreviation, req type, req number
@@ -26,16 +17,6 @@ var (
 	reReqIDBad   = regexp.MustCompile(`(?i)REQ(-(\w+))+`)
 	reReqKWD     = regexp.MustCompile(`(?i)(rationale|parent|parents|safety\s+impact|verification|urgent|important|mode|provenance):`)
 )
-
-// Returns the requirement type for the given requirement, which is one of SYS, SWH, SWL, HWH, HWL or the empty string if
-// the request is not initialized.
-func (r *Req) ReqType() string {
-	parts := ReReqID.FindStringSubmatch(r.ID)
-	if len(parts) == 0 {
-		return ""
-	}
-	return parts[3]
-}
 
 // ParseReq finds the first REQ-XXX tag and the reserved words and distills a Req from it.
 //
@@ -72,7 +53,6 @@ func ParseReq(txt string) (*Req, error) {
 	}
 	r := &Req{
 		ID:         txt[defid[0]:defid[1]],
-		ProjectID:  fmt.Sprintf("%s-%s", txt[defid[2]:defid[3]], strings.ToUpper(txt[defid[4]:defid[5]])),
 		Attributes: map[string]string{},
 	}
 
@@ -105,7 +85,7 @@ func ParseReq(txt string) (*Req, error) {
 	parmatch := ReReqID.FindAllStringSubmatchIndex(parents, -1)
 	for i, ids := range parmatch {
 		val := parents[ids[0]:ids[1]]
-		r.Parents = append(r.Parents, val)
+		r.ParentIds = append(r.ParentIds, val)
 		if i > 0 {
 			sep := parents[parmatch[i-1][1]:ids[0]]
 			if strings.TrimFunc(sep, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) }) != "" {

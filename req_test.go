@@ -4,13 +4,11 @@ package main
 import (
 	"reflect"
 	"regexp"
+	"strconv"
 	"testing"
 
-	"strconv"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/daedaleanai/reqtraq/config"
-	"github.com/daedaleanai/reqtraq/lyx"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReqGraph_AddCodeRef(t *testing.T) {
@@ -35,8 +33,8 @@ func TestReqGraph_AddCodeRef(t *testing.T) {
 func TestReqGraph_AddReq(t *testing.T) {
 	rg := reqGraph{}
 
-	req := &lyx.Req{ID: "REQ-0-DDLN-SWH-001", ProjectID: "0-DDLN"}
-	req2 := &lyx.Req{ID: "REQ-0-DDLN-SWL-001", ProjectID: "0-DDLN", Parents: []string{"REQ-0-DDLN-SWH-001"}}
+	req := &Req{ID: "REQ-0-DDLN-SWH-001"}
+	req2 := &Req{ID: "REQ-0-DDLN-SWL-001", ParentIds: []string{"REQ-0-DDLN-SWH-001"}}
 
 	rg.AddReq(req, "./0-DDLN-0-SRD.lyx")
 	rg.AddReq(req2, "./0-DDLN-1-SDD.lyx")
@@ -64,20 +62,20 @@ func TestReqGraph_AddReq(t *testing.T) {
 func TestReqGraph_AddReqSomeMore(t *testing.T) {
 	rg := reqGraph{}
 
-	for _, v := range []*lyx.Req{
-		{ID: "REQ-0-DDLN-SWH-001", ProjectID: "0-DDLN", Position: 1},
-		{ID: "REQ-0-DDLN-SWH-002", ProjectID: "0-DDLN", Position: 2},
-		{ID: "REQ-0-DDLN-SWH-003", ProjectID: "0-DDLN", Position: 3},
+	for _, v := range []*Req{
+		{ID: "REQ-0-DDLN-SWH-001", Position: 1},
+		{ID: "REQ-0-DDLN-SWH-002", Position: 2},
+		{ID: "REQ-0-DDLN-SWH-003", Position: 3},
 	} {
 		if err := rg.AddReq(v, "./0-DDLN-0-SRD.lyx"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
 
-	for _, v := range []*lyx.Req{
-		{ID: "REQ-0-DDLN-SWL-001", ProjectID: "0-DDLN", Parents: []string{"REQ-0-DDLN-SWH-001"}, Position: 1},
-		{ID: "REQ-0-DDLN-SWL-002", ProjectID: "0-DDLN", Parents: []string{"REQ-0-DDLN-SWH-001"}, Position: 2},
-		{ID: "REQ-0-DDLN-SWL-003", ProjectID: "0-DDLN", Parents: []string{"REQ-0-DDLN-SWH-003"}, Position: 3},
+	for _, v := range []*Req{
+		{ID: "REQ-0-DDLN-SWL-001", ParentIds: []string{"REQ-0-DDLN-SWH-001"}, Position: 1},
+		{ID: "REQ-0-DDLN-SWL-002", ParentIds: []string{"REQ-0-DDLN-SWH-001"}, Position: 2},
+		{ID: "REQ-0-DDLN-SWL-003", ParentIds: []string{"REQ-0-DDLN-SWH-003"}, Position: 3},
 	} {
 		if err := rg.AddReq(v, "./0-DDLN-1-SDD.lyx"); err != nil {
 			t.Errorf("addreq: %v", err)

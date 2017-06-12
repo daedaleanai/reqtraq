@@ -1,6 +1,6 @@
 // @llr REQ-0-DDLN-SWL-014
 // @llr REQ-0-DDLN-SWL-002
-package lyx
+package main
 
 import (
 	"bufio"
