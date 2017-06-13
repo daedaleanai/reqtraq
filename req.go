@@ -13,13 +13,12 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"regexp"
-	"sort"
-	"strconv"
-
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/config"
@@ -123,7 +122,6 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 	}
 	return errs
 }
-
 
 func (r *Req) Tasklists() map[string]*taskmgr.Task {
 	m := map[string]*taskmgr.Task{}
@@ -276,10 +274,11 @@ func (rg reqGraph) AddReq(req *lyx.Req, path string) error {
 	}
 
 	path = strings.TrimPrefix(path, git.RepoPath())
-	rg[req.ID] = &Req{ID: req.ID, Level: level, ParentIds: req.Parents, Path: path, Title: req.Attributes["TITLE"],
-		Body: req.Attributes["BODY"], Attributes: req.Attributes, Position: int(req.Position)}
-	delete(req.Attributes, "BODY")
-	delete(req.Attributes, "TITLE")
+	body := req.Attributes["TEXT"]
+	title := strings.TrimSpace(strings.SplitN(body, "\n", 2)[0])
+	rg[req.ID] = &Req{ID: req.ID, Level: level, ParentIds: req.Parents, Path: path, Title: title,
+		Body: body, Attributes: req.Attributes, Position: int(req.Position)}
+	delete(req.Attributes, "TEXT")
 	return nil
 }
 
@@ -459,7 +458,6 @@ func (rg reqGraph) UpdateTasks(filterIDs map[string]bool) error {
 	if err != nil {
 		return err
 	}
-
 
 	parentTaskTitle := "Implement " + config.ProjectName
 	parentOfAll, err := taskmgr.TaskMgr.FindTaskByTitle(parentTaskTitle, sysProjectID)
