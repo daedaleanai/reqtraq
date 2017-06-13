@@ -36,27 +36,24 @@ func TestReqGraph_AddReq(t *testing.T) {
 	req := &Req{ID: "REQ-0-DDLN-SWH-001"}
 	req2 := &Req{ID: "REQ-0-DDLN-SWL-001", ParentIds: []string{"REQ-0-DDLN-SWH-001"}}
 
-	rg.AddReq(req, "./0-DDLN-0-SRD.lyx")
-	rg.AddReq(req2, "./0-DDLN-1-SDD.lyx")
+	rg.AddReq(req, "./0-DDLN-0-SRD.md")
+	rg.AddReq(req2, "./0-DDLN-1-SDD.md")
 
 	// if this becomes more complex we can move it into a table of tescases.
-	if expct := (&Req{
-		ID:    "REQ-0-DDLN-SWH-001",
-		Level: config.HIGH,
-		Path:  "./0-DDLN-0-SRD.lyx",
-	}); !reflect.DeepEqual(expct, rg["REQ-0-DDLN-SWH-001"]) {
-		t.Errorf("\nexpected %#v,\n   got %#v", expct, rg["REQ-0-DDLN-SWH-001"])
+	if expectedReq := (&Req{
+		ID:   "REQ-0-DDLN-SWH-001",
+		Path: "./0-DDLN-0-SRD.md",
+	}); !reflect.DeepEqual(expectedReq, rg["REQ-0-DDLN-SWH-001"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-0-DDLN-SWH-001"])
 	}
 
-	if expct := (&Req{
+	if expectedReq := (&Req{
 		ID:        "REQ-0-DDLN-SWL-001",
-		Level:     config.LOW,
-		Path:      "./0-DDLN-1-SDD.lyx",
+		Path:      "./0-DDLN-1-SDD.md",
 		ParentIds: []string{"REQ-0-DDLN-SWH-001"},
-	}); !reflect.DeepEqual(expct, rg["REQ-0-DDLN-SWL-001"]) {
-		t.Errorf("\nexpected %#v,\n   got %#v", expct, rg["REQ-0-DDLN-SWL-001"])
+	}); !reflect.DeepEqual(expectedReq, rg["REQ-0-DDLN-SWL-001"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-0-DDLN-SWL-001"])
 	}
-
 }
 
 func TestReqGraph_AddReqSomeMore(t *testing.T) {
@@ -67,7 +64,7 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 		{ID: "REQ-0-DDLN-SWH-002", Position: 2},
 		{ID: "REQ-0-DDLN-SWH-003", Position: 3},
 	} {
-		if err := rg.AddReq(v, "./0-DDLN-0-SRD.lyx"); err != nil {
+		if err := rg.AddReq(v, "./0-DDLN-0-SRD.md"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
@@ -77,7 +74,7 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 		{ID: "REQ-0-DDLN-SWL-002", ParentIds: []string{"REQ-0-DDLN-SWH-001"}, Position: 2},
 		{ID: "REQ-0-DDLN-SWL-003", ParentIds: []string{"REQ-0-DDLN-SWH-003"}, Position: 3},
 	} {
-		if err := rg.AddReq(v, "./0-DDLN-1-SDD.lyx"); err != nil {
+		if err := rg.AddReq(v, "./0-DDLN-1-SDD.md"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
@@ -86,18 +83,33 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 		id     string
 		expect Req
 	}{
-		{"REQ-0-DDLN-SWH-001", Req{ID: "REQ-0-DDLN-SWH-001", Level: config.HIGH, Path: "./0-DDLN-0-SRD.lyx", Position: 1}},
+		{"REQ-0-DDLN-SWH-001", Req{ID: "REQ-0-DDLN-SWH-001", Path: "./0-DDLN-0-SRD.md", Position: 1}},
 		{"REQ-0-DDLN-SWL-001", Req{
 			ID:        "REQ-0-DDLN-SWL-001",
-			Level:     config.LOW,
-			Path:      "./0-DDLN-1-SDD.lyx",
+			Path:      "./0-DDLN-1-SDD.md",
 			ParentIds: []string{"REQ-0-DDLN-SWH-001"},
 			Position:  1,
 		}},
 	} {
 		if !reflect.DeepEqual(v.expect, *rg[v.id]) {
-			t.Errorf("case %d:\nexpected %#v,\n   got %#v", i, v.expect, *rg[v.id])
+			t.Errorf("case %d:\nexpected %#v,\n     got %#v", i, v.expect, *rg[v.id])
 		}
+	}
+}
+
+func TestReq_ReqType(t *testing.T) {
+	req := Req{ID: "REQ-0-DDLN-SWL-001"}
+
+	if v := req.ReqType(); v != "SWL" {
+		t.Error("Expected SWL got", v)
+	}
+}
+
+func TestReq_ReqTypeNoMatch(t *testing.T) {
+	req := Req{ID: "Garbage"}
+
+	if v := req.ReqType(); v != "" {
+		t.Error("Expected nothing got", v)
 	}
 }
 
@@ -170,17 +182,21 @@ func TestReq_MatchesDiffs(t *testing.T) {
 }
 
 // @tests @llr REQ-0-DDLN-SWL-015
-func TestParseLyx(t *testing.T) {
+func TestParsing(t *testing.T) {
+	CheckParsing(t, "testdata/valid_system_requirement/123-TEST-100-ORD.lyx")
+	CheckParsing(t, "testdata/valid_system_requirement/123-TEST-100-ORD.md")
+}
+
+func CheckParsing(t *testing.T, f string) {
 	rg := reqGraph{}
-	testSystemFile := "testdata/valid_system_requirement/123-TEST-100-ORD.lyx"
-	errors := ParseLyx(testSystemFile, rg)
-	assert.Empty(t, errors, "Unexpected errors wile parsing "+testSystemFile)
+	errors := parseCertdocToGraph(f, rg)
+	assert.Empty(t, errors, "Unexpected errors while parsing "+f)
 	var systemReqs [5]Req
 	for i := 0; i < 5; i++ {
 		reqNo := strconv.Itoa(i + 1)
 		systemReqs[i] = Req{ID: "REQ-123-TEST-SYS-00" + reqNo,
 			Level:    config.SYSTEM,
-			Path:     "testdata/valid_system_requirement/123-TEST-100-ORD.lyx",
+			Path:     f,
 			Position: i,
 			Attributes: map[string]string{
 				"SAFETY IMPACT": "Impact " + reqNo,

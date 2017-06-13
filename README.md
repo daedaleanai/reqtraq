@@ -1,26 +1,25 @@
 # Reqtraq
 
 
-Reqtraq is an open source go library for requirement management, as mandated by
+Reqtraq is an open source go tool for requirement management, as mandated by
 DO-178C.
 Reqtraq is designed to stay out of your way. It requires no user interaction for day-to-day tasks.
 Instead, it parses documents that are required in the certification process and extracts everything
 it needs from there.
 
 Reqtraq has 3 main components:
-1. Precommit hook: makes sure the documents have the correct structure and linking:
-  * Correctly named
-  * Requirements correctly formatted and continuous
-  * References exist, Parent requirements exist and not DELETED
-  * Required attributes are there and correctly formatted
-  * Linkifies documents
+1. **Precommit hook** makes sure the documents have the correct structure and linking:
+   * Files correctly named
+   * Requirements correctly formatted and continuous
+   * References exist, Parent requirements exist and not DELETED
+   * Required attributes are there and correctly formatted
 
-2. Prepush hook: exports tasks to desired task management tool (supported for Phabricator; JIRA and others need to be added)
+2. **Prepush hook** exports tasks to desired task management tool (currently supports Phabricator; JIRA and others need to be added)
 
-3. Standalone binary:
-  * Report generation with filtering
-  * Phabricator export
-  * Web tool
+3. **Standalone binary**
+   * Report generation with filtering
+   * Phabricator export
+   * Web tool for easy inspection
 
 
 
@@ -34,23 +33,23 @@ Install Go according to the instructions [here](https://golang.org/doc/install)
 ### Installation
 ```
 $ go get github.com/daedaleanai/reqtraq
+$ export PATH=$PATH:$GOPATH/bin
 ```
 
 ## Using Reqtraq
-Reqtraq is tightly intergrated with Git and Lyx (a Latex WYWIG). In order to successfully use Reqtraq your requirement documents need to be written in Lyx, and each requirement delimited with a lyx Note. See the example documents in the `certdocs` directory for some good templates.
+Reqtraq is tightly integrated with Git. See the certification documents in the `certdocs` directory for some good examples.
 Reqtraq uses the Git history to figure out the Git commits associated with a requirement and the Phabricator API to assess the completion status of each requirement.
 
 ### Usage examples
 #### Getting the next available requirement ID
 ```
-$ cd $GOPATH/src/github.com/daedaleanai/reqtraq/
-$ reqtraq nextid certdocs/0-DDLN-212-SDD.lyx
+$ reqtraq nextid certdocs/0-DDLN-212-SDD.md
 REQ-0-DDLN-SWL-019
 ```
 
 #### Parse and List requirements
 ```
-$ reqtraq list certdocs/0-DDLN-100-ORD.lyx
+$ reqtraq list certdocs/0-DDLN-100-ORD.md
 Requirement REQ-0-DDLN-SYS-001  Bidirectional tracing.
 ...
 ```

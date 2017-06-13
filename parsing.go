@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/daedaleanai/reqtraq/config"
 )
 
 var (
@@ -15,7 +17,7 @@ var (
 	ReReqID      = regexp.MustCompile(reReqIdStr)
 	ReReqDeleted = regexp.MustCompile(reReqIdStr + ` DELETED`)
 	reReqIDBad   = regexp.MustCompile(`(?i)REQ(-(\w+))+`)
-	reReqKWD     = regexp.MustCompile(`(?i)(rationale|parent|parents|safety\s+impact|verification|urgent|important|mode|provenance):`)
+	reReqKWD     = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
 )
 
 // ParseReq finds the first REQ-XXX tag and the reserved words and distills a Req from it.
@@ -37,6 +39,7 @@ var (
 // Since the parsing is rather 'soft', ParseReq returns verbose errors indicating problems in
 // a helpful way, meaning they at least provide enough context for the user to find the text.
 func ParseReq(txt string) (*Req, error) {
+	lyx := strings.HasPrefix(txt, "\n")
 	head := txt
 	if len(head) > 40 {
 		head = head[:40]
@@ -48,9 +51,17 @@ func ParseReq(txt string) (*Req, error) {
 		}
 		return nil, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
 	}
-	if defid[0] > 20 {
-		return nil, fmt.Errorf("malformed requirement: too much heading garbage before ID: %q", head)
+
+	if lyx {
+		if defid[0] > 20 {
+			return nil, fmt.Errorf("malformed requirement: too much heading garbage before ID: %q", head)
+		}
+	} else {
+		if defid[0] > 0 {
+			return nil, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
+		}
 	}
+
 	r := &Req{
 		ID:         txt[defid[0]:defid[1]],
 		Attributes: map[string]string{},
@@ -58,15 +69,20 @@ func ParseReq(txt string) (*Req, error) {
 
 	// chop defining ID and any punctuation
 	txt = strings.TrimLeftFunc(txt[defid[1]:], unicode.IsPunct)
+	txt = strings.TrimLeftFunc(txt, unicode.IsSpace)
+
+	var attributesStart int
 	kwdMatches := reReqKWD.FindAllStringSubmatchIndex(txt, -1)
-	// TEXT is anything up to the first keyword we found, or the entire remainder if we didn't.
 	if len(kwdMatches) == 0 {
-		r.Attributes["TEXT"] = txt
+		return nil, fmt.Errorf("requirement %s contains no attributes", r.ID)
+	}
+	if lyx {
+		attributesStart = kwdMatches[0][0]
 	} else {
-		r.Attributes["TEXT"] = txt[:kwdMatches[0][0]]
+		attributesStart = strings.Index(txt, "\n###### Attributes:\n")
 	}
 	for i, v := range kwdMatches {
-		key := strings.ToUpper(txt[v[2]:v[3]])
+		key := strings.ToUpper(txt[v[4]:v[5]])
 		if key == "PARENT" { // make our lives easier, accept both, output only PARENTS
 			key = "PARENTS"
 		}
@@ -75,10 +91,13 @@ func ParseReq(txt string) (*Req, error) {
 			e = kwdMatches[i+1][0]
 		}
 		if _, ok := r.Attributes[key]; ok {
-			return nil, fmt.Errorf("requirement %s contains repeated keyword: %q", r.ID, key)
+			return nil, fmt.Errorf("requirement %s contains duplicate attribute: %q", r.ID, key)
 		}
 		r.Attributes[key] = strings.TrimSpace(txt[v[1]:e])
 	}
+
+	// TEXT is anything up to the first keyword we found
+	txt = txt[:attributesStart]
 
 	// PARENTS must be punctuation/space separated list of parseable req-ids.
 	parents := r.Attributes["PARENTS"]
@@ -93,6 +112,16 @@ func ParseReq(txt string) (*Req, error) {
 			}
 		}
 	}
+
+	level, ok := config.ReqTypeToReqLevel[r.ReqType()]
+	if !ok {
+		return nil, fmt.Errorf("Invalid request type: %q", r.ReqType())
+	}
+	r.Level = level
+
+	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
+	r.Title = parts[0]
+	r.Body = parts[1]
 
 	return r, nil
 }

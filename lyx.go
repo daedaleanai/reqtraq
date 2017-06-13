@@ -7,12 +7,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/git"
@@ -66,95 +63,13 @@ func (s lyxStack) inNoteLayout() bool {
 	return s[size-2].element == "inset" && s[size-2].arg == "Note" && s[size-1].element == "layout"
 }
 
-// IsCertdoc returns whether the file is a certdoc with requirements.
-func IsCertdoc(f string) bool {
-	if path.Ext(f) != ".lyx" {
-		return false
-	}
-	return path.Base(path.Dir(f)) == "certdocs" ||
-		reCertdoc.MatchString(strings.TrimSuffix(path.Base(f), ".lyx"))
-}
-
-func NextId(f string) (string, error) {
-	var (
-		reqs      []string
-		reqID     string
-		nextReqID string
-	)
-
-	reqs, err := ParseCertdoc(f, ioutil.Discard)
-	if err != nil {
-		return "", err
-	}
-
-	nextId := 1
-	if len(reqs) > 0 {
-		// infer next req ID from existing req IDs
-		for _, v := range reqs {
-			r, err2 := ParseReq(v)
-			reqID = r.ID
-			reqIdComps := strings.Split(r.ID, "-")
-			currentId, err2 := strconv.Atoi(reqIdComps[len(reqIdComps)-1])
-			if err2 != nil {
-				return "", fmt.Errorf("Requirements failed to parse: %s", reqID)
-			}
-			if currentId > nextId {
-				nextId = currentId
-			}
-		}
-		parts := ReReqID.FindStringSubmatch(reqID)
-		nextReqID = fmt.Sprintf("REQ-%s-%03d", strings.Join(parts[1:len(parts)-1], "-"), nextId+1)
-	} else {
-		// infer next (=first) req ID from file name
-		if err := IsValidDocName(f); err != nil {
-			return "", err
-		}
-		fNameWithExt := path.Base(f)
-		extension := filepath.Ext(fNameWithExt)
-		fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
-		fNameComps := strings.Split(fName, "-")
-		docType := fNameComps[len(fNameComps)-1]
-		reqType, correctFileType := FileTypeToReqType[docType]
-		if !correctFileType {
-			return "", fmt.Errorf("Document name does not comply with naming convention.")
-		}
-		nextReqID = "REQ-" + fNameComps[0] + "-" + fNameComps[1] + "-" + reqType + "-001"
-	}
-
-	return nextReqID, nil
-}
-
-func IsValidDocName(f string) error {
-	// check if it's a lyx document
-	if path.Ext(f) != ".lyx" {
-		return fmt.Errorf("Invalid extension: '%s'. Only '.lyx' is supported", path.Ext(f))
-	}
-	filename := strings.TrimSuffix(path.Base(f), ".lyx")
-	// check if the structure of the filename is correct
-	if !reCertdoc.MatchString(filename) {
-		return fmt.Errorf("Invalid file name: '%s'. Certification doc file name must match %v", filename, reCertdoc)
-	}
-	// check if the number matches the document type
-	fNameComps := strings.Split(filename, "-")
-	docType := fNameComps[len(fNameComps)-1]
-	v, ok := docNameConventions[docType]
-	if !ok {
-		return fmt.Errorf("Invalid document type: '%s'. Must be one of %v", docType, docNameConventions)
-	}
-	docNumber := fNameComps[len(fNameComps)-2]
-	if v != docNumber {
-		return fmt.Errorf("Document number for type '%s' must be '%s', and not '%s'", docType, v, docNumber)
-	}
-	return nil
-}
-
-// ParseCertdoc reads a .lyx file finding blocks of text bracketed by
+// ParseLyx reads a .lyx file finding blocks of text bracketed by
 // notes containing "req:"  ...  "/req".
 // It returns a slice of strings with one element per req:/req block
 // containing the text in layout blocks, skipping (hopefully) the inset data.
 // or an error describing a problem parsing the lines.
 // It linkifies the lyx file and writes it to the provided writer.
-func ParseCertdoc(f string, w io.Writer) ([]string, error) {
+func ParseLyx(f string, w io.Writer) ([]string, error) {
 	var (
 		reqs []string
 

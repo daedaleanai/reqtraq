@@ -1,5 +1,5 @@
 /*
- * ReqTraq is the swiss army knife binary implementing all requirements tracking and linting for prod repo's at Daedalean.
+ * Reqtraq is the swiss army knife binary implementing all requirements tracking and linting for prod repo's at Daedalean.
  * Run without arguments to get comprehensive help.
  */
 
@@ -38,16 +38,16 @@ Syntax:
 
 	reqtraq command <command_args> [flags]
 
-ReqTraq is a requirements tracer.
+Reqtraq is a requirements tracer.
 
-ReqTraq operates on .lyx documents and source code in a directory tree, usually
-in a git repo.  The .lyx documents are scanned for requirements, and the source code
-for tags referring to them.
+Reqtraq operates on certification documents and source code in a directory tree,
+usually in a git repo.  The certification documents are scanned for requirements,
+and the source code for references to them.
 
 command is one of:
 	help		prints this help message
 	linkify		changes the lyx content by adding named destinations and links to parent requirements
-	list    	parses and lists all requirements found in .lyx files
+	list    	parses and lists the requirements found in certification documents
 	nextid		generates the next requirement id for the given document
 	precommit	runs the precommit checks for the requirement documents in the current repository
 	prepush		runs the prepush checks for the requirement documents in the current repository
@@ -71,8 +71,8 @@ Parameters:
 	<output_lyx_filename>	linkified Lyx file
 `
 
-const listUsage = `Parses and lists all requirements found in .lyx files. Usage:
-	reqtraq linkify <input_lyx_filename>
+const listUsage = `Parses and lists all requirements found in certification documents. Usage:
+	reqtraq list <input_lyx_filename>
 Parameters:
 	<input_lyx_filename>	Lyx file to be parsed
 `
@@ -142,7 +142,6 @@ const webUsage = `Starts a local web server to facilitate interaction with reqtr
 Parameters:
 	--addr: the ip:port where to serve.
 	--certdoc_path: location of certification documents within the current repository.
-
 `
 
 type JsonConf struct {
@@ -264,18 +263,27 @@ func main() {
 		}
 		fmt.Println(nextID)
 	case "list":
-		reqs, err := ParseCertdoc(f, ioutil.Discard)
+		reqs, err := ParseCertdoc(f)
 		if err != nil {
 			log.Fatal(err)
 		}
 		failureCount := 0
 		for _, v := range reqs {
 			r, err2 := ParseReq(v)
-			body := strings.Split(r.Attributes["TEXT"], "\n")
-			fmt.Printf("Requirement %s %s\n%s...\n\n", r.ID, body[0], body[1])
 			if err2 != nil {
+				log.Printf("Requirement failed to parse: %q\n%s", err2, v)
 				failureCount++
+				continue
 			}
+			body := make([]string, 0)
+			lines := strings.Split(r.Body, "\n")
+			for _, line := range lines {
+				if line == "" {
+					continue
+				}
+				body = append(body, line)
+			}
+			fmt.Printf("Requirement %s %s\n%s…\n\n", r.ID, r.Title, body[0])
 		}
 		if failureCount > 0 {
 			log.Fatalf("Requirements failed to parse: %d", failureCount)
@@ -289,7 +297,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = ParseCertdoc(f, o)
+		_, err = ParseLyx(f, o)
 
 		if err != nil {
 			log.Fatal(err)

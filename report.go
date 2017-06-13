@@ -90,7 +90,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	    <meta name="description" content="">
 	    <meta name="author" content="">
 
-		<title>ReqTraq - Daedalean AG</title>
+		<title>Reqtraq - Daedalean AG</title>
 
 		<!-- BOOTSTRAP -->
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
@@ -110,7 +110,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	</head>
 	<body>
 		<section style="max-width:100%; text-align:center;">
-			<h1>ReqTraq Report</h1>
+			<h1>Reqtraq Report</h1>
 
 {{end}}
 {{define "FOOTER"}}

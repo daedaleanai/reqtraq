@@ -53,7 +53,7 @@ var (
 type Req struct {
 	ID         string // code files do not have an ID, use Path as primary key
 	Level      config.RequirementLevel
-	Path       string // .lyx or code file this was found in relative to repo root
+	Path       string // certification document or code file this was found in relative to repo root
 	FileHash   string // for code files, the sha1 of the contents
 	ParentIds  []string
 	Parents    []*Req
@@ -212,27 +212,27 @@ type reqGraph map[string]*Req
 
 func CreateReqGraph(certdocPath, codePath string) (reqGraph, error) {
 	rg := reqGraph{}
-
 	errorResult := ""
 
-	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
+	_ = filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
 		func(fileName string, info os.FileInfo, err error) error {
+			var errs []error
 			switch strings.ToLower(path.Ext(fileName)) {
-			case ".lyx":
-				errs := ParseLyx(fileName, rg)
-				if len(errs) > 0 {
-					errorResult += "Problems found while parsing " + fileName + ":\n"
-					for _, v := range errs {
-						errorResult += "\t" + v.Error() + "\n"
-					}
-					errorResult += "\n"
+			case ".lyx", ".md":
+				errs = parseCertdocToGraph(fileName, rg)
+			}
+			if len(errs) > 0 {
+				errorResult += "Problems found while parsing " + fileName + ":\n"
+				for _, v := range errs {
+					errorResult += "\t" + v.Error() + "\n"
 				}
+				errorResult += "\n"
 			}
 			return nil
 		})
 
 	// walk the code
-	err = filepath.Walk(filepath.Join(git.RepoPath(), codePath), func(fileName string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(filepath.Join(git.RepoPath(), codePath), func(fileName string, info os.FileInfo, err error) error {
 		switch strings.ToLower(path.Ext(fileName)) {
 		case ".cc", ".c", ".h", ".hh", ".go":
 			// TODO (pk,lb): do that in a nicer way without hard-coded folder names
@@ -251,16 +251,15 @@ func CreateReqGraph(certdocPath, codePath string) (reqGraph, error) {
 		return nil
 	})
 
-	err = rg.Resolve()
+	err := rg.Resolve()
 	if err != nil {
 		errorResult += err.Error()
 	}
 
-	if errorResult == "" {
-		return rg, nil
-	} else {
+	if errorResult != "" {
 		return rg, fmt.Errorf(errorResult)
 	}
+	return rg, nil
 }
 
 // relativePathToRepo returns filePath relative to repoPath by
@@ -277,17 +276,6 @@ func (rg reqGraph) AddReq(req *Req, path string) error {
 	if v := rg[req.ID]; v != nil {
 		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
 	}
-	level, ok := config.ReqTypeToReqLevel[req.ReqType()]
-	if !ok {
-		return fmt.Errorf("Invalid request type: %q", req.ReqType())
-	}
-	req.Level = level
-	req.Path = strings.TrimPrefix(path, git.RepoPath())
-
-	req.Body = req.Attributes["TEXT"]
-	delete(req.Attributes, "TEXT")
-	req.Title = strings.TrimSpace(strings.SplitN(req.Body, "\n", 2)[0])
-
 	req.Path = strings.TrimPrefix(path, git.RepoPath())
 
 	rg[req.ID] = req
@@ -306,37 +294,31 @@ func (rg reqGraph) CheckAttributes(as []map[string]string) []error {
 
 // @llr REQ-0-DDLN-SWL-004
 func (rg reqGraph) checkReqReferences(certdocPath string) error {
-
 	reParents := regexp.MustCompile(`Parents: REQ-`)
 
 	errorResult := ""
 
 	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
 		func(fileName string, info os.FileInfo, err error) error {
+			r, err := os.Open(fileName)
+			if err != nil {
+				return err
+			}
 
-			switch strings.ToLower(path.Ext(fileName)) {
-			case ".lyx":
-				r, err := os.Open(fileName)
-				if err != nil {
-					return err
-				}
+			scan := bufio.NewScanner(r)
+			for lno := 1; scan.Scan(); lno++ {
+				line := scan.Text()
+				// parents have alreay been checked in Resolve(), and we don't throw an eror at the place where the deleted req is defined
+				discardRefToDeleted := reParents.MatchString(line) || ReReqDeleted.MatchString(line)
+				parmatch := ReReqID.FindAllStringSubmatchIndex(line, -1)
 
-				scan := bufio.NewScanner(r)
-
-				for lno := 1; scan.Scan(); lno++ {
-					line := scan.Text()
-					// parents have alreay been checked in Resolve(), and we don't throw an eror at the place where the deleted req is defined
-					discardRefToDeleted := reParents.MatchString(line) || ReReqDeleted.MatchString(line)
-					parmatch := ReReqID.FindAllStringSubmatchIndex(line, -1)
-
-					for _, ids := range parmatch {
-						reqID := line[ids[0]:ids[1]]
-						v, reqFound := rg[reqID]
-						if !reqFound {
-							errorResult += "Invalid reference to inexistent requirement " + reqID + " in " + fileName + ":" + strconv.Itoa(lno) + "\n"
-						} else if v.IsDeleted() && !discardRefToDeleted {
-							errorResult += "Invalid reference to deleted requirement " + reqID + " in " + fileName + ":" + strconv.Itoa(lno) + "\n"
-						}
+				for _, ids := range parmatch {
+					reqID := line[ids[0]:ids[1]]
+					v, reqFound := rg[reqID]
+					if !reqFound {
+						errorResult += "Invalid reference to inexistent requirement " + reqID + " in " + fileName + ":" + strconv.Itoa(lno) + "\n"
+					} else if v.IsDeleted() && !discardRefToDeleted {
+						errorResult += "Invalid reference to deleted requirement " + reqID + " in " + fileName + ":" + strconv.Itoa(lno) + "\n"
 					}
 				}
 			}
@@ -347,11 +329,10 @@ func (rg reqGraph) checkReqReferences(certdocPath string) error {
 		return err
 	}
 
-	if errorResult == "" {
-		return nil
-	} else {
+	if errorResult != "" {
 		return fmt.Errorf(errorResult)
 	}
+	return nil
 }
 
 func (rg reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {
@@ -360,30 +341,29 @@ func (rg reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {
 
 // @llr REQ-0-DDLN-SWL-017
 func (rg reqGraph) Resolve() error {
-
 	errorResult := ""
 
 	for _, req := range rg {
 		if len(req.ParentIds) == 0 && req.Level != config.SYSTEM {
 			errorResult += "Requirement " + req.ID + " in file " + req.Path + " has no parents.\n"
 		}
-		for _, parentId := range req.ParentIds {
-			parent := rg[parentId]
+		for _, parentID := range req.ParentIds {
+			parent := rg[parentID]
 			if parent != nil {
 				if parent.IsDeleted() && !req.IsDeleted() {
 					if req.Level != config.CODE {
-						errorResult += "Invalid parent of requirement " + req.ID + ": " + parentId + " is deleted.\n"
+						errorResult += "Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted.\n"
 					} else {
-						errorResult += "Invalid reference in file " + req.Path + ": " + parentId + " is deleted.\n"
+						errorResult += "Invalid reference in file " + req.Path + ": " + parentID + " is deleted.\n"
 					}
 				}
 				parent.Children = append(parent.Children, req)
 				req.Parents = append(req.Parents, parent)
 			} else {
 				if req.Level != config.CODE {
-					errorResult += "Invalid parent of requirement " + req.ID + ": " + parentId + " does not exist.\n"
+					errorResult += "Invalid parent of requirement " + req.ID + ": " + parentID + " does not exist.\n"
 				} else {
-					errorResult += "Invalid reference in file " + req.Path + ": " + parentId + " does not exist.\n"
+					errorResult += "Invalid reference in file " + req.Path + ": " + parentID + " does not exist.\n"
 				}
 			}
 		}
@@ -412,7 +392,6 @@ func (rg reqGraph) Resolve() error {
 		}
 	}
 	return nil
-
 }
 
 func (rg reqGraph) OrdsByPosition() []*Req {
@@ -612,23 +591,16 @@ func parseCode(id, fileName string, graph reqGraph) error {
 	return nil
 }
 
-func ParseLyx(fileName string, graph reqGraph) []error {
-
-	if err := IsValidDocName(fileName); err != nil {
-		return []error{err}
-	}
-
-	reqs, err := ParseCertdoc(fileName, ioutil.Discard)
+func parseCertdocToGraph(fileName string, graph reqGraph) []error {
+	reqs, err := ParseCertdoc(fileName)
 	if err != nil {
 		return []error{fmt.Errorf("Error parsing %s: %v", fileName, err)}
 	}
-
 	isReqPresent := make([]bool, len(reqs))
 
 	var errs []error
 	for i, v := range reqs {
 		r, err := ParseReq(v)
-		//fmt.Println(i, r, err2)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -680,4 +652,96 @@ func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
 	}
 	_, ok := diffs[r.ID]
 	return ok
+}
+
+func NextId(f string) (string, error) {
+	var (
+		reqs      []string
+		reqID     string
+		nextReqID string
+	)
+
+	reqs, err := ParseCertdoc(f)
+	if err != nil {
+		return "", err
+	}
+
+	nextId := 1
+	if len(reqs) > 0 {
+		// infer next req ID from existing req IDs
+		for _, v := range reqs {
+			r, err2 := ParseReq(v)
+			reqID = r.ID
+			reqIdComps := strings.Split(r.ID, "-")
+			currentId, err2 := strconv.Atoi(reqIdComps[len(reqIdComps)-1])
+			if err2 != nil {
+				return "", fmt.Errorf("Requirements failed to parse: %s", reqID)
+			}
+			if currentId > nextId {
+				nextId = currentId
+			}
+		}
+		parts := ReReqID.FindStringSubmatch(reqID)
+		nextReqID = fmt.Sprintf("REQ-%s-%03d", strings.Join(parts[1:len(parts)-1], "-"), nextId+1)
+	} else {
+		// infer next (=first) req ID from file name
+		if err := IsValidDocName(f); err != nil {
+			return "", err
+		}
+		fNameWithExt := path.Base(f)
+		extension := filepath.Ext(fNameWithExt)
+		fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
+		fNameComps := strings.Split(fName, "-")
+		docType := fNameComps[len(fNameComps)-1]
+		reqType, correctFileType := FileTypeToReqType[docType]
+		if !correctFileType {
+			return "", fmt.Errorf("Document name does not comply with naming convention.")
+		}
+		nextReqID = "REQ-" + fNameComps[0] + "-" + fNameComps[1] + "-" + reqType + "-001"
+	}
+
+	return nextReqID, nil
+}
+
+// ParseCertdoc parses raw requirements out of a certdoc.
+func ParseCertdoc(fileName string) ([]string, error) {
+	if err := IsValidDocName(fileName); err != nil {
+		return nil, err
+	}
+
+	ext := path.Ext(fileName)
+	switch strings.ToLower(ext) {
+	case ".lyx":
+		return ParseLyx(fileName, ioutil.Discard)
+	case ".md":
+		return ParseMarkdown(fileName)
+	}
+	return nil, fmt.Errorf("Unrecognized extension: %s", ext)
+}
+
+func IsValidDocName(f string) error {
+	ext := path.Ext(f)
+	switch strings.ToLower(ext) {
+	case ".lyx", ".md":
+		// All good.
+	default:
+		return fmt.Errorf("Invalid extension: '%s'. Only '.lyx' and '.md' are supported", strings.ToLower(ext))
+	}
+	filename := strings.TrimSuffix(path.Base(f), ext)
+	// check if the structure of the filename is correct
+	if !reCertdoc.MatchString(filename) {
+		return fmt.Errorf("Invalid file name: '%s'. Certification doc file name must match %v", filename, reCertdoc)
+	}
+	// check if the number matches the document type
+	fNameComps := strings.Split(filename, "-")
+	docType := fNameComps[len(fNameComps)-1]
+	v, ok := docNameConventions[docType]
+	if !ok {
+		return fmt.Errorf("Invalid document type: '%s'. Must be one of %v", docType, docNameConventions)
+	}
+	docNumber := fNameComps[len(fNameComps)-2]
+	if v != docNumber {
+		return fmt.Errorf("Document number for type '%s' must be '%s', and not '%s'", docType, v, docNumber)
+	}
+	return nil
 }
