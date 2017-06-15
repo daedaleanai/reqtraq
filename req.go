@@ -184,7 +184,7 @@ func changelistUrlsForFilepaths(filepaths []string) []string {
 }
 
 func changelistUrlsForFilepath(filepath string) []string {
-	res, err := linepipes.All(linepipes.Run("git", "log", filepath))
+	res, err := linepipes.All(linepipes.Run("git", "-C", path.Dir(filepath), "log", filepath))
 	if err != nil {
 		log.Fatal(err)
 	}
