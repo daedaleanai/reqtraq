@@ -25,9 +25,8 @@ Reqtraq has 3 main components:
 
 ## How to install Reqtraq
 ### Dependencies
-  * go 1.8+
-
-Install Go according to the instructions [here](https://golang.org/doc/install)
+  * go 1.8+ *Installation instructions [here](https://golang.org/doc/install).*
+  * pandoc *Installation instructions [here](https://pandoc.org/installing.html).*
 
 
 ### Installation
