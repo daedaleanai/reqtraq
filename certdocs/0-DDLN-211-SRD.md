@@ -201,6 +201,16 @@ The report generation tool SHALL have a simple web interface that allows generat
 - Verification: Demonstration
 - Safety impact: None
 
+##### REQ-0-DDLN-SWH-014 Requirement Rich Formatting
+
+The RMT SHALL allow for us to express rich markdown concepts in requirements descriptions, e.g. math, tables, and code.
+
+###### Attributes:
+- Rationale: Technical Requiments often need to document equations, tables of data, or code.
+- Parents: REQ-0-DDLN-SYS-006
+- Verification: Demonstration
+- Safety impact: None
+
 ### Other Assumptions
 
 In the creation of these requirements it was assumed that Reqtraq users use Git for version control.
