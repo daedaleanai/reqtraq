@@ -147,7 +147,6 @@ func ParseReq(txt string) (*Req, error) {
 
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
 	r.Title = parts[0]
-
 	r.Body = formatBodyAsHTML(parts[1])
 	return r, nil
 }
