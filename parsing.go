@@ -3,7 +3,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"html/template"
 	"regexp"
 	"strings"
 	"unicode"
@@ -124,9 +124,6 @@ func ParseReq(txt string) (*Req, error) {
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
 	r.Title = parts[0]
 	// TODO(aroetter): Run this body text through pandoc
-	r.Body = parts[1]
-	r.Body = "ALEX says hello, look at the body text now. <b>Bold</b>."
-	log.Println("ALEX2 got a body [", r.Body, "]")
-
+	r.Body = template.HTML(parts[1])
 	return r, nil
 }
