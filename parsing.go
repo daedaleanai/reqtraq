@@ -24,6 +24,7 @@ var (
 	reReqKWD     = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
 )
 
+// @llr REQ-0-DDLN-SWL-019
 // Given a string containing markdown, convert it to HTML using pandoc
 func formatBodyAsHTML(txt string) (template.HTML) {
 	cmd := exec.Command("pandoc", "--mathjax")
