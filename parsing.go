@@ -34,8 +34,6 @@ func formatBodyAsHTML(txt string) (template.HTML) {
 
 	go func() {
 		defer stdin.Close()
-		// TODO(aroetter): remove this
-		//txt = "Hello some text *bold* more text **more**."
 		io.WriteString(stdin, txt)
 	}()
 
