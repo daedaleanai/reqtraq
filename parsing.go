@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"unicode"
@@ -38,6 +39,7 @@ var (
 //
 // Since the parsing is rather 'soft', ParseReq returns verbose errors indicating problems in
 // a helpful way, meaning they at least provide enough context for the user to find the text.
+// TODO(aroetter): pass in a bool pandoc here
 func ParseReq(txt string) (*Req, error) {
 	lyx := strings.HasPrefix(txt, "\n")
 	head := txt
@@ -121,7 +123,10 @@ func ParseReq(txt string) (*Req, error) {
 
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
 	r.Title = parts[0]
+	// TODO(aroetter): Run this body text through pandoc
 	r.Body = parts[1]
+	r.Body = "ALEX says hello, look at the body text now. <b>Bold</b>."
+	log.Println("ALEX2 got a body [", r.Body, "]")
 
 	return r, nil
 }

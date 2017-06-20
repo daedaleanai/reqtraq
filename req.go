@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"crypto/sha1"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -59,7 +60,9 @@ type Req struct {
 	Parents    []*Req
 	Children   []*Req
 	Title      string
-	Body       string
+	// Body contains various HTML tags (links, converted markup, etc). Type must be HTML,
+	// not a string, so it's not HTML-escaped by the template.
+	Body       template.HTML
 	Attributes map[string]string
 	Position   int
 	Seen       bool
