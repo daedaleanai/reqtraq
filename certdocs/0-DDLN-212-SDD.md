@@ -433,6 +433,52 @@ Attributes can be optional or mandatory. Each attribute has a name. Each attribu
 - Verification: Demonstration
 - Safety impact: None
 
+##### REQ-0-DDLN-SWL-019 Pandoc markdown rendering
+
+The RMT tool SHALL invoke pandoc to convert markdown (and pandoc extensions like math, tables, and code) into HTML that correctly renders into generated reports.
+
+* Requirements bodies can include code that is delimited with the triple-backtick delimiter (\```), which results in rendered HTML as follows:
+```
+int main(int argc, char** argv) {
+        FlyAirplane();
+}
+```
+
+
+* Requirements bodies can include math (both inline and display) that is delimited with the single dollar sign (\$) for inline, and the double dollar
+sign (\$$) for display. They will be rendered in HTML reports using MathJax and look as follows:
+    * Inline math: $x=y$
+    * Display math:
+$$
+\frac{d}{dx}\left( \int_{0}^{x} f(u)\,du\right)=f(x).
+$$
+
+* Requirements bodies can include tables in any of the four pandoc table formats. An example simple table is shown here:
+
+--------------------------------------------------------------------
+             *Alpha*         *Beta*              *Gamma*
+----------   -------------   -----------------   --------------------
+    Monday     3 Watts        2 pints             3 chickens,  
+                                                  1 hr at charger
+
+   Tuesday    14 Kilograms    1 Penguin,          1 cheese sandwich
+                              2 Thunderbird
+
+ Wednesday    2 aspirin       Tall space ship    (can't remember)
+---------------------------------------------------------------------
+
+Table:  *Table of nonsense*, deluxe edition
+
+
+
+
+###### Attributes:
+- Rationale: pandoc is a markdown to HTML converter that has markdown-extensions for math, tables, and code.
+- Parents: REQ-0-DDLN-SWH-014
+- Verification: Demonstration
+- Safety impact: None
+
+
 ### Other Assumptions
 
 In the creation of these requirements it was assumed that Reqtraq users use Git for version control.

@@ -107,6 +107,11 @@ var reportTmpl = template.Must(template.New("").Parse(`
 				text-decoration: none;
 			}
 		</style>
+		<!-- Load MathJax for rendering of equations -->
+		<script type="text/javascript" async
+			src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+		</script>
+
 	</head>
 	<body>
 		<section style="max-width:100%; text-align:center;">

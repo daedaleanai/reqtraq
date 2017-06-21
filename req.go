@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"crypto/sha1"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -59,7 +60,9 @@ type Req struct {
 	Parents    []*Req
 	Children   []*Req
 	Title      string
-	Body       string
+	// Body contains various HTML tags (links, converted markdown, etc). Type must be HTML,
+	// not a string, so it's not HTML-escaped by the templating engine.
+	Body       template.HTML
 	Attributes map[string]string
 	Position   int
 	Seen       bool
@@ -500,7 +503,8 @@ func (rg reqGraph) UpdateTasks(filterIDs map[string]bool) error {
 				if !currentReq.IsDeleted() {
 					log.Printf("Creating task for requirement %s", currentReq.ID)
 
-					taskPHID, err := taskmgr.TaskMgr.CreateTask(currentReq.ID+": "+currentReq.Title, currentReq.Body, projectPHID, currentReq.Attributes, parentTaskIDs)
+					taskPHID, err := taskmgr.TaskMgr.CreateTask(currentReq.ID+": "+currentReq.Title, string(currentReq.Body),
+						projectPHID, currentReq.Attributes, parentTaskIDs)
 					if err != nil {
 						return fmt.Errorf("Error creating requirement %s, caused by\n%v", currentReq.ID, err)
 					}
@@ -518,7 +522,8 @@ func (rg reqGraph) UpdateTasks(filterIDs map[string]bool) error {
 					}
 				} else {
 					log.Printf("Updating task T%s for requirement %s", task.ID, currentReq.ID)
-					err = taskmgr.TaskMgr.UpdateTask(task.ID, currentReq.ID+": "+currentReq.Title, currentReq.Body, projectPHID, currentReq.Attributes, parentTaskIDs)
+					err = taskmgr.TaskMgr.UpdateTask(task.ID, currentReq.ID+": "+currentReq.Title, string(currentReq.Body),
+						projectPHID, currentReq.Attributes, parentTaskIDs)
 					if err != nil {
 						return fmt.Errorf("Error updating requirement %s, caused by\n%v", currentReq.ID, err)
 					}
@@ -642,7 +647,7 @@ func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
 				return false
 			}
 		case BodyFilter:
-			if !e.MatchString(r.Body) {
+			if !e.MatchString(string(r.Body)) {
 				return false
 			}
 		}

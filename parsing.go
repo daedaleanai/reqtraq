@@ -3,6 +3,10 @@ package main
 
 import (
 	"fmt"
+	"html/template"
+	"io"
+	"log"
+	"os/exec"
 	"regexp"
 	"strings"
 	"unicode"
@@ -19,6 +23,28 @@ var (
 	reReqIDBad   = regexp.MustCompile(`(?i)REQ(-(\w+))+`)
 	reReqKWD     = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
 )
+
+// @llr REQ-0-DDLN-SWL-019
+// Given a string containing markdown, convert it to HTML using pandoc
+func formatBodyAsHTML(txt string) (template.HTML) {
+	cmd := exec.Command("pandoc", "--mathjax")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Fatal("Couldn't get input pipe for pandoc: ", err)
+	}
+
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, txt)
+	}()
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatal("Error while running pandoc: ", err)
+	}
+
+	return template.HTML(out)
+}
 
 // ParseReq finds the first REQ-XXX tag and the reserved words and distills a Req from it.
 //
@@ -121,7 +147,6 @@ func ParseReq(txt string) (*Req, error) {
 
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
 	r.Title = parts[0]
-	r.Body = parts[1]
-
+	r.Body = formatBodyAsHTML(parts[1])
 	return r, nil
 }
