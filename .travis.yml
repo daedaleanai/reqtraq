@@ -1,0 +1,14 @@
+os:
+  - linux
+
+addons:
+  apt_packages:
+    - pandoc
+
+language: go
+
+go:
+  - 1.8.x
+
+script:
+  - go test
