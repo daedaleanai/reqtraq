@@ -146,7 +146,13 @@ func ParseReq(txt string) (*Req, error) {
 	r.Level = level
 
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
-	r.Title = parts[0]
-	r.Body = formatBodyAsHTML(parts[1])
+
+	if len(parts) == 2{
+		r.Title = parts[0]
+		r.Body = formatBodyAsHTML(parts[1])
+	} else {
+		return nil, fmt.Errorf("Requirement body must not be empty", r.ID)
+	}
+
 	return r, nil
 }

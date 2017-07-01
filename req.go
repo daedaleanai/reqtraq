@@ -581,6 +581,10 @@ func parseCode(id, fileName string, graph reqGraph) error {
 		h.Write([]byte{0})
 	}
 
+	if linepipes.Verbose {
+		fmt.Println("scanning code for requirement claims:", fileName)
+	}
+
 	scanner := bufio.NewScanner(io.TeeReader(f, h))
 	for scanner.Scan() {
 		if parts := reLLRReference.FindStringSubmatch(scanner.Text()); len(parts) > 0 {
