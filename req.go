@@ -698,7 +698,7 @@ func NextId(f string) (string, error) {
 		fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
 		fNameComps := strings.Split(fName, "-")
 		docType := fNameComps[len(fNameComps)-1]
-		reqType, correctFileType := FileTypeToReqType[docType]
+		reqType, correctFileType := config.DocTypeToReqType[docType]
 		if !correctFileType {
 			return "", fmt.Errorf("Document name does not comply with naming convention.")
 		}
@@ -740,9 +740,9 @@ func IsValidDocName(f string) error {
 	// check if the number matches the document type
 	fNameComps := strings.Split(filename, "-")
 	docType := fNameComps[len(fNameComps)-1]
-	v, ok := docNameConventions[docType]
+	v, ok := config.DocTypeToDocId[docType]
 	if !ok {
-		return fmt.Errorf("Invalid document type: '%s'. Must be one of %v", docType, docNameConventions)
+		return fmt.Errorf("Invalid document type: '%s'. Must be one of %v", docType, config.DocTypeToDocId)
 	}
 	docNumber := fNameComps[len(fNameComps)-2]
 	if v != docNumber {

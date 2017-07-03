@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/git"
 )
 
@@ -227,72 +228,6 @@ hypertarget{%s}
 	return reqs, nil
 }
 
-var FileTypeToReqType = map[string]string{
-	"ORD": "SYS",
-	"SRD": "SWH",
-	"HRD": "HWH",
-	"SDD": "SWL",
-	"HDD": "HWL"}
-
-var docNamePerReqIDType = map[string]string{
-	"SYS": "100-ORD",
-	"SWH": "211-SRD",
-	"SWL": "212-SDD",
-	"HWH": "311-HRD",
-	"HWL": "312-HDD",
-}
-
-var docNameConventions = map[string]string{
-	"H":      "0",
-	"DS":     "1",
-	"SRS":    "6",
-	"SDS":    "7",
-	"SCS":    "8",
-	"HRS":    "9",
-	"HCS":    "10",
-	"DAS":    "11",
-	"HDS":    "12",
-	"HVVS":   "13",
-	"HAS":    "14",
-	"HCMS":   "15",
-	"TAS":    "34",
-	"ORD":    "100",
-	"SP":     "150",
-	"SFA":    "151",
-	"PSAC":   "200",
-	"SCMP":   "201",
-	"SQAP":   "202",
-	"SDP":    "203",
-	"SVP":    "204",
-	"TQP":    "205",
-	"SAS":    "206",
-	"SRD":    "211",
-	"SDD":    "212",
-	"SVCP":   "213",
-	"PHAK":   "300",
-	"HRD":    "311",
-	"HDD":    "312",
-	"CLPSAC": "101",
-	"CLSDP":  "102",
-	"CLSVP":  "103",
-	"CLSCMP": "104",
-	"CLSQAP": "105",
-	"CLSDD":  "107",
-	"CLSRD":  "106",
-	"CLSVCP": "108",
-	"CLSCI":  "109",
-	"CLTQP":  "110",
-	"CLSAS":  "111",
-	"TPPSAC": "201",
-	"TPSRD":  "206",
-	"TPSDD":  "207",
-	"TPSVCP": "208",
-	"TPHRD":  "209",
-	"TPORD":  "210",
-	"TPSFHA": "211",
-	"TPFFPA": "212",
-}
-
 func linkify(s, repo, dirInRepo string) (string, error) {
 	parmatch := ReReqID.FindAllStringSubmatchIndex(s, -1)
 	var res bytes.Buffer
@@ -310,7 +245,7 @@ func linkify(s, repo, dirInRepo string) (string, error) {
 			// This should not happen.
 			return "", fmt.Errorf("regexp cannot be used, please file a bug in Devtools: %q", ids)
 		}
-		docType, ok := docNamePerReqIDType[reqType]
+		docType, ok := config.ReqTypeToDocIdAndType[reqType]
 		if !ok {
 			return "", fmt.Errorf("unknown requirement type: %q (in %q)", reqType, reqID)
 		}
