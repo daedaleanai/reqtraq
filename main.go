@@ -187,7 +187,6 @@ func main() {
 
 	var err error
 
-	linepipes.Verbose = *fVerbose
 
 	// check to see if the command has a second parameter, e.g. list <filename>
 	f := ""
@@ -200,6 +199,9 @@ func main() {
 		os.Args = append(os.Args[:1], remainingArgs[1:]...)
 		flag.Parse()
 	}
+
+	// assign global Verbose variable after arguments have been parsed
+	linepipes.Verbose = *fVerbose
 
 	filter := ReqFilter{} // Filter for report generation
 	switch command {
@@ -398,6 +400,11 @@ func main() {
 		if err := rg.UpdateTasks(reqIds); err != nil {
 			log.Fatal(err)
 		}
+	default:
+		fmt.Printf(`Invalid command "%s"`, command)
+		fmt.Println("")
+		fmt.Println(usage)
+		os.Exit(1)
 	}
 }
 

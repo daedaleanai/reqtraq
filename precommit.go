@@ -12,8 +12,8 @@ import (
 	"github.com/daedaleanai/reqtraq/config"
 )
 
-// lintLyxReq is called for each requirement while building the req graph
-func lintLyxReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
+// lintReq is called for each requirement while building the req graph
+func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
 
 	// extract file name without extension
 	fNameWithExt := path.Base(fileName)

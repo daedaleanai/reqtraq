@@ -52,14 +52,14 @@ var (
 // The Attributes map has potential elements;
 //  rationale safety_impact verification urgent important mode provenance
 type Req struct {
-	ID         string // code files do not have an ID, use Path as primary key
-	Level      config.RequirementLevel
-	Path       string // certification document or code file this was found in relative to repo root
-	FileHash   string // for code files, the sha1 of the contents
-	ParentIds  []string
-	Parents    []*Req
-	Children   []*Req
-	Title      string
+	ID        string // code files do not have an ID, use Path as primary key
+	Level     config.RequirementLevel
+	Path      string // certification document or code file this was found in relative to repo root
+	FileHash  string // for code files, the sha1 of the contents
+	ParentIds []string
+	Parents   []*Req
+	Children  []*Req
+	Title     string
 	// Body contains various HTML tags (links, converted markdown, etc). Type must be HTML,
 	// not a string, so it's not HTML-escaped by the templating engine.
 	Body       template.HTML
@@ -610,7 +610,7 @@ func parseCertdocToGraph(fileName string, graph reqGraph) []error {
 			errs = append(errs, err)
 			continue
 		}
-		errs2 := lintLyxReq(fileName, len(reqs), isReqPresent, r)
+		errs2 := lintReq(fileName, len(reqs), isReqPresent, r)
 		if len(errs2) != 0 {
 			errs = append(errs, errs2...)
 			continue

@@ -26,7 +26,7 @@ var (
 
 // @llr REQ-0-DDLN-SWL-019
 // Given a string containing markdown, convert it to HTML using pandoc
-func formatBodyAsHTML(txt string) (template.HTML) {
+func formatBodyAsHTML(txt string) template.HTML {
 	cmd := exec.Command("pandoc", "--mathjax")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -146,7 +146,11 @@ func ParseReq(txt string) (*Req, error) {
 	r.Level = level
 
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Requirement body must not be empty: %s\n", r.ID)
+	}
 	r.Title = parts[0]
 	r.Body = formatBodyAsHTML(parts[1])
+
 	return r, nil
 }
