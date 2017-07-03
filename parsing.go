@@ -151,7 +151,7 @@ func ParseReq(txt string) (*Req, error) {
 		r.Title = parts[0]
 		r.Body = formatBodyAsHTML(parts[1])
 	} else {
-		return nil, fmt.Errorf("Requirement body must not be empty", r.ID)
+		return nil, fmt.Errorf("Requirement body must not be empty: %s", r.ID)
 	}
 
 	return r, nil

@@ -401,7 +401,7 @@ func main() {
 			log.Fatal(err)
 		}
 	default:
-		fmt.Println("Invalid command \"", command, "\"")
+		fmt.Printf(`Invalid command "%s"`, command)
 		fmt.Println(usage)
 		os.Exit(1)
 	}

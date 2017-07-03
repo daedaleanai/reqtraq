@@ -581,10 +581,6 @@ func parseCode(id, fileName string, graph reqGraph) error {
 		h.Write([]byte{0})
 	}
 
-	if linepipes.Verbose {
-		fmt.Println("scanning code for requirement claims:", fileName)
-	}
-
 	scanner := bufio.NewScanner(io.TeeReader(f, h))
 	for scanner.Scan() {
 		if parts := reLLRReference.FindStringSubmatch(scanner.Text()); len(parts) > 0 {
@@ -614,7 +610,7 @@ func parseCertdocToGraph(fileName string, graph reqGraph) []error {
 			errs = append(errs, err)
 			continue
 		}
-		errs2 := lintLyxReq(fileName, len(reqs), isReqPresent, r)
+		errs2 := lintReqIds(fileName, len(reqs), isReqPresent, r)
 		if len(errs2) != 0 {
 			errs = append(errs, errs2...)
 			continue
