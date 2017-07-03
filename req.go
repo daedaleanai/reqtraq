@@ -610,7 +610,7 @@ func parseCertdocToGraph(fileName string, graph reqGraph) []error {
 			errs = append(errs, err)
 			continue
 		}
-		errs2 := lintLyxReq(fileName, len(reqs), isReqPresent, r)
+		errs2 := lintReqIds(fileName, len(reqs), isReqPresent, r)
 		if len(errs2) != 0 {
 			errs = append(errs, errs2...)
 			continue
