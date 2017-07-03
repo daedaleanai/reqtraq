@@ -54,7 +54,7 @@ This document discusses the following topics:
 
 ### Inputs and Outputs
 
-Data comes in from the requirements documents and code files in the same Git repository.
+Data comes in from the requirements documents and code files in one or more Git repositories.
 
 Reqtraq interacts with a Phabricator server using the Phabricator Conduit <abbr title="Application Programming Interface">API</abbr>.
 
@@ -70,7 +70,7 @@ Any report is generated from a `reqGraph` object which is a dictionary of requir
 
 The SWLs of the system are as follows:
 
-##### REQ-0-DDLN-SWL-001 Requirements Storage
+##### REQ-RQTQ-SWL-001 Requirements Storage
 
 Requirements SHALL be stored in Lyx or Markdown files and version controlled by Git. Reqtraq is not responsible for the actual formatting or version control of each document. Instead Reqtraq leverages Git for storage and version control and Lyx/Latex or Markdown for formatting.
 
@@ -82,35 +82,35 @@ Reqtraq will parse the requirement documents in the `certdocs` directory:
 
 ###### Attributes:
 - Rationale: Git is the industry standard for version control. Lyx is the industry standard for formatting. Markdown is widespread and very easy to use.
-- Parents: REQ-0-DDLN-SWH-001
+- Parents: REQ-RQTQ-SWH-001
 - Verification: Unit test
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-014 Accessing and linking to requirements
+##### REQ-RQTQ-SWL-014 Accessing and linking to requirements
 
 Each time a change to a requirement document is committed, Reqtraq SHALL parse the document and alter the following information:
 
 - each requirement described in the document, is wrapped into a **named anchor** so that the requirement can be directly linked to, e.g.
 
 ```
-<a name="#REQ-0-DDLN-SWL-001">REQ-0-DDLN-SWL-001</a>
+<a name="#REQ-RQTQ-SWL-001">REQ-RQTQ-SWL-001</a>
 ```
 
-- each requirement referred to in the document is replaced with a link to that requirement. For example a reference to the High Level Requirement REQ-0-DDLN-SYS-001 will be replaced with:
+- each requirement referred to in the document is replaced with a link to that requirement. For example a reference to the High Level Requirement REQ-RQTQ-SYS-001 will be replaced with:
 
 ```
-<a href="https://a/REQ-0-DDLN-SYS-001">REQ-0-DDLN-SYS-001</a>
+<a href="https://a/REQ-RQTQ-SYS-001">REQ-RQTQ-SYS-001</a>
 ```
 
 Where `http://a` is the Daedalean URL redirector. The URL redirector will infer the name of the document where the requirement is defined (0-DDLN-0-SRD in our case) and use the Google Drive API or other methods to find the URL of the document, then redirect to it, e.g.:
 
 ```
-<a href="https://doc-04-6g-docs.googleusercontent.com/....">REQ-0-DDLN-SYS-001</a>
+<a href="https://doc-04-6g-docs.googleusercontent.com/....">REQ-RQTQ-SYS-001</a>
 ```
 
 **TODO:** The URL in the example may be a Docs Url instead
 
-Note that the URL redirector needs to infer the name of the document the requirement is defined in, as described in REQ-0-DDLN-SWL-002.
+Note that the URL redirector needs to infer the name of the document the requirement is defined in, as described in REQ-RQTQ-SWL-002.
 
 ###### Reqtraq triggering
 
@@ -122,17 +122,17 @@ Reqtraq SHALL have a Git server-hook component that automatically triggers each 
 
 ###### Attributes:
 - Rationale: this ensures that all documents defining or reference requirements don’t introduce typing mistakes.
-- Parents: REQ-0-DDLN-SWH-012
+- Parents: REQ-RQTQ-SWH-012
 - Verification: Unit test
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-002 Construct the requirement URL.
+##### REQ-RQTQ-SWL-002 Construct the requirement URL.
 
 The <abbr title="Requirements Management Tool">RMT</abbr> SHALL infer the document where a requirement is defined solely based on the name of the requirement. This can be uniquely constructed as follows:
 
 - strip the `REQ-` prefix from the requirement name
 
-- take the 2 sections of the requirement name following `REQ-` (project/system number, project/system abbrev), e.g. "0-DDLN"
+- take the section of the requirement name following `REQ-` (project/system abbrev), e.g. "RQTQ"
 
 - append the sequence number for the document type (e.g. 100 for ORD, 212 for SDD, etc.)
 
@@ -143,19 +143,19 @@ The <abbr title="Requirements Management Tool">RMT</abbr> SHALL infer the docume
 
 ###### Attributes:
 - Rationale: simplicity and completeness: the ability to find a requirement only based on its name simplifies the development and the verification process.
-- Parents: REQ-0-DDLN-SWH-001
+- Parents: REQ-RQTQ-SWH-001
 - Verification: Unit test
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-003 Uniform requirement ID format.
+##### REQ-RQTQ-SWL-003 Uniform requirement ID format.
 
 The RMT SHALL check that the requirements defined in each document have a correct id:
 
 - the first section of the requirement name is `REQ-`
 
-- the next 2 sections (sections 2 and 3) of the requirement are identical to the first 2 sections of the document (project/system number, project/system abbrev), e.g. "0-DDLN"
+- the next section (section 2) of the requirement is identical to the first section of the document (project/system abbrev), e.g. "RQTQ"
 
-- section 4 of the requirement id is:
+- section 3 of the requirement id is:
 
     - `SYS` for system/overall requirements (defined in ORD documents)
 
@@ -167,27 +167,27 @@ The RMT SHALL check that the requirements defined in each document have a correc
 
     - `HWL` for hardware low-level requirements (defined in HDD documents)
 
-- section 5 of the requirement name is a three digit sequence number n such that requirements 0, 1, ..., n-1 all exist, not necessarily in order
+- section 4 of the requirement name is a sequence number n such that requirements 0, 1, ..., n-1 all exist, not necessarily in order
 
 ###### Attributes:
 - Rationale: correct IDs are essential for tracing requirements.
 - Verification: Unit test.
 - Safety impact: None.
-- Parent: REQ-0-DDLN-SWH-002
+- Parent: REQ-RQTQ-SWH-002
 
-##### REQ-0-DDLN-SWL-004 Valid requirement references.
+##### REQ-RQTQ-SWL-004 Valid requirement references.
 
 The RMT SHALL check that the requirements referred to in each document exist (and thus have a correct id):
 
-- for each requirement reference, check if the referenced requirement exists in the requirement map constructed as described in REQ-0-DDLN-SWL-015
+- for each requirement reference, check if the referenced requirement exists in the requirement map constructed as described in REQ-RQTQ-SWL-015
 
 ###### Attributes:
 - Rationale: invalid requirement references indicate an error in the requirement construction
 - Verification: Unit test.
 - Safety impact: None.
-- Parent: REQ-0-DDLN-SWH-002
+- Parent: REQ-RQTQ-SWH-002
 
-##### REQ-0-DDLN-SWL-005 ID allocation.
+##### REQ-RQTQ-SWL-005 ID allocation.
 
 The RMT SHALL check that given a requirement ID with sequence number N, all requirements with the same prefix and sequence numbers 0...N-1 exist and are defined in the current document (in any order).
 
@@ -195,11 +195,11 @@ The RMT SHALL check that given a requirement ID with sequence number N, all requ
 - Rationale: this helps ensure that no requirement sequence numbers are accidentally skipped.
 - Verification: Unit test.
 - Safety impact: None.
-- Parent: REQ-0-DDLN-SWH-003
+- Parent: REQ-RQTQ-SWH-003
 
-##### REQ-0-DDLN-SWL-017 Deleted requirements.
+##### REQ-RQTQ-SWL-017 Deleted requirements.
 
-Deleted requirements are requirements that do not apply anymore (e.g. they are obsolete). Deleted requirements SHALL be marked by changing the title to "Deleted", for example "REQ-0-DDLN-SWL-015 Deleted"
+Deleted requirements are requirements that do not apply anymore (e.g. they are obsolete). Deleted requirements SHALL be marked by changing the title to "Deleted", for example "REQ-RQTQ-SWL-015 Deleted"
 
 Deleted requirements SHALL not be checked for completeness and all the tasks associated with them SHALL be closed as WONTFIX. All references to a deleted requirement SHALL be marked as errors.
 
@@ -207,9 +207,9 @@ Deleted requirements SHALL not be checked for completeness and all the tasks ass
 - Rationale: continuous requirement numbering helps ensure that no requirements were accidentally skipped and completely deleting requirements would create gaps in the numbering.
 - Verification: Unit test.
 - Safety impact: None.
-- Parent: REQ-0-DDLN-SWH-003
+- Parent: REQ-RQTQ-SWH-003
 
-##### REQ-0-DDLN-SWL-015 Data structure for keeping requirements and their hierarchy
+##### REQ-RQTQ-SWL-015 Data structure for keeping requirements and their hierarchy
 
 The interface between the parsing tool and the report generation tool SHALL be a data structure that maps requirement IDs to a requirement structure. The requirement structure will hold all the data about the requirement that is needed for the report generation (ID, body, attributes, parents, children, etc.). The data structure is built by traversing the entire git repository and parsing all files that may contain or reference requirements, such as `.lyx`/`.md` requirement files and `.cc`/`.hh` source files).
 
@@ -217,11 +217,60 @@ The interface between the parsing tool and the report generation tool SHALL be a
 - Rationale: this data structure will be used for report generation and graph verification.
 - Verification: Unit test
 - Safety impact: None
-- Parents: REQ-0-DDLN-SWH-004, REQ-0-DDLN-SWH-005
+- Parents: REQ-RQTQ-SWH-004, REQ-RQTQ-SWH-005
 
-##### REQ-0-DDLN-SWL-006. Tracing system to high, low level, implementation, test.
+##### REQ-RQTQ-SWL-020 Requirements document organization
 
-The RMT SHALL, given a list of requirements given to or generated by the project as checked in to the repository, be able to generate parent and child requirements and code ordered from system to high level to low level requirement to implementation and test, including missing continuations.
+Requirements documents SHALL be organized as follows:
+  - requirements documents for a specific project SHALL be located in the `certdocs` top-level directory for that particular project
+  - for projects that are part of a larger system, the system level requirements of the project will have parents in the system level requirements of the larger system
+  - for projects that are self-contained, the system level requirements will have no parents
+
+**Example 1: Self-contained project**
+A project called VMU (Visual Motion Unit) is certified as a self-contained project. In this case, the top-level directory of the VMU project will contain a `certdocs` directory that contains the system level, high-level and low-level requirement documents:
+
+```
+vmu
+  certdocs
+     RQTQ-100-ORD.md
+     RQTQ-211-SDD.md
+     RQTQ-212-SDD.md
+  vmu code files
+```
+
+The system requirements in `RQTQ-100-ORD.md` are top-level requirements, and will thus have no parents.
+
+**Example 2: Project part of a larger system**
+A project called VMU (Visual Motion Unit) is certified as a subsytem of a larger system (let's call it VG - visual guidance) that contains other related projects (LD - landmark detection, CD - cloud detector, etc.). In this case, the top-level directory of the VMU, the CD, and LD will each contain a `certdocs` directory that contains the system level, high-level and low-level requirement documents for their respective projects. The top-level directory for VG, the overall guidance system, will also contain a `certdocs` directory, with system requirements that are the parents of all system requirements defined in the VMU, LD or CD:
+
+```
+vg
+  certdocs
+     VG-100-ORD.md  # these are the top-level parent requirements
+vmu
+  certdocs
+     VMU-100-ORD.md # these system requirements refer to parents in VG-100-ORD.md
+     VMU-211-SDD.md
+     VMU-212-SDD.md
+  vmu code files
+ld
+  certdocs
+     LD-100-ORD.md # also refer to parents in VG-100-ORD.md
+     LD-211-SDD.md
+     LD-212-SDD.md
+  ld code files
+cd
+  ...
+```
+###### Attributes:
+- Rationale: Reqtraq should support tracking requirements across sub-systems of a larger system.
+- Parents: REQ-RQTQ-SWH-15, REQ-RQTQ-SWH-16
+- Verification: Test.
+- Safety impact: None.
+
+##### REQ-RQTQ-SWL-006 Tracing system to high, low level, implementation, test
+
+Given a list of requirements, the RMT SHALL be able to generate parent and child requirements and code ordered from system to high level to low level requirement to implementation and test, including missing continuations.
 
 ###### Report structure
 
@@ -261,38 +310,40 @@ The information will be organized as following:
 
     - ...
 
-Note 1: The above list will show "denormalized" requirements, in the sense that if a requirement has multiple parents, it will be listed under each parent. To facilitate readability, the full information will be displayed only the first time a requirement appears, otherwise a link to the first occurrence is used.
+**Note 1:** The above list will show "denormalized" requirements, in the sense that if a requirement has multiple parents, it will be listed under each parent. To facilitate readability, the full information will be displayed only the first time a requirement appears, otherwise a link to the first occurrence is used.
 
-Note 2: The completion status of SYS, SWH or HWH is:
+**Note 2:** The completion status of SYS, SWH or HWH is:
 - not started, if none of the children are started
 - started, if at least one child is started
 - completed, if \*all\* children are completed
 
-###### Attributes:
-- Rationale: the report will be used by the certification authority to visualize requirement tracing.
-- Parents: REQ-0-DDLN-SWH-004, REQ-0-DDLN-SWH-007
-- Verification: Test.
-- Safety impact: None.
-
-##### REQ-0-DDLN-SWL-007. Tracing implementation, test to low, high, system level.
-
-The RMT SHALL, given a list of requirements given to or generated by the project as checked in to the repository be able to generate parent and child requirements and code, ordered from implementation or test to low level, high level to system requirement, including missing continuations.
-
-This is identical to REQ-0-DDLN-SWL-006, except that the report is generated in reverse order.
+**Note 3:** In the case of a system that has multiple projects (sub-systems), there will be more than one level of system requirements.
 
 ###### Attributes:
 - Rationale: the report will be used by the certification authority to visualize requirement tracing.
-- Parents: REQ-0-DDLN-SWH-005
+- Parents: REQ-RQTQ-SWH-004, REQ-RQTQ-SWH-007
 - Verification: Test.
 - Safety impact: None.
 
-##### REQ-0-DDLN-SWL-008. Change impact tracing
+##### REQ-RQTQ-SWL-007. Tracing implementation, test to low, high, system level.
+
+Given a list of requirements, the RMT SHALL be able to generate parent and child requirements and code, ordered from implementation or test to low level, high level to system requirement, including missing continuations.
+
+**Note:** This is identical to REQ-RQTQ-SWL-006, except that the report is generated in reverse order.
+
+###### Attributes:
+- Rationale: the report will be used by the certification authority to visualize requirement tracing.
+- Parents: REQ-RQTQ-SWH-005
+- Verification: Test.
+- Safety impact: None.
+
+##### REQ-RQTQ-SWL-008. Change impact tracing
 
 The RMT SHALL be able to generate a list of all requirements changed between checked in versions of the project’s documentation, for use as input to the high-to-low and low-to-high tracing functions.
 
-The report generation described in REQ-0-DDLN-SWL-006 will be able to receive the following inputs:
+The report generation described in REQ-RQTQ-SWL-006 will be able to receive the following inputs:
 
-- no input: in this case Reqtraq will generate a global HTML (TODO: other formats?) report listing all the requirements, from system to high level to low level, defined in the project associated with the repository (each project has its own Git repository)
+- no input: in this case Reqtraq will generate a global HTML report listing all the requirements, from system to high level to low level, defined in the project associated with the repository (each project has its own Git repository)
 
 - a list of requirement IDs (system, high level or low level): in this case the report will be generated for the given requirements, plus all their direct/indirect children. The direct/indirect parent requirements will also be listed, but all children other than the ones requested will be omitted.
 
@@ -302,7 +353,7 @@ Suggested usage (the directory in which reqtraq is run determines the project fo
 
 ```
 reqtraq report 
-reqtraq report REQ-0-DDLN-SWL-008,REQ-0-DDLN-SWL-009,REQ-0-DDLN-SWL-010
+reqtraq report REQ-RQTQ-SWL-008,REQ-RQTQ-SWL-009,REQ-RQTQ-SWL-010
 reqtraq report d6cd1e2bd19e03a81132a23b2025920577f84e37
 ```
 
@@ -310,20 +361,20 @@ Note: a requirement is considered "changed" if either it was directly edited or 
 
 ###### Attributes:
 - Rationale: the report will be used by the certification authority to visualize requirements that changed within a period of time.
-- Parents: REQ-0-DDLN-SWH-006
+- Parents: REQ-RQTQ-SWH-006
 - Verification: Test.
 - Safety impact: None.
 
-##### REQ-0-DDLN-SWL-018 Phabricator export
+##### REQ-RQTQ-SWL-018 Phabricator export
 
 The RMT SHALL export all requirements as Phabricator tasks, in the following format:
 
-- Title: requirement title, e.g. "REQ-0-DDLN-SWL-018 Phabricator export"
+- Title: requirement title, e.g. "REQ-RQTQ-SWL-018 Phabricator export"
 - Assigned To: empty
 - Status: Open
 - Priority: Normal
 - Description: The requirement description
-- Tags: Project code (e.g. DDLN in this case)
+- Tags: Project code (e.g. RQTRQ in this case)
 - Subscribers: empty
 - Parents\: the parent requirements
 - Children: the child requirements
@@ -333,22 +384,22 @@ If a task with the given requirement id already exists, then RMT will update the
 If a task’s title changes to "Deleted" it’s associated task and all its children will be marked as WONTFIX.
 
 ###### Attributes:
-- Parents: REQ-0-DDLN-SWH-006
+- Parents: REQ-RQTQ-SWH-006
 - Verification: Test.
 - Safety impact: None.
 
-##### REQ-0-DDLN-SWL-009. Change history tracing
+##### REQ-RQTQ-SWL-009. Change history tracing
 
 The RMT MUST be able to generate a list of all changelists that touched the definition or implementation of a given set of requirements, and the corresponding Problem Reports that these changelists belong to.
 
-The report described in REQ-0-DDLN-SWL-006 addresses this requirement. Each LLR will contain both the source files that implement it and the CLs that implemented it.
+The report described in REQ-RQTQ-SWL-006 addresses this requirement. Each LLR will contain both the source files that implement it and the CLs that implemented it.
 
 ###### Attributes:
-- Parents: REQ-0-DDLN-SWH-007
+- Parents: REQ-RQTQ-SWH-007
 - Verification: Test.
 - Safety impact: None.
 
-##### REQ-0-DDLN-SWL-010. Change justification tracing
+##### REQ-RQTQ-SWL-010. Change justification tracing
 
 The RMT SHALL verify and flag violations that changelists touching definitions or implementation of a requirement have a rationale-for-change field.
 
@@ -356,11 +407,11 @@ The current workflow forces each changelist to have a description and an associa
 
 ###### Attributes:
 - Rationale: no changes should be allowed unless they were vetted and the justification accepted by an independent reviewer.
-- Parents: REQ-0-DDLN-SWH-008
+- Parents: REQ-RQTQ-SWH-008
 - Verification: Test.
 - Safety impact: None.
 
-##### REQ-0-DDLN-SWL-011. Report readability
+##### REQ-RQTQ-SWL-011. Report readability
 
 The formats supported by RMT will be HTML and PDF, using the following syntax:
 
@@ -370,12 +421,12 @@ reqtraq report --format html
 ```
 
 ###### Attributes:
-- Rationale: reports on the bidirectional traceability have to be submitted as evidence in certification trajectories. The report generated in REQ-0-DDLN-SWL-006 addresses this issue.
-- Parents: REQ-0-DDLN-SWH-009
+- Rationale: reports on the bidirectional traceability have to be submitted as evidence in certification trajectories. The report generated in REQ-RQTQ-SWL-006 addresses this issue.
+- Parents: REQ-RQTQ-SWH-009
 - Verification: Demonstration.
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-012. Filtering of output
+##### REQ-RQTQ-SWL-012. Filtering of output
 
 The report generation tool SHALL allow filtering by matching a regular expression against:
 
@@ -386,17 +437,17 @@ The report generation tool SHALL allow filtering by matching a regular expressio
 Suggested usage:
 ```
 reqtraq report --title_filter="Motion estimation"
-reqtraq report --id_filter="REQ-0-DDLN-SWL-.*"
+reqtraq report --id_filter="REQ-RQTQ-SWL-.*"
 reqtraq report --body_filter="reprojection error"
 ```
 
 ###### Attributes:
 - Rationale: useful in the development or verification phase to check a subset of requirements.
-- Parents: REQ-0-DDLN-SWH-010
+- Parents: REQ-RQTQ-SWH-010
 - Verification: Demonstration
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-016 Web interface
+##### REQ-RQTQ-SWL-016 Web interface
 
 The RMT tool SHALL support starting up a simple web interface for report generation. The syntax for starting up the web interface will be:
 
@@ -408,11 +459,11 @@ The command must be executed in the repository for which the reports will be gen
 
 ###### Attributes:
 - Rationale: useful for report navigation and easy report generation.
-- Parents: REQ-0-DDLN-SWH-013
+- Parents: REQ-RQTQ-SWH-013
 - Verification: Demonstration
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-013 Requirement attributes
+##### REQ-RQTQ-SWL-013 Requirement attributes
 
 The RMT SHALL be able to store a number of predefined attributes and enforce/flag mandatory/optional rules for them.
 
@@ -429,11 +480,11 @@ Attributes can be optional or mandatory. Each attribute has a name. Each attribu
 
 ###### Attributes:
 - Rationale: Attributes help define the importance of and the verification process for each requirement. Missing attributes indicate an incomplete requirement.
-- Parents: REQ-0-DDLN-SWH-011
+- Parents: REQ-RQTQ-SWH-011
 - Verification: Demonstration
 - Safety impact: None
 
-##### REQ-0-DDLN-SWL-019 Pandoc markdown rendering
+##### REQ-RQTQ-SWL-019 Pandoc markdown rendering
 
 The RMT tool SHALL invoke pandoc to convert markdown (and pandoc extensions like math, tables, and code) into HTML that correctly renders into generated reports.
 
@@ -474,7 +525,7 @@ Table:  *Table of nonsense*, deluxe edition
 
 ###### Attributes:
 - Rationale: pandoc is a markdown to HTML converter that has markdown-extensions for math, tables, and code.
-- Parents: REQ-0-DDLN-SWH-014
+- Parents: REQ-RQTQ-SWH-014
 - Verification: Demonstration
 - Safety impact: None
 
