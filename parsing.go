@@ -147,12 +147,11 @@ func ParseReq(txt string) (*Req, error) {
 
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
 
-	if len(parts) == 2{
-		r.Title = parts[0]
-		r.Body = formatBodyAsHTML(parts[1])
-	} else {
+	if len(parts) != 2{
 		return nil, fmt.Errorf("Requirement body must not be empty: %s\n", r.ID)
 	}
+	r.Title = parts[0]
+	r.Body = formatBodyAsHTML(parts[1])
 
 	return r, nil
 }
