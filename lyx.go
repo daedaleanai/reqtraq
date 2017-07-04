@@ -1,5 +1,5 @@
-// @llr REQ-0-DDLN-SWL-014
-// @llr REQ-0-DDLN-SWL-002
+// @llr REQ-TRAQ-SWL-014
+// @llr REQ-TRAQ-SWL-002
 package main
 
 import (
@@ -17,9 +17,8 @@ import (
 )
 
 var (
-	reCertdoc = regexp.MustCompile(`(\d+)-(\w+)-(\d+)-(\w+)`) // project number, project abbreviation, certdoc type number, certdoc type
-	reStart   = regexp.MustCompile(`(?i)^\s*req:\s*$`)        // 'req:' standalone on a line
-	reEnd     = regexp.MustCompile(`(?i)^\s*/req\s*$`)        // '/req' standalone on a line
+	reStart = regexp.MustCompile(`(?i)^\s*req:\s*$`) // 'req:' standalone on a line
+	reEnd   = regexp.MustCompile(`(?i)^\s*/req\s*$`) // '/req' standalone on a line
 )
 
 // lyxState is the information needed to keep around on a stack to parse the
@@ -233,24 +232,28 @@ func linkify(s, repo, dirInRepo string) (string, error) {
 	var res bytes.Buffer
 	parsedTo := 0
 	for _, ids := range parmatch {
-		// For example: ["REQ-0-DDLN-SYS-006" "0" "DDLN" "SYS" "006"]
+		// For example: ["REQ-TRAQ-SYS-006" "TRAQ" "SYS" "006"]
 		res.WriteString(s[parsedTo:ids[0]])
 		reqID := s[ids[0]:ids[1]]
 		parsedTo = ids[1]
-		// As per REQ-0-DDLN-SWH-002:
+		// As per REQ-TRAQ-SWH-002:
 		// REQ-[project/system number]-[project/system abbreviation]-[SSS or SWH or SWL or HWH or HWL]-[a unique alphanumeric sequence],
-		numberAbbrev := s[ids[2]:ids[5]]
-		reqType := s[ids[6]:ids[7]]
-		if len(ids) != 10 {
+		project := s[ids[2]:ids[3]]
+		reqType := s[ids[4]:ids[5]]
+		if len(ids) != 8 {
 			// This should not happen.
 			return "", fmt.Errorf("regexp cannot be used, please file a bug in Devtools: %q", ids)
 		}
-		docType, ok := config.ReqTypeToDocIdAndType[reqType]
+		docType, ok := config.ReqTypeToDocType[reqType]
 		if !ok {
 			return "", fmt.Errorf("unknown requirement type: %q (in %q)", reqType, reqID)
 		}
-		// For example: 0-DDLN-0-ORD
-		name := fmt.Sprintf("%s-%s", numberAbbrev, docType)
+		docID, ok := config.DocTypeToDocId[docType]
+		if !ok {
+			return "", fmt.Errorf("doc type has no doc id associated: %q (in %q)", docType, reqID)
+		}
+		// For example: TRAQ-100-ORD
+		name := fmt.Sprintf("%s-%s-%s", project, docID, docType)
 		url := fmt.Sprintf("http://a.daedalean.ai/docs/%s/%s/%s.pdf#%s", repo, dirInRepo, name, reqID)
 		res.WriteString(fmt.Sprintf(`
 \begin_inset CommandInset href

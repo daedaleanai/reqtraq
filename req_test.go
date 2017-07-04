@@ -1,4 +1,4 @@
-// @tests @llr REQ-0-DDLN-SWL-015
+// @tests @llr REQ-TRAQ-SWL-015
 package main
 
 import (
@@ -14,7 +14,7 @@ import (
 func TestReqGraph_AddCodeRef(t *testing.T) {
 	rg := reqGraph{}
 	const id = "certdocs/a.cc"
-	rg.AddCodeRefs(id, "a.cc", "", []string{"REQ-0-DDLN-0-SWH-001"})
+	rg.AddCodeRefs(id, "a.cc", "", []string{"REQ-TRAQ-0-SWH-001"})
 	v := rg["a.cc"]
 	if v == nil {
 		// fatal instead of error
@@ -33,26 +33,26 @@ func TestReqGraph_AddCodeRef(t *testing.T) {
 func TestReqGraph_AddReq(t *testing.T) {
 	rg := reqGraph{}
 
-	req := &Req{ID: "REQ-0-DDLN-SWH-001"}
-	req2 := &Req{ID: "REQ-0-DDLN-SWL-001", ParentIds: []string{"REQ-0-DDLN-SWH-001"}}
+	req := &Req{ID: "REQ-TRAQ-SWH-001"}
+	req2 := &Req{ID: "REQ-TRAQ-SWL-001", ParentIds: []string{"REQ-TRAQ-SWH-001"}}
 
-	rg.AddReq(req, "./0-DDLN-0-SRD.md")
-	rg.AddReq(req2, "./0-DDLN-1-SDD.md")
+	rg.AddReq(req, "./TRAQ-0-SRD.md")
+	rg.AddReq(req2, "./TRAQ-1-SDD.md")
 
 	// if this becomes more complex we can move it into a table of tescases.
 	if expectedReq := (&Req{
-		ID:   "REQ-0-DDLN-SWH-001",
-		Path: "./0-DDLN-0-SRD.md",
-	}); !reflect.DeepEqual(expectedReq, rg["REQ-0-DDLN-SWH-001"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-0-DDLN-SWH-001"])
+		ID:   "REQ-TRAQ-SWH-001",
+		Path: "./TRAQ-0-SRD.md",
+	}); !reflect.DeepEqual(expectedReq, rg["REQ-TRAQ-SWH-001"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-TRAQ-SWH-001"])
 	}
 
 	if expectedReq := (&Req{
-		ID:        "REQ-0-DDLN-SWL-001",
-		Path:      "./0-DDLN-1-SDD.md",
-		ParentIds: []string{"REQ-0-DDLN-SWH-001"},
-	}); !reflect.DeepEqual(expectedReq, rg["REQ-0-DDLN-SWL-001"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-0-DDLN-SWL-001"])
+		ID:        "REQ-TRAQ-SWL-001",
+		Path:      "./TRAQ-1-SDD.md",
+		ParentIds: []string{"REQ-TRAQ-SWH-001"},
+	}); !reflect.DeepEqual(expectedReq, rg["REQ-TRAQ-SWL-001"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-TRAQ-SWL-001"])
 	}
 }
 
@@ -60,21 +60,21 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 	rg := reqGraph{}
 
 	for _, v := range []*Req{
-		{ID: "REQ-0-DDLN-SWH-001", Position: 1},
-		{ID: "REQ-0-DDLN-SWH-002", Position: 2},
-		{ID: "REQ-0-DDLN-SWH-003", Position: 3},
+		{ID: "REQ-TRAQ-SWH-001", Position: 1},
+		{ID: "REQ-TRAQ-SWH-002", Position: 2},
+		{ID: "REQ-TRAQ-SWH-003", Position: 3},
 	} {
-		if err := rg.AddReq(v, "./0-DDLN-0-SRD.md"); err != nil {
+		if err := rg.AddReq(v, "./TRAQ-0-SRD.md"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
 
 	for _, v := range []*Req{
-		{ID: "REQ-0-DDLN-SWL-001", ParentIds: []string{"REQ-0-DDLN-SWH-001"}, Position: 1},
-		{ID: "REQ-0-DDLN-SWL-002", ParentIds: []string{"REQ-0-DDLN-SWH-001"}, Position: 2},
-		{ID: "REQ-0-DDLN-SWL-003", ParentIds: []string{"REQ-0-DDLN-SWH-003"}, Position: 3},
+		{ID: "REQ-TRAQ-SWL-001", ParentIds: []string{"REQ-TRAQ-SWH-001"}, Position: 1},
+		{ID: "REQ-TRAQ-SWL-002", ParentIds: []string{"REQ-TRAQ-SWH-001"}, Position: 2},
+		{ID: "REQ-TRAQ-SWL-003", ParentIds: []string{"REQ-TRAQ-SWH-003"}, Position: 3},
 	} {
-		if err := rg.AddReq(v, "./0-DDLN-1-SDD.md"); err != nil {
+		if err := rg.AddReq(v, "./TRAQ-1-SDD.md"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
@@ -83,11 +83,11 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 		id     string
 		expect Req
 	}{
-		{"REQ-0-DDLN-SWH-001", Req{ID: "REQ-0-DDLN-SWH-001", Path: "./0-DDLN-0-SRD.md", Position: 1}},
-		{"REQ-0-DDLN-SWL-001", Req{
-			ID:        "REQ-0-DDLN-SWL-001",
-			Path:      "./0-DDLN-1-SDD.md",
-			ParentIds: []string{"REQ-0-DDLN-SWH-001"},
+		{"REQ-TRAQ-SWH-001", Req{ID: "REQ-TRAQ-SWH-001", Path: "./TRAQ-0-SRD.md", Position: 1}},
+		{"REQ-TRAQ-SWL-001", Req{
+			ID:        "REQ-TRAQ-SWL-001",
+			Path:      "./TRAQ-1-SDD.md",
+			ParentIds: []string{"REQ-TRAQ-SWH-001"},
 			Position:  1,
 		}},
 	} {
@@ -98,7 +98,7 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 }
 
 func TestReq_ReqType(t *testing.T) {
-	req := Req{ID: "REQ-0-DDLN-SWL-001"}
+	req := Req{ID: "REQ-TRAQ-SWL-001"}
 
 	if v := req.ReqType(); v != "SWL" {
 		t.Error("Expected SWL got", v)
@@ -114,15 +114,15 @@ func TestReq_ReqTypeNoMatch(t *testing.T) {
 }
 
 func TestReq_IdFilter(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWH-001", Body: "thrust control"}
-	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-0-DDLN-SWH-*")}
+	r := Req{ID: "REQ-TRAQ-SWH-001", Body: "thrust control"}
+	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-TRAQ-SWH-*")}
 	if !r.Matches(filter, nil) {
 		t.Errorf("expected matching requirement but did not match")
 	}
 }
 
 func TestReq_TitleFilter(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWH-001", Title: "The control unit will calculate thrust.", Body: "It will also do much more."}
+	r := Req{ID: "REQ-TRAQ-SWH-001", Title: "The control unit will calculate thrust.", Body: "It will also do much more."}
 	filter := ReqFilter{TitleFilter: regexp.MustCompile("thrust")}
 	if !r.Matches(filter, nil) {
 		t.Errorf("expected matching requirement but did not match")
@@ -130,7 +130,7 @@ func TestReq_TitleFilter(t *testing.T) {
 }
 
 func TestReq_TitleFilterNegative(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWH-001", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."}
+	r := Req{ID: "REQ-TRAQ-SWH-001", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."}
 	filter := ReqFilter{TitleFilter: regexp.MustCompile("thrust")}
 	if r.Matches(filter, nil) {
 		t.Errorf("expected mismatching requirement but found match")
@@ -138,7 +138,7 @@ func TestReq_TitleFilterNegative(t *testing.T) {
 }
 
 func TestReq_BodyFilter(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWH-001", Body: "thrust control"}
+	r := Req{ID: "REQ-TRAQ-SWH-001", Body: "thrust control"}
 	filter := ReqFilter{BodyFilter: regexp.MustCompile("thrust")}
 	if !r.Matches(filter, nil) {
 		t.Errorf("expected matching requirement but did not match")
@@ -146,23 +146,23 @@ func TestReq_BodyFilter(t *testing.T) {
 }
 
 func TestReq_IdAndBodyFilter(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWL-014", Body: "thrust control"}
-	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-0-*"), BodyFilter: regexp.MustCompile("thrust")}
+	r := Req{ID: "REQ-TRAQ-SWL-014", Body: "thrust control"}
+	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-*"), BodyFilter: regexp.MustCompile("thrust")}
 	if !r.Matches(filter, nil) {
 		t.Errorf("expected matching requirement but did not match")
 	}
 }
 
 func TestReq_IdAndBodyFilterNegative(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWL-014", Body: "thrust control"}
-	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-1-*"), BodyFilter: regexp.MustCompile("thrust")}
+	r := Req{ID: "REQ-TRAQ-SWL-014", Body: "thrust control"}
+	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-DDLN-*"), BodyFilter: regexp.MustCompile("thrust")}
 	if r.Matches(filter, nil) {
 		t.Errorf("expected mismatching requirement but found match")
 	}
 }
 
 func TestReq_MatchesDiffs(t *testing.T) {
-	r := Req{ID: "REQ-0-DDLN-SWL-014", Body: "thrust control"}
+	r := Req{ID: "REQ-TRAQ-SWL-014", Body: "thrust control"}
 	// Matching filter.
 	filter := ReqFilter{}
 	diffs := make(map[string][]string)
@@ -181,10 +181,10 @@ func TestReq_MatchesDiffs(t *testing.T) {
 	}
 }
 
-// @tests @llr REQ-0-DDLN-SWL-015
+// @tests @llr REQ-TRAQ-SWL-015
 func TestParsing(t *testing.T) {
-	CheckParsing(t, "testdata/valid_system_requirement/123-TEST-100-ORD.lyx")
-	CheckParsing(t, "testdata/valid_system_requirement/123-TEST-100-ORD.md")
+	CheckParsing(t, "testdata/valid_system_requirement/TEST-100-ORD.lyx")
+	CheckParsing(t, "testdata/valid_system_requirement/TEST-100-ORD.md")
 }
 
 func CheckParsing(t *testing.T, f string) {
@@ -194,7 +194,7 @@ func CheckParsing(t *testing.T, f string) {
 	var systemReqs [5]Req
 	for i := 0; i < 5; i++ {
 		reqNo := strconv.Itoa(i + 1)
-		systemReqs[i] = Req{ID: "REQ-123-TEST-SYS-00" + reqNo,
+		systemReqs[i] = Req{ID: "REQ-TEST-SYS-00" + reqNo,
 			Level:    config.SYSTEM,
 			Path:     f,
 			Position: i,
@@ -213,6 +213,6 @@ func CheckParsing(t *testing.T, f string) {
 }
 
 func TestReq_IsDeleted(t *testing.T) {
-	req := Req{ID: "REQ-123-TEST-SYS-002", Title: "DELETED Requirement", Body: "This is the body"}
+	req := Req{ID: "REQ-TEST-SYS-002", Title: "DELETED Requirement", Body: "This is the body"}
 	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Body)
 }

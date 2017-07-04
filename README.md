@@ -42,14 +42,14 @@ Reqtraq uses the Git history to figure out the Git commits associated with a req
 ### Usage examples
 #### Getting the next available requirement ID
 ```
-$ reqtraq nextid certdocs/0-DDLN-138-SDD.md
-REQ-0-DDLN-SWL-019
+$ reqtraq nextid certdocs/TRAQ-138-SDD.md
+REQ-TRAQ-SWL-021
 ```
 
 #### Parse and List requirements
 ```
-$ reqtraq list certdocs/0-DDLN-100-ORD.md
-Requirement REQ-0-DDLN-SYS-001  Bidirectional tracing.
+$ reqtraq list certdocs/TRAQ-100-ORD.md
+Requirement REQ-TRAQ-SYS-001  Bidirectional tracing.
 ...
 ```
 
@@ -62,7 +62,7 @@ $ reqtraq reportdown
 ```
 Filtering:
 ```
-$ reqtraq reportdown --id_filter=".*0-DDLN-SYS.*"
+$ reqtraq reportdown --id_filter=".*TRAQ-SYS.*"
 2017/06/06 22:51:23 Creating ./req-down.html (this may take a while)...
 2017/06/06 22:51:41 Creating ./req-down-filtered.html (this may take a while)...
 ```

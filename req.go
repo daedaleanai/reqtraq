@@ -1,8 +1,8 @@
-// @llr REQ-0-DDLN-SWL-015
-// @llr REQ-0-DDLN-SWL-006
-// @llr REQ-0-DDLN-SWL-007
-// @llr REQ-0-DDLN-SWL-011
-// @llr REQ-0-DDLN-SWL-013
+// @llr REQ-TRAQ-SWL-015
+// @llr REQ-TRAQ-SWL-006
+// @llr REQ-TRAQ-SWL-007
+// @llr REQ-TRAQ-SWL-011
+// @llr REQ-TRAQ-SWL-013
 
 package main
 
@@ -45,6 +45,8 @@ var reqStatusToString = map[RequirementStatus]string{
 func (rs RequirementStatus) String() string { return reqStatusToString[rs] }
 
 var (
+	// project abbreviation, certdoc type number, certdoc type
+	reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
 	reDiffRev = regexp.MustCompile(`Differential Revision:\s(.*)\s`)
 )
 
@@ -76,7 +78,7 @@ func (r *Req) ReqType() string {
 	if len(parts) == 0 {
 		return ""
 	}
-	return parts[3]
+	return parts[2]
 }
 
 func (r *Req) resolveUp() {
@@ -161,7 +163,7 @@ func (r *Req) Tasklists() map[string]*taskmgr.Task {
 	return m
 }
 
-// @llr REQ-0-DDLN-SWL-009
+// @llr REQ-TRAQ-SWL-009
 func (r *Req) Changelists() map[string]string {
 	m := map[string]string{}
 	if r.Level == config.LOW {
@@ -209,15 +211,15 @@ func changelistUrlsForFilepath(filepath string) []string {
 	return urls
 }
 
-// @llr REQ-0-DDLN-SWL-015
+// @llr REQ-TRAQ-SWL-015
 // A ReqGraph maps IDs and Paths to Req structures.
 type reqGraph map[string]*Req
 
-func CreateReqGraph(certdocPath, codePath string) (reqGraph, error) {
+func CreateReqGraph(certdocsPath, codePath string) (reqGraph, error) {
 	rg := reqGraph{}
 	errorResult := ""
 
-	_ = filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
+	_ = filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
 		func(fileName string, info os.FileInfo, err error) error {
 			var errs []error
 			switch strings.ToLower(path.Ext(fileName)) {
@@ -295,7 +297,7 @@ func (rg reqGraph) CheckAttributes(as []map[string]string) []error {
 	return errs
 }
 
-// @llr REQ-0-DDLN-SWL-004
+// @llr REQ-TRAQ-SWL-004
 func (rg reqGraph) checkReqReferences(certdocPath string) error {
 	reParents := regexp.MustCompile(`Parents: REQ-`)
 
@@ -342,7 +344,7 @@ func (rg reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {
 	rg[fileName] = &Req{ID: id, Path: fileName, FileHash: fileHash, ParentIds: reqIds, Level: config.CODE}
 }
 
-// @llr REQ-0-DDLN-SWL-017
+// @llr REQ-TRAQ-SWL-017
 func (rg reqGraph) Resolve() error {
 	errorResult := ""
 
@@ -566,7 +568,7 @@ func (a byPosition) Len() int           { return len(a) }
 func (a byPosition) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byPosition) Less(i, j int) bool { return a[i].Position < a[j].Position }
 
-var reLLRReference = regexp.MustCompile(`//\s*@llr\s*(REQ-\d+-\w+-SWL-\d+).*`)
+var reLLRReference = regexp.MustCompile(fmt.Sprintf(`//\s*@llr\s*(%s).*`, reReqIdStr))
 
 func parseCode(id, fileName string, graph reqGraph) error {
 	f, err := os.Open(fileName)
@@ -632,7 +634,7 @@ const (
 
 type ReqFilter map[FilterType]*regexp.Regexp
 
-// @llr REQ-0-DDLN-SWL-012
+// @llr REQ-TRAQ-SWL-012
 // Matches returns true if the requirement matches the filter AND its ID is
 // in the diffs map, if any.
 func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
@@ -662,7 +664,6 @@ func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
 func NextId(f string) (string, error) {
 	var (
 		reqs      []string
-		reqID     string
 		nextReqID string
 	)
 
@@ -671,28 +672,35 @@ func NextId(f string) (string, error) {
 		return "", err
 	}
 
-	nextId := 1
 	if len(reqs) > 0 {
+		var (
+			lastReq    *Req
+			greatestID int = 0
+		)
 		// infer next req ID from existing req IDs
 		for _, v := range reqs {
-			r, err2 := ParseReq(v)
-			reqID = r.ID
-			reqIdComps := strings.Split(r.ID, "-")
-			currentId, err2 := strconv.Atoi(reqIdComps[len(reqIdComps)-1])
-			if err2 != nil {
-				return "", fmt.Errorf("Requirements failed to parse: %s", reqID)
+			r, err := ParseReq(v)
+			if err != nil {
+				return "", err
 			}
-			if currentId > nextId {
-				nextId = currentId
+			parts := ReReqID.FindStringSubmatch(r.ID)
+			if parts == nil {
+				return "", fmt.Errorf("Requirement ID invalid: %s", r.ID)
+			}
+			sequenceNumber := parts[len(parts)-1]
+			currentID, err := strconv.Atoi(sequenceNumber)
+			if err != nil {
+				return "", fmt.Errorf("Requirement sequence part \"%s\" (%s) not a number:  %s", r.ID, sequenceNumber, err)
+			}
+			if currentID > greatestID {
+				greatestID = currentID
+				lastReq = r
 			}
 		}
-		parts := ReReqID.FindStringSubmatch(reqID)
-		nextReqID = fmt.Sprintf("REQ-%s-%03d", strings.Join(parts[1:len(parts)-1], "-"), nextId+1)
+		ii := ReReqID.FindStringSubmatchIndex(lastReq.ID)
+		nextReqID = fmt.Sprintf("%s%03d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
 	} else {
 		// infer next (=first) req ID from file name
-		if err := IsValidDocName(f); err != nil {
-			return "", err
-		}
 		fNameWithExt := path.Base(f)
 		extension := filepath.Ext(fNameWithExt)
 		fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
@@ -724,6 +732,8 @@ func ParseCertdoc(fileName string) ([]string, error) {
 	return nil, fmt.Errorf("Unrecognized extension: %s", ext)
 }
 
+// IsValidDocName checks the f filename is a valid certdoc name.
+// @llr REQ-TRAQ-SWL-020
 func IsValidDocName(f string) error {
 	ext := path.Ext(f)
 	switch strings.ToLower(ext) {
@@ -734,19 +744,20 @@ func IsValidDocName(f string) error {
 	}
 	filename := strings.TrimSuffix(path.Base(f), ext)
 	// check if the structure of the filename is correct
-	if !reCertdoc.MatchString(filename) {
+	parts := reCertdoc.FindStringSubmatch(filename)
+	if parts == nil {
 		return fmt.Errorf("Invalid file name: '%s'. Certification doc file name must match %v", filename, reCertdoc)
 	}
-	// check if the number matches the document type
-	fNameComps := strings.Split(filename, "-")
-	docType := fNameComps[len(fNameComps)-1]
-	v, ok := config.DocTypeToDocId[docType]
+	// check the document type code
+	docType := parts[3]
+	correctNumber, ok := config.DocTypeToDocId[docType]
 	if !ok {
 		return fmt.Errorf("Invalid document type: '%s'. Must be one of %v", docType, config.DocTypeToDocId)
 	}
-	docNumber := fNameComps[len(fNameComps)-2]
-	if v != docNumber {
-		return fmt.Errorf("Document number for type '%s' must be '%s', and not '%s'", docType, v, docNumber)
+	// check the document type number
+	docNumber := parts[2]
+	if correctNumber != docNumber {
+		return fmt.Errorf("Document number for type '%s' must be '%s', and not '%s'", docType, correctNumber, docNumber)
 	}
 	return nil
 }

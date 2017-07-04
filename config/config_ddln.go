@@ -49,13 +49,13 @@ var DocTypeToReqType = map[string]string{
 	"HDD": "HWL",
 }
 
-// Map from requirement type to document ID and document type.
-var ReqTypeToDocIdAndType = map[string]string{
-	"SYS": "100-ORD",
-	"SWH": "137-SRD",
-	"SWL": "138-SDD",
-	"HWH": "175-HRD",
-	"HWL": "176-HDD",
+// Map from requirement type to document type.
+var ReqTypeToDocType = map[string]string{
+	"SYS": "ORD",
+	"SWH": "SRD",
+	"SWL": "SDD",
+	"HWH": "HRD",
+	"HWL": "HDD",
 }
 
 // Map from document type to document ID.

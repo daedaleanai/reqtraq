@@ -14,35 +14,35 @@ import (
 func TestParseMarkdown(t *testing.T) {
 	checkParse(t, `
 # Title
-#### REQ-0-TEST-SYS-005
+#### REQ-TEST-SYS-005
 ##### Heading part of a req
-#### REQ-0-TEST-SYS-006
-Content mentioning REQ-0-TEST-SYS-001
-REQ-0-TEST-SYS-002
+#### REQ-TEST-SYS-006
+Content mentioning REQ-TEST-SYS-001
+REQ-TEST-SYS-002
 ### Title2
-#### REQ-0-TEST-SYS-007
+#### REQ-TEST-SYS-007
 `,
 		"",
-		"REQ-0-TEST-SYS-005\n##### Heading part of a req\n",
-		"REQ-0-TEST-SYS-006\nContent mentioning REQ-0-TEST-SYS-001\nREQ-0-TEST-SYS-002\n",
-		"REQ-0-TEST-SYS-007\n")
+		"REQ-TEST-SYS-005\n##### Heading part of a req\n",
+		"REQ-TEST-SYS-006\nContent mentioning REQ-TEST-SYS-001\nREQ-TEST-SYS-002\n",
+		"REQ-TEST-SYS-007\n")
 
-	checkParse(t, `# REQ-0-TEST-SYS-005 REQ-0-TEST-SYS-006`, `malformed requirement title: too many IDs on line 1:`)
+	checkParse(t, `# REQ-TEST-SYS-005 REQ-TEST-SYS-006`, `malformed requirement title: too many IDs on line 1:`)
 	checkParse(t, `
-# REQ-0-TEST-SYS-005
-## REQ-0-TEST-SYS-006`,
+# REQ-TEST-SYS-005
+## REQ-TEST-SYS-006`,
 		"requirement heading on line 3 must be at same level as requirement heading on line 2 (2 != 1):")
 	checkParse(t, `
-## REQ-0-TEST-SYS-005
-# REQ-0-TEST-SYS-006`,
+## REQ-TEST-SYS-005
+# REQ-TEST-SYS-006`,
 		"requirement heading on line 3 must be at same level as requirement heading on line 2 (1 != 2):")
 	checkParse(t, `
-# REQ-0-TEST-SYS-005
+# REQ-TEST-SYS-005
 # Title`,
 		"non-requirement heading on line 3 at same level as requirement heading on line 2 (1):")
 	checkParse(t, `
 # Title
-# REQ-0-TEST-SYS-005`,
+# REQ-TEST-SYS-005`,
 		"requirement heading on line 3 at same level as previous heading on line 2 (1):")
 }
 

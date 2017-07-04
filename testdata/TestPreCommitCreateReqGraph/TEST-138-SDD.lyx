@@ -93,7 +93,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWL-001 [OK] Good
+REQ-TEST-SWL-001 [OK] Good
 \end_layout
 
 \begin_layout Standard
@@ -108,7 +108,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-001.
+Parents: REQ-TEST-SYS-001.
 \end_layout
 
 \begin_layout Standard
@@ -142,7 +142,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWL-002 [NOT OK] Deleted Parent
+REQ-TEST-SWL-002 [NOT OK] Deleted Parent
 \end_layout
 
 \begin_layout Standard
@@ -157,7 +157,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-002.
+Parents: REQ-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard
@@ -191,7 +191,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWL-003 DELETED [OK] deleted and deleted parent
+REQ-TEST-SWL-003 DELETED [OK] deleted and deleted parent
 \end_layout
 
 \begin_layout Standard
@@ -206,7 +206,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-002.
+Parents: REQ-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard

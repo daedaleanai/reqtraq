@@ -1,5 +1,5 @@
-// @llr REQ-0-DDLN-SWL-003
-// @llr REQ-0-DDLN-SWL-005
+// @llr REQ-TRAQ-SWL-003
+// @llr REQ-TRAQ-SWL-005
 package main
 
 import (
@@ -14,7 +14,6 @@ import (
 
 // lintReq is called for each requirement while building the req graph
 func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
-
 	// extract file name without extension
 	fNameWithExt := path.Base(fileName)
 	extension := filepath.Ext(fNameWithExt)
@@ -32,17 +31,14 @@ func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
 		errs = append(errs, fmt.Errorf("Incorrect requirement name %s. Every requirement needs to start with REQ, got %s.", r.ID, reqIdComps[0]))
 	}
 	if reqIdComps[1] != fNameComps[0] {
-		errs = append(errs, fmt.Errorf("Incorrect project ID for requirement %s. Expected %s, got %s.", r.ID, fNameComps[0], reqIdComps[1]))
+		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, fNameComps[0], reqIdComps[1]))
 	}
-	if reqIdComps[2] != fNameComps[1] {
-		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, fNameComps[1], reqIdComps[2]))
+	if reqIdComps[2] != reqType {
+		errs = append(errs, fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, reqType, reqIdComps[2]))
 	}
-	if reqIdComps[3] != reqType {
-		errs = append(errs, fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, reqType, reqIdComps[3]))
-	}
-	currentId, err2 := strconv.Atoi(reqIdComps[len(reqIdComps)-1])
+	currentId, err2 := strconv.Atoi(reqIdComps[3])
 	if err2 != nil {
-		errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIdComps[len(reqIdComps)-1]))
+		errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIdComps[3]))
 	} else {
 
 		// check requirement sequence number

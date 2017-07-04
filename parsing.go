@@ -1,4 +1,4 @@
-// @llr REQ-0-DDLN-SWL-001
+// @llr REQ-TRAQ-SWL-001
 package main
 
 import (
@@ -16,15 +16,15 @@ import (
 
 var (
 	// REQ, project number, project abbreviation, req type, req number
-	// For example: REQ-0-DDLN-SWH-004
-	reReqIdStr   = `REQ-(\d+)-(\w+)-(SYS|SWH|SWL|HWH|HWL)-(\d+)`
+	// For example: REQ-TRAQ-SWH-004
+	reReqIdStr   = `REQ-(\w+)-(SYS|SWH|SWL|HWH|HWL)-(\d+)`
 	ReReqID      = regexp.MustCompile(reReqIdStr)
+	reReqIDBad   = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
 	ReReqDeleted = regexp.MustCompile(reReqIdStr + ` DELETED`)
-	reReqIDBad   = regexp.MustCompile(`(?i)REQ(-(\w+))+`)
 	reReqKWD     = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
 )
 
-// @llr REQ-0-DDLN-SWL-019
+// @llr REQ-TRAQ-SWL-019
 // Given a string containing markdown, convert it to HTML using pandoc
 func formatBodyAsHTML(txt string) template.HTML {
 	cmd := exec.Command("pandoc", "--mathjax")

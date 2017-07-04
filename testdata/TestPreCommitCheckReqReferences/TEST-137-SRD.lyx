@@ -93,7 +93,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-001 [OK] Good
+REQ-TEST-SWH-001 [OK] Good
 \end_layout
 
 \begin_layout Standard
@@ -108,7 +108,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-001.
+Parents: REQ-TEST-SYS-001.
 \end_layout
 
 \begin_layout Standard
@@ -142,7 +142,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-002 DELETED [OK] deleted and deleted parent
+REQ-TEST-SWH-002 DELETED [OK] deleted and deleted parent
 \end_layout
 
 \begin_layout Standard
@@ -157,7 +157,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-002.
+Parents: REQ-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard
@@ -191,13 +191,13 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-003 [NOT OK] Reference to nonexistent req
+REQ-TEST-SWH-003 [NOT OK] Reference to nonexistent req
 \end_layout
 
 \begin_layout Standard
 This is just a test.
  This text does not mean anything.
- See REQ-0-TEST-SYS-022.
+ See REQ-TEST-SYS-022.
 \end_layout
 
 \begin_layout Standard
@@ -207,7 +207,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
+Parents: REQ-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -241,13 +241,13 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-004 [NOT OK] Reference to deleted req
+REQ-TEST-SWH-004 [NOT OK] Reference to deleted req
 \end_layout
 
 \begin_layout Standard
 This is just a test.
  This text does not mean anything.
- See REQ-0-TEST-SYS-002.
+ See REQ-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard
@@ -257,7 +257,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
+Parents: REQ-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -291,7 +291,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-005 [OK] Good
+REQ-TEST-SWH-005 [OK] Good
 \end_layout
 
 \begin_layout Standard
@@ -306,7 +306,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-001
+Parents: REQ-TEST-SYS-001
 \end_layout
 
 \begin_layout Standard
@@ -340,7 +340,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-006 [NOT OK] Missing attribute verification
+REQ-TEST-SWH-006 [NOT OK] Missing attribute verification
 \end_layout
 
 \begin_layout Standard
@@ -355,7 +355,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
+Parents: REQ-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -385,7 +385,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-007 [NOT OK] Missing attribute safety impact
+REQ-TEST-SWH-007 [NOT OK] Missing attribute safety impact
 \end_layout
 
 \begin_layout Standard
@@ -400,7 +400,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
+Parents: REQ-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -430,7 +430,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-008 [NOT OK] Wrong value of attribute verification
+REQ-TEST-SWH-008 [NOT OK] Wrong value of attribute verification
 \end_layout
 
 \begin_layout Standard
@@ -445,7 +445,7 @@ Rationale: This is just a test.
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
+Parents: REQ-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard

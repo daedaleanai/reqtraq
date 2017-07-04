@@ -72,7 +72,7 @@
 \begin_body
 
 \begin_layout Title
-ReqTraq Test SRD
+ReqTraq Test ORD
 \end_layout
 
 \begin_layout Standard
@@ -93,7 +93,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-001 [OK] Good
+REQ-TEST-SYS-001 [OK] Good
 \end_layout
 
 \begin_layout Standard
@@ -104,11 +104,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-001.
 \end_layout
 
 \begin_layout Standard
@@ -142,7 +138,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-002 [NOT OK] Deleted Parent
+REQ-TEST-SYS-002 DELETED [OK] Deleted
 \end_layout
 
 \begin_layout Standard
@@ -153,11 +149,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard
@@ -191,7 +183,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-003 DELETED [OK] deleted and deleted parent
+REQ-TEST-SWH-003 [NOT OK] Wrong req type
 \end_layout
 
 \begin_layout Standard
@@ -202,11 +194,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard
@@ -240,7 +228,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-004 [NOT OK] Nonexistent parent
+REQ-TEST-SYS-004 [OK OBSOLETE] Wrong project number
 \end_layout
 
 \begin_layout Standard
@@ -251,11 +239,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-022.
 \end_layout
 
 \begin_layout Standard
@@ -289,23 +273,18 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-005 [NOT OK] Reference to nonexistent req
+REQ-TSET-SYS-005 [NOT OK] Wrong project name
 \end_layout
 
 \begin_layout Standard
 This is just a test.
  This text does not mean anything.
- See REQ-0-TEST-SYS-022.
 \end_layout
 
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -339,23 +318,18 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-011 [NOT OK] Reference to deleted req
+REG-TEST-SYS-006 [NOT OK] Wrong prefix
 \end_layout
 
 \begin_layout Standard
 This is just a test.
  This text does not mean anything.
- See REQ-0-TEST-SYS-002.
 \end_layout
 
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -389,7 +363,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-006 [NOT OK] No parents
+REQ-0.TEST-SYS-007 [NOT OK] Wrong ID syntax 1
 \end_layout
 
 \begin_layout Standard
@@ -400,11 +374,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents:
 \end_layout
 
 \begin_layout Standard
@@ -438,7 +408,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-007 [NOT OK] Missing attribute parents
+REQ-TESTSYS-008 [NOT OK] Wrong ID syntax 2
 \end_layout
 
 \begin_layout Standard
@@ -449,7 +419,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
+
 \end_layout
 
 \begin_layout Standard
@@ -483,7 +453,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-008 [NOT OK] Missing attribute verification
+REQ-TEST-SYS-001 [NOT OK] Duplicate
 \end_layout
 
 \begin_layout Standard
@@ -494,11 +464,11 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
+
 \end_layout
 
 \begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
+Verification: Demonstration.
 \end_layout
 
 \begin_layout Standard
@@ -528,7 +498,7 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SWH-009 [NOT OK] Missing attribute safety impact
+REQ-TEST-SYS-013 [NOT OK] Wrong sequence number
 \end_layout
 
 \begin_layout Standard
@@ -539,11 +509,7 @@ This is just a test.
 \begin_layout Standard
 Rationale: This is just a test.
  This text does not mean anything.
- 
-\end_layout
 
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
 \end_layout
 
 \begin_layout Standard
@@ -551,48 +517,7 @@ Verification: Demonstration.
 \end_layout
 
 \begin_layout Standard
-\begin_inset Note Note
-status collapsed
-
-\begin_layout Plain Layout
-/req
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Subsection
-\begin_inset Note Note
-status collapsed
-
-\begin_layout Plain Layout
-req:
-\end_layout
-
-\end_inset
-
-REQ-0-TEST-SWH-010 [NOT OK] Wrong value of attribute verification
-\end_layout
-
-\begin_layout Standard
-This is just a test.
- This text does not mean anything.
-\end_layout
-
-\begin_layout Standard
-Rationale: This is just a test.
- This text does not mean anything.
- 
-\end_layout
-
-\begin_layout Standard
-Parents: REQ-0-TEST-SYS-003.
-\end_layout
-
-\begin_layout Standard
-Verification: None.
+Safety impact: None.
 \end_layout
 
 \begin_layout Standard

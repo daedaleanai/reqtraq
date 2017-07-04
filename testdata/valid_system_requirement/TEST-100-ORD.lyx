@@ -72,11 +72,11 @@
 \begin_body
 
 \begin_layout Title
-ReqTraq Test ORD
+ReqTraq Test File
 \end_layout
 
 \begin_layout Standard
-This is a test file for ReqTraq.
+This file is used as a test input for the reqtraq tool
 \end_layout
 
 \begin_layout Section
@@ -93,26 +93,23 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SYS-001 [OK] Good
+REQ-TEST-SYS-001 Section 1
 \end_layout
 
 \begin_layout Standard
-This is just a test.
- This text does not mean anything.
+Body of requirement 1.
 \end_layout
 
 \begin_layout Standard
-Rationale: This is just a test.
- This text does not mean anything.
- 
+Rationale: Rationale 1
 \end_layout
 
 \begin_layout Standard
-Verification: Demonstration.
+Verification: Test 1
 \end_layout
 
 \begin_layout Standard
-Safety impact: None.
+Safety impact: Impact 1
 \end_layout
 
 \begin_layout Standard
@@ -138,26 +135,23 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SYS-002 DELETED [OK] Deleted
+REQ-TEST-SYS-002 Section 2
 \end_layout
 
 \begin_layout Standard
-This is just a test.
- This text does not mean anything.
+Body of requirement 2.
 \end_layout
 
 \begin_layout Standard
-Rationale: This is just a test.
- This text does not mean anything.
- 
+Rationale: Rationale 2
 \end_layout
 
 \begin_layout Standard
-Verification: Demonstration.
+Verification: Test 2
 \end_layout
 
 \begin_layout Standard
-Safety impact: None.
+Safety impact: Impact 2
 \end_layout
 
 \begin_layout Standard
@@ -183,26 +177,104 @@ req:
 
 \end_inset
 
-REQ-0-TEST-SYS-003 [OK] Good
+REQ-TEST-SYS-003 Deleted
 \end_layout
 
 \begin_layout Standard
-This is just a test.
- This text does not mean anything.
+Body of requirement 4.
 \end_layout
 
 \begin_layout Standard
-Rationale: This is just a test.
- This text does not mean anything.
- 
+Rationale: Rationale 4
 \end_layout
 
 \begin_layout Standard
-Verification: Demonstration.
+Verification: Test 4
 \end_layout
 
 \begin_layout Standard
-Safety impact: None.
+Safety impact: Impact 4
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+/req
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+req:
+\end_layout
+
+\end_inset
+
+REQ-TEST-SYS-004 Section 3
+\end_layout
+
+\begin_layout Standard
+Body of requirement 3.
+\end_layout
+
+\begin_layout Standard
+Rationale: Rationale 3
+\end_layout
+
+\begin_layout Standard
+Verification: Test 3
+\end_layout
+
+\begin_layout Standard
+Safety impact: Impact 3
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+/req
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+req:
+\end_layout
+
+\end_inset
+
+REQ-TEST-SYS-005 DERIVED
+\end_layout
+
+\begin_layout Standard
+Body of requirement 5.
+\end_layout
+
+\begin_layout Standard
+Rationale: Rationale 5
+\end_layout
+
+\begin_layout Standard
+Verification: Test 5
+\end_layout
+
+\begin_layout Standard
+Safety impact: Impact 5
 \end_layout
 
 \begin_layout Standard

@@ -4,7 +4,7 @@ This file is used as a test input for the reqtraq tool
 
 ## List Of Requirements
 
-### REQ-123-TEST-SYS-001 Section 1
+### REQ-TEST-SYS-001 Section 1
 
 Body of requirement 1.
 
@@ -13,7 +13,7 @@ Body of requirement 1.
 - Verification: Test 1
 - Safety impact: Impact 1
 
-### REQ-123-TEST-SYS-002 Section 2
+### REQ-TEST-SYS-002 Section 2
 
 Body of requirement 2.
 
@@ -22,7 +22,7 @@ Body of requirement 2.
 - Verification: Test 2
 - Safety impact: Impact 2
 
-### REQ-123-TEST-SYS-003 Deleted
+### REQ-TEST-SYS-003 Deleted
 
 Body of requirement 4.
 
@@ -31,7 +31,7 @@ Body of requirement 4.
 - Verification: Test 4
 - Safety impact: Impact 4
 
-### REQ-123-TEST-SYS-004 Section 3
+### REQ-TEST-SYS-004 Section 3
 
 Body of requirement 3.
 
@@ -41,7 +41,7 @@ Body of requirement 3.
 - Safety impact: Impact 3
 
 
-### REQ-123-TEST-SYS-005 DERIVED
+### REQ-TEST-SYS-005 DERIVED
 
 Body of requirement 5.
 
