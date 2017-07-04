@@ -42,7 +42,7 @@ Reqtraq uses the Git history to figure out the Git commits associated with a req
 ### Usage examples
 #### Getting the next available requirement ID
 ```
-$ reqtraq nextid certdocs/0-DDLN-212-SDD.md
+$ reqtraq nextid certdocs/0-DDLN-138-SDD.md
 REQ-0-DDLN-SWL-019
 ```
 

@@ -9,7 +9,7 @@ Document Approval:
 
 ### Purpose
 
-This document contains the definition of the software architecture and the <abbr title="Software Low-Level Requirement">SWL</abbr>s for the Reqtraq tool that will satisfy the <abbr title="Software High-Level Requirement">SWH</abbr>s specified in 0-DDLN-211-SRD. It follows Section 11.10 of DO-178C / ED-12C.
+This document contains the definition of the software architecture and the <abbr title="Software Low-Level Requirement">SWL</abbr>s for the Reqtraq tool that will satisfy the <abbr title="Software High-Level Requirement">SWH</abbr>s specified in 0-DDLN-137-SRD. It follows Section 11.10 of DO-178C / ED-12C.
 
 The purpose of the Reqtraq tool is to comply with the DO-178C / ED-12C traceability data requirements.
 
@@ -42,7 +42,7 @@ This document discusses the following topics:
 
 **0-DDLN-100-ORD** Overall Requirements Document for Reqtraq
 
-**0-DDLN-211-SRD** Software Requirements Document for Reqtraq
+**0-DDLN-137-SRD** Software Requirements Document for Reqtraq
 
 ### Definitions of Acronyms and Terms
 

@@ -27,7 +27,7 @@ func TestPreCommitCreateReqGraph(t *testing.T) {
 	assert.Contains(t, err.Error(), "Invalid requirement sequence number for REQ-0-TEST-SYS-001, is duplicate.")
 	assert.Contains(t, err.Error(), "Invalid requirement sequence number for REQ-0-TEST-SYS-013: missing requirements in between. Total number of requirements is 10.")
 
-	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-006 in file /testdata/TestPreCommitCreateReqGraph/0-TEST-211-SRD.lyx has no parents.")
+	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-006 in file /testdata/TestPreCommitCreateReqGraph/0-TEST-137-SRD.lyx has no parents.")
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-009: REQ-0-TEST-SYS-003 does not exist.")
 
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-004: REQ-0-TEST-SYS-022 does not exist.")
@@ -38,7 +38,7 @@ func TestPreCommitCreateReqGraph(t *testing.T) {
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-010: REQ-0-TEST-SYS-003 does not exist.")
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-011: REQ-0-TEST-SYS-003 does not exist.")
 
-	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-007 in file /testdata/TestPreCommitCreateReqGraph/0-TEST-211-SRD.lyx has no parents.")
+	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-007 in file /testdata/TestPreCommitCreateReqGraph/0-TEST-137-SRD.lyx has no parents.")
 }
 
 func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
@@ -56,7 +56,7 @@ func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
 	assert.Contains(t, err.Error(), "Invalid requirement sequence number for REQ-0-TEST-SYS-001, is duplicate.")
 	assert.Contains(t, err.Error(), "Invalid requirement sequence number for REQ-0-TEST-SYS-013: missing requirements in between. Total number of requirements is 10.")
 
-	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-006 in file /testdata/TestPreCommitCreateReqGraphMarkdown/0-TEST-211-SRD.md has no parents.")
+	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-006 in file /testdata/TestPreCommitCreateReqGraphMarkdown/0-TEST-137-SRD.md has no parents.")
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-009: REQ-0-TEST-SYS-003 does not exist.")
 
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-004: REQ-0-TEST-SYS-022 does not exist.")
@@ -67,7 +67,7 @@ func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-010: REQ-0-TEST-SYS-003 does not exist.")
 	assert.Contains(t, err.Error(), "Invalid parent of requirement REQ-0-TEST-SWH-011: REQ-0-TEST-SYS-003 does not exist.")
 
-	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-007 in file /testdata/TestPreCommitCreateReqGraphMarkdown/0-TEST-211-SRD.md has no parents.")
+	assert.Contains(t, err.Error(), "Requirement REQ-0-TEST-SWH-007 in file /testdata/TestPreCommitCreateReqGraphMarkdown/0-TEST-137-SRD.md has no parents.")
 	assert.Contains(t, err.Error(), "Requirement body must not be empty: REQ-0-TEST-SWL-004")
 }
 
