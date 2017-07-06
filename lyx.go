@@ -89,10 +89,18 @@ func ParseLyx(f string, w io.Writer) ([]string, error) {
 
 	// Cache some info related to the git repo context.
 	repo := git.RepoName()
-	pathInRepo, err := git.PathInRepo(f)
+	repoPath, err := filepath.Abs(git.RepoPath())
 	if err != nil {
-		return nil, fmt.Errorf("File %s not found in repo.", f)
+		return nil, err
 	}
+	absPath, err := filepath.Abs(f)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(absPath, repoPath) {
+		return nil, fmt.Errorf("File %s (%s) not in repo: %s", f, absPath, repoPath)
+	}
+	pathInRepo := strings.TrimPrefix(absPath, repoPath)
 	dirInRepo := filepath.Dir(pathInRepo)
 
 	for lno := 1; scan.Scan(); lno++ {
