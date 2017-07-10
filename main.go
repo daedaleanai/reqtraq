@@ -187,7 +187,6 @@ func main() {
 
 	var err error
 
-
 	// check to see if the command has a second parameter, e.g. list <filename>
 	f := ""
 	remainingArgs := flag.Args()
@@ -299,7 +298,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = ParseLyx(f, o)
+		err = ParseLyx(f, o)
 
 		if err != nil {
 			log.Fatal(err)

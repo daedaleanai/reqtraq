@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -721,26 +720,15 @@ func ParseCertdoc(fileName string) ([]string, error) {
 	if err := IsValidDocName(fileName); err != nil {
 		return nil, err
 	}
-
-	ext := path.Ext(fileName)
-	switch strings.ToLower(ext) {
-	case ".lyx":
-		return ParseLyx(fileName, ioutil.Discard)
-	case ".md":
-		return ParseMarkdown(fileName)
-	}
-	return nil, fmt.Errorf("Unrecognized extension: %s", ext)
+	return ParseMarkdown(fileName)
 }
 
 // IsValidDocName checks the f filename is a valid certdoc name.
 // @llr REQ-TRAQ-SWL-020
 func IsValidDocName(f string) error {
 	ext := path.Ext(f)
-	switch strings.ToLower(ext) {
-	case ".lyx", ".md":
-		// All good.
-	default:
-		return fmt.Errorf("Invalid extension: '%s'. Only '.lyx' and '.md' are supported", strings.ToLower(ext))
+	if strings.ToLower(ext) != ".md" {
+		return fmt.Errorf("Invalid extension: '%s'. Only '.md' is supported", strings.ToLower(ext))
 	}
 	filename := strings.TrimSuffix(path.Base(f), ext)
 	// check if the structure of the filename is correct

@@ -9,16 +9,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/git"
-)
-
-var (
-	reStart = regexp.MustCompile(`(?i)^\s*req:\s*$`) // 'req:' standalone on a line
-	reEnd   = regexp.MustCompile(`(?i)^\s*/req\s*$`) // '/req' standalone on a line
 )
 
 // lyxState is the information needed to keep around on a stack to parse the
@@ -69,21 +63,11 @@ func (s lyxStack) inNoteLayout() bool {
 // containing the text in layout blocks, skipping (hopefully) the inset data.
 // or an error describing a problem parsing the lines.
 // It linkifies the lyx file and writes it to the provided writer.
-func ParseLyx(f string, w io.Writer) ([]string, error) {
-	var (
-		reqs []string
-
-		state         lyxStack
-		preamblestart bool
-		inreq         bool
-		reqid         string
-		aftertitle    bool
-		reqstart      int
-		reqbuf        bytes.Buffer
-	)
+func ParseLyx(f string, w io.Writer) error {
+	var state lyxStack
 	r, err := os.Open(f)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	scan := bufio.NewScanner(r)
 
@@ -91,21 +75,23 @@ func ParseLyx(f string, w io.Writer) ([]string, error) {
 	repo := git.RepoName()
 	repoPath, err := filepath.Abs(git.RepoPath())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	absPath, err := filepath.Abs(f)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !strings.HasPrefix(absPath, repoPath) {
-		return nil, fmt.Errorf("File %s (%s) not in repo: %s", f, absPath, repoPath)
+		return fmt.Errorf("File %s (%s) not in repo: %s", f, absPath, repoPath)
 	}
 	pathInRepo := strings.TrimPrefix(absPath, repoPath)
 	dirInRepo := filepath.Dir(pathInRepo)
 
+	previousLine := ""
 	for lno := 1; scan.Scan(); lno++ {
 		outline := scan.Text()
 		line := outline
+		// An empty line means that a Lyx paragraph has ended.
 		istext := line != "" && !strings.HasPrefix(line, `\`) && !strings.HasPrefix(line, `#`)
 		fields := strings.Fields(line)
 		arg := ""
@@ -113,126 +99,56 @@ func ParseLyx(f string, w io.Writer) ([]string, error) {
 			arg = fields[1]
 		}
 		switch {
-		case strings.HasPrefix(line, `\textclass`):
-			// Next is the preamble.
-			preamblestart = true
-
-		case preamblestart:
-			preamblestart = false
-			if strings.HasPrefix(line, `\begin_preamble`) {
-				// The preable already exists.
-				state.push(lno, line, "")
-			} else {
-				// There is no preamble, we add it ourselves.
-				// ..if we want to.
-			}
-
 		case line == `\use_hyperref false`:
 			// Required so the anchors end up in the PDF when converting.
 			outline = `\use_hyperref true`
 
-		case state.top().element == "preamble" && strings.HasPrefix(line, `\end_preamble`):
-			if err = state.pop(lno, line); err != nil {
-				return nil, err
-			}
-
 		case strings.HasPrefix(line, `\begin_layout`):
 			state.push(lno, line, arg)
-			if aftertitle {
-				aftertitle = false
-				outline = fmt.Sprintf(`%s
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-hypertarget{%s}
-\end_layout
-
-\end_inset
-`, outline, reqid)
-			}
 
 		case strings.HasPrefix(line, `\begin_inset`):
 			state.push(lno, line, arg)
 
 		case strings.HasPrefix(line, `\end_layout`):
 			if err = state.pop(lno, line); err != nil {
-				return nil, err
+				return err
 			}
 
 		case strings.HasPrefix(line, `\end_inset`):
 			if err = state.pop(lno, line); err != nil {
-				return nil, err
+				return err
 			}
 
-		case istext && state.inNoteLayout() && reStart.Match(scan.Bytes()):
-			if inreq {
-				return nil, fmt.Errorf("malformed requirement tag: 'req:' on line %d comes after previous unclosed one at line %d\n", lno, reqstart)
+		case istext && state.top().element != "inset":
+			count := len(ReReqID.FindAllString(previousLine, -1))
+			countCurrent := len(ReReqID.FindAllString(line, -1))
+			indexes := ReReqID.FindAllStringIndex(previousLine+line, -1)
+			if count+countCurrent < len(indexes) {
+				// There is a requirement ID which is split on two lines.
+				// We move the entire requirement to the second line.
+				line = previousLine[indexes[count][0]:] + line
+				previousLine = previousLine[:indexes[count][0]]
 			}
-			reqstart = lno
-			inreq = true
-			aftertitle = true
-
-		case istext && inreq && state.inNoteLayout() && reEnd.Match(scan.Bytes()):
-			if !inreq {
-				return nil, fmt.Errorf("malformed requirement tag: '/req' on line %d has no corresponding opening req:\n", lno)
+			if outline, err = linkify(line, repo, dirInRepo); err != nil {
+				return fmt.Errorf("malformed requirement: cannot linkify ID on line %d: %q because: %s", lno, line, err)
 			}
-			inreq = false
-			reqs = append(reqs, reqbuf.String())
-			reqbuf.Reset()
-
-		case (istext || line == "") && inreq && state.top().element != "inset": // text layout content in a req bracketed block
-			// an empty line means that a Lyx zparagraph has ended. simply append a \n to the previously parsed line and go to the next line
-			if line == "" {
-				reqbuf.WriteByte('\n')
-				continue
-			}
-			isFirstLine := reqbuf.Len() == 0
-			if isFirstLine {
-				reqIDs := ReReqID.FindAllString(outline, -1)
-				switch len(reqIDs) {
-				case 0:
-					return nil, fmt.Errorf("malformed requirement title: missing ID on line %d: %q", lno, outline)
-				case 1:
-					reqid = reqIDs[0]
-				default:
-					return nil, fmt.Errorf("malformed requirement title: too many IDs on line %d: %q", lno, outline)
-				}
-			} else {
-				count := len(ReReqID.FindAllString(reqbuf.String(), -1))
-				countCurrent := len(ReReqID.FindAllString(line, -1))
-				r := reqbuf.String() + line
-				indexes := ReReqID.FindAllStringIndex(r, -1)
-				if count+countCurrent < len(indexes) {
-					// There is a requirement ID which is split on two lines.
-					// We move the entire requirement to the second line.
-					reqbuf.Truncate(indexes[count][0])
-					line = r[indexes[count][0]:] + line
-				}
-				if outline, err = linkify(outline, repo, dirInRepo); err != nil {
-					return nil, fmt.Errorf("malformed requirement: cannot linkify ID on line %d: %q because: %s", lno, outline, err)
-				}
-			}
-
-			reqbuf.WriteString(line)
-
 		}
-		if _, err := w.Write([]byte(outline)); err != nil {
-			return nil, err
+		if lno > 1 {
+			if _, err := w.Write([]byte(previousLine + "\n")); err != nil {
+				return err
+			}
 		}
-		if _, err := w.Write([]byte("\n")); err != nil {
-			return nil, err
-		}
+		previousLine = outline
+	}
+	if _, err := w.Write([]byte(previousLine + "\n")); err != nil {
+		return err
 	}
 
 	if err := scan.Err(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return reqs, nil
+	return nil
 }
 
 func linkify(s, repo, dirInRepo string) (string, error) {

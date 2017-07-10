@@ -183,11 +183,7 @@ func TestReq_MatchesDiffs(t *testing.T) {
 
 // @tests @llr REQ-TRAQ-SWL-015
 func TestParsing(t *testing.T) {
-	CheckParsing(t, "testdata/valid_system_requirement/TEST-100-ORD.lyx")
-	CheckParsing(t, "testdata/valid_system_requirement/TEST-100-ORD.md")
-}
-
-func CheckParsing(t *testing.T, f string) {
+	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
 	rg := reqGraph{}
 	errors := parseCertdocToGraph(f, rg)
 	assert.Empty(t, errors, "Unexpected errors while parsing "+f)
