@@ -1,5 +1,5 @@
-// @llr REQ-TRAQ-SWL-014
-// @llr REQ-TRAQ-SWL-002
+// @llr REQ-TRAQ-SWL-14
+// @llr REQ-TRAQ-SWL-2
 package main
 
 import (
@@ -156,11 +156,11 @@ func linkify(s, repo, dirInRepo string) (string, error) {
 	var res bytes.Buffer
 	parsedTo := 0
 	for _, ids := range parmatch {
-		// For example: ["REQ-TRAQ-SYS-006" "TRAQ" "SYS" "006"]
+		// For example: ["REQ-TRAQ-SYS-6" "TRAQ" "SYS" "006"]
 		res.WriteString(s[parsedTo:ids[0]])
 		reqID := s[ids[0]:ids[1]]
 		parsedTo = ids[1]
-		// As per REQ-TRAQ-SWH-002:
+		// As per REQ-TRAQ-SWH-2:
 		// REQ-[project/system number]-[project/system abbreviation]-[SSS or SWH or SWL or HWH or HWL]-[a unique alphanumeric sequence],
 		project := s[ids[2]:ids[3]]
 		reqType := s[ids[4]:ids[5]]

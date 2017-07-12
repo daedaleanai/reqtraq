@@ -4,67 +4,67 @@ This is a test file for Reqtraq.
 
 ## List Of Requirements
 
-### REQ-TEST-SWH-001 [OK] Good
+### REQ-TEST-SWH-1 [OK] Good
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-001.
+- Parents: REQ-TEST-SYS-1.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-002 [NOT OK] Deleted Parent
+### REQ-TEST-SWH-2 [NOT OK] Deleted Parent
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-002.
+- Parents: REQ-TEST-SYS-2.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-003 DELETED [OK] deleted and deleted parent
+### REQ-TEST-SWH-3 DELETED [OK] deleted and deleted parent
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-002.
+- Parents: REQ-TEST-SYS-2.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-004 [NOT OK] Nonexistent parent
+### REQ-TEST-SWH-4 [NOT OK] Nonexistent parent
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-022.
+- Parents: REQ-TEST-SYS-22.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-005 [NOT OK] Reference to nonexistent req
+### REQ-TEST-SWH-5 [NOT OK] Reference to nonexistent req
 
-This is just a test. This text does not mean anything. See REQ-TEST-SYS-022.
+This is just a test. This text does not mean anything. See REQ-TEST-SYS-22.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-003.
+- Parents: REQ-TEST-SYS-3.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-011 [NOT OK] Reference to deleted req
+### REQ-TEST-SWH-11 [NOT OK] Reference to deleted req
 
-This is just a test. This text does not mean anything. See REQ-TEST-SYS-002.
+This is just a test. This text does not mean anything. See REQ-TEST-SYS-2.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-003.
+- Parents: REQ-TEST-SYS-3.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-006 [NOT OK] No parents
+### REQ-TEST-SWH-6 [NOT OK] No parents
 
 This is just a test. This text does not mean anything.
 
@@ -74,7 +74,7 @@ This is just a test. This text does not mean anything.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-007 [NOT OK] Missing attribute parents
+### REQ-TEST-SWH-7 [NOT OK] Missing attribute parents
 
 This is just a test. This text does not mean anything.
 
@@ -83,29 +83,29 @@ This is just a test. This text does not mean anything.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWH-008 [NOT OK] Missing attribute verification
+### REQ-TEST-SWH-8 [NOT OK] Missing attribute verification
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-003.
+- Parents: REQ-TEST-SYS-3.
 - Safety impact: None.
 
-### REQ-TEST-SWH-009 [NOT OK] Missing attribute safety impact
+### REQ-TEST-SWH-9 [NOT OK] Missing attribute safety impact
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-003.
+- Parents: REQ-TEST-SYS-3.
 - Verification: Demonstration.
 
-### REQ-TEST-SWH-010 [NOT OK] Wrong value of attribute verification
+### REQ-TEST-SWH-10 [NOT OK] Wrong value of attribute verification
 
 This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-003.
+- Parents: REQ-TEST-SYS-3.
 - Verification: None.

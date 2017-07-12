@@ -323,12 +323,12 @@ func (rg reqGraph) ReportIssues(w io.Writer) error {
 	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{rg, nil, Oncer{}, nil})
 }
 
-// @llr REQ-TRAQ-SWL-006
+// @llr REQ-TRAQ-SWL-6
 func (rg reqGraph) ReportDownFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
 	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs})
 }
 
-// @llr REQ-TRAQ-SWL-007
+// @llr REQ-TRAQ-SWL-7
 func (rg reqGraph) ReportUpFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
 	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs})
 }
