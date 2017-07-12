@@ -8,20 +8,20 @@ import (
 	"unicode"
 )
 
-// ChangedSince produces a report of how requirments have changed between prg and this reqGraph
+// ChangedSince produces a report of how requirements have changed between prg and this reqGraph
 func (rg reqGraph) ChangedSince(prg reqGraph) (diffs map[string][]string) {
 	if prg == nil {
 		return
 	}
 	keys := map[string]bool{}
-	for k, _ := range rg {
+	for k := range rg {
 		keys[k] = true
 	}
-	for k, _ := range prg {
+	for k := range prg {
 		keys[k] = true
 	}
 	var kk []string
-	for k, _ := range keys {
+	for k := range keys {
 		kk = append(kk, k)
 	}
 	sort.Strings(kk)
@@ -98,10 +98,10 @@ func (r *Req) ChangedSince(pr *Req) (diffs []string) {
 	}
 
 	var keys []string
-	for k, _ := range pr.Attributes {
+	for k := range pr.Attributes {
 		keys = append(keys, k)
 	}
-	for k, _ := range r.Attributes {
+	for k := range r.Attributes {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

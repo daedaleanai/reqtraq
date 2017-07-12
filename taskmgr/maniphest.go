@@ -96,7 +96,7 @@ func (tmgr *PhabricatorTaskManager) CreateProject(name, parentPHID string) (stri
 		return "", err
 	}
 	transactions := []requests.Transaction{
-		requests.Transaction{TransactionType: "name", Value: name},
+		{TransactionType: "name", Value: name},
 	}
 	if parentPHID != "" {
 		transactions = append(transactions, requests.Transaction{TransactionType: "parent", Value: parentPHID})
@@ -210,9 +210,9 @@ func (tmgr *PhabricatorTaskManager) UpdateTask(taskID, title, taskBody, projectP
 		return err
 	}
 	transactions := []requests.Transaction{
-		requests.Transaction{TransactionType: "title", Value: title},
-		requests.Transaction{TransactionType: "description", Value: taskBody},
-		requests.Transaction{TransactionType: "projects.add", Value: []string{projectPHID}},
+		{TransactionType: "title", Value: title},
+		{TransactionType: "description", Value: taskBody},
+		{TransactionType: "projects.add", Value: []string{projectPHID}},
 	}
 	if len(parentTaskIDs) > 0 {
 		transactions = append(transactions, requests.Transaction{TransactionType: "parent", Value: parentTaskIDs[0]})
@@ -231,9 +231,9 @@ func (tmgr *PhabricatorTaskManager) DeleteTask(taskID, title, projectPHID string
 		return err
 	}
 	transactions := []requests.Transaction{
-		requests.Transaction{TransactionType: "title", Value: title},
-		requests.Transaction{TransactionType: "projects.add", Value: []string{projectPHID}},
-		requests.Transaction{TransactionType: "status", Value: "invalid"},
+		{TransactionType: "title", Value: title},
+		{TransactionType: "projects.add", Value: []string{projectPHID}},
+		{TransactionType: "status", Value: "invalid"},
 	}
 	_, err = client.ManiphestEditTask(requests.EditEndpointRequest{
 		ObjectIdentifier: taskID,
@@ -249,10 +249,10 @@ func (tmgr *PhabricatorTaskManager) CreateTask(title, taskBody, projectPHID stri
 		return "", err
 	}
 	transactions := []requests.Transaction{
-		requests.Transaction{TransactionType: "title", Value: title},
-		requests.Transaction{TransactionType: "description", Value: taskBody},
-		requests.Transaction{TransactionType: "status", Value: "open"},
-		requests.Transaction{TransactionType: "projects.set", Value: []string{projectPHID}},
+		{TransactionType: "title", Value: title},
+		{TransactionType: "description", Value: taskBody},
+		{TransactionType: "status", Value: "open"},
+		{TransactionType: "projects.set", Value: []string{projectPHID}},
 	}
 	if len(parentTaskIDs) > 0 {
 		transactions = append(transactions, requests.Transaction{TransactionType: "parent", Value: parentTaskIDs[0]})
@@ -268,8 +268,8 @@ func (tmgr *PhabricatorTaskManager) CreateTask(title, taskBody, projectPHID stri
 
 func maniphestTaskToTask(task *entities.ManiphestTask) *Task {
 	return &Task{
-		ID: task.PHID,
-		DisplayID:               task.ID,
+		ID:               task.PHID,
+		DisplayID:        task.ID,
 		Title:            task.Title,
 		DependsOnTaskIDs: task.DependsOnTaskPHIDs,
 		Description:      task.Description,
