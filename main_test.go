@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -13,7 +14,7 @@ func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
 	assert.NotNil(t, err, "Expected some errors but got 0.")
 
 	nLines := strings.Count(err.Error(), "\n")
-	assert.Equal(t, 22, nLines, "Number of errors is not correct.")
+	assert.Equal(t, 21, nLines, fmt.Sprintf("Number of errors is not correct:\n%sEND", err))
 
 	assert.Contains(t, err.Error(), "Problems found while parsing")
 	assert.Contains(t, err.Error(), "Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.")

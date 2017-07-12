@@ -432,9 +432,11 @@ Reqtraq SHALL discover requirements definitions in certification documents `.md`
 
 ##### REQ-TRAQ-SWL-13 Requirement attributes
 
-The RMT SHALL be able to store a number of predefined attributes and enforce/flag mandatory/optional rules for them.
+The RMT SHALL read the attributes of each requirement from the attributes section at the end of the requirement definition. The attributes section starts with a level 6 [ATX heading](https://github.github.com/gfm/#atx-headings). The requirement attributes are formatted one per line.
 
-The attributes of each requirement MUST appear at the end of the requirement definition, one per line.
+    ###### Attributes:
+    - NAME1: VALUE1
+    - NAME2: VALUE2
 
 Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in an `attributes.json` file in the `certdocs` directory. For example, the `attributes.json` for the current document would be:
 

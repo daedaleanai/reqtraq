@@ -16,11 +16,12 @@ import (
 var (
 	// REQ, project number, project abbreviation, req type, req number
 	// For example: REQ-TRAQ-SWH-4
-	reReqIdStr   = `REQ-(\w+)-(SYS|SWH|SWL|HWH|HWL)-(\d+)`
-	ReReqID      = regexp.MustCompile(reReqIdStr)
-	reReqIDBad   = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
-	ReReqDeleted = regexp.MustCompile(reReqIdStr + ` DELETED`)
-	reReqKWD     = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
+	reReqIdStr                 = `REQ-(\w+)-(SYS|SWH|SWL|HWH|HWL)-(\d+)`
+	ReReqID                    = regexp.MustCompile(reReqIdStr)
+	reReqIDBad                 = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
+	ReReqDeleted               = regexp.MustCompile(reReqIdStr + ` DELETED`)
+	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n###### Attributes:$`)
+	reReqKWD                   = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
 )
 
 // formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
@@ -88,31 +89,47 @@ func ParseReq(txt string) (*Req, error) {
 	}
 
 	// chop defining ID and any punctuation
-	txt = strings.TrimLeftFunc(txt[defid[1]:], unicode.IsPunct)
-	txt = strings.TrimLeftFunc(txt, unicode.IsSpace)
+	txt = strings.TrimLeftFunc(txt[defid[1]:], IsPunctOrSpace)
 
-	kwdMatches := reReqKWD.FindAllStringSubmatchIndex(txt, -1)
-	if len(kwdMatches) == 0 {
-		return nil, fmt.Errorf("requirement %s contains no attributes", r.ID)
+	// The first line is the title.
+	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
+	if len(parts) < 2 {
+		// It means there is a single line.
+		return nil, fmt.Errorf("Requirement must not be empty: %s", r.ID)
 	}
-	attributesStart := strings.Index(txt, "\n###### Attributes:\n")
-	for i, v := range kwdMatches {
-		key := strings.ToUpper(txt[v[4]:v[5]])
-		if key == "PARENT" { // make our lives easier, accept both, output only PARENTS
-			key = "PARENTS"
+	r.Title = parts[0]
+
+	// Next is the body, until the attributes section.
+	bodyAndAttributes := parts[1]
+	var attributesStart = len(bodyAndAttributes)
+	ii := reAttributesSectionHeading.FindStringIndex(bodyAndAttributes)
+	if ii != nil {
+		attributesStart = ii[0]
+		attributes := bodyAndAttributes[attributesStart:]
+		kwdMatches := reReqKWD.FindAllStringSubmatchIndex(attributes, -1)
+		if len(kwdMatches) == 0 {
+			return nil, fmt.Errorf("Requirement %s contains an attribute section but no attributes", r.ID)
 		}
-		e := len(txt)
-		if i < len(kwdMatches)-1 {
-			e = kwdMatches[i+1][0]
+		for i, v := range kwdMatches {
+			key := strings.ToUpper(attributes[v[4]:v[5]])
+			if key == "PARENT" { // make our lives easier, accept both, output only PARENTS
+				key = "PARENTS"
+			}
+			e := len(attributes)
+			if i < len(kwdMatches)-1 {
+				e = kwdMatches[i+1][0]
+			}
+			if _, ok := r.Attributes[key]; ok {
+				return nil, fmt.Errorf("requirement %s contains duplicate attribute: %q", r.ID, key)
+			}
+			r.Attributes[key] = strings.TrimSpace(attributes[v[1]:e])
 		}
-		if _, ok := r.Attributes[key]; ok {
-			return nil, fmt.Errorf("requirement %s contains duplicate attribute: %q", r.ID, key)
-		}
-		r.Attributes[key] = strings.TrimSpace(txt[v[1]:e])
 	}
 
-	// TEXT is anything up to the first keyword we found
-	txt = txt[:attributesStart]
+	r.Body = formatBodyAsHTML(bodyAndAttributes[:attributesStart])
+	if strings.TrimSpace(string(r.Body)) == "" {
+		return nil, fmt.Errorf("Requirement body must not be empty: %s", r.ID)
+	}
 
 	// PARENTS must be punctuation/space separated list of parseable req-ids.
 	parents := r.Attributes["PARENTS"]
@@ -122,7 +139,7 @@ func ParseReq(txt string) (*Req, error) {
 		r.ParentIds = append(r.ParentIds, val)
 		if i > 0 {
 			sep := parents[parmatch[i-1][1]:ids[0]]
-			if strings.TrimFunc(sep, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) }) != "" {
+			if strings.TrimFunc(sep, IsPunctOrSpace) != "" {
 				return nil, fmt.Errorf("requirement %s parents: unparseable as list of requirement ids: %q in %q", r.ID, sep, parents)
 			}
 		}
@@ -134,12 +151,9 @@ func ParseReq(txt string) (*Req, error) {
 	}
 	r.Level = level
 
-	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("Requirement body must not be empty: %s\n", r.ID)
-	}
-	r.Title = parts[0]
-	r.Body = formatBodyAsHTML(parts[1])
-
 	return r, nil
+}
+
+func IsPunctOrSpace(r rune) bool {
+	return unicode.IsSpace(r) || unicode.IsPunct(r)
 }
