@@ -189,6 +189,6 @@ target "%s"
 
 `, reqID, url))
 	}
-	res.WriteString(s[parsedTo:len(s)])
+	res.WriteString(s[parsedTo:])
 	return res.String(), nil
 }

@@ -1,12 +1,12 @@
 package taskmgr
 
 import (
-	"github.com/danieldanciu/gonduit/entities"
-	"github.com/danieldanciu/gonduit/requests"
 	"errors"
 	"fmt"
 	"github.com/danieldanciu/gonduit"
 	"github.com/danieldanciu/gonduit/core"
+	"github.com/danieldanciu/gonduit/entities"
+	"github.com/danieldanciu/gonduit/requests"
 
 	"github.com/daedaleanai/reqtraq/linepipes"
 )
