@@ -65,7 +65,7 @@ The SWH requirements of the system are as follows:
 
 ##### REQ-TRAQ-SWH-001 Requirements Storage
 
-The RMT SHALL persistently store and retrieve requirements and their change history in the controlled document repository in the form of `.lyx` or `.md` files.
+The RMT SHALL persistently store and retrieve requirements and their change history in the controlled document repository in the form of `.md` files.
 
 ###### Attributes:
 - Rationale: requirements must be change-controlled. We do this in Git repositories. The RMT must use this and only this to store the requirements. Work done in Git repositories is tracked in a separate PR/ticket system, but all data that needs to be controlled shall be stored with the commits in Git.

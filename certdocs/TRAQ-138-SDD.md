@@ -71,18 +71,14 @@ Any report is generated from a `reqGraph` object which is a dictionary of requir
 The SWLs of the system are as follows:
 
 
-##### REQ-TRAQ-SWL-001 Requirements Storage
+##### REQ-TRAQ-SWL-001 Requirements storage
 
-Requirements SHALL be stored in Lyx or Markdown files and version controlled by Git. Reqtraq is not responsible for the actual formatting or version control of each document. Instead Reqtraq leverages Git for storage and version control and Lyx/Latex or Markdown for formatting.
+Requirements SHALL be stored in Markdown files version controlled by Git. Reqtraq is not responsible for the actual formatting or version control of each document. Instead Reqtraq leverages Git for storage and version control and Markdown for formatting.
 
-Reqtraq will discover all the `.lyx` and `.md` files in the `certdocs` directory and will parse them as certification documents to look for requirements:
-- Each requirement in a `.lyx` file is delimited by a Lyx `req:` note.
-- Each requirement in an `.md` file:
-  - starts with a heading which has at the beginning a requirement id and
-  - ends when another requirement starts, or when a higher-level heading starts.
+Reqtraq will discover all the `.md` files in the `certdocs` directory and will parse them as certification documents to look for requirements.
 
 ###### Attributes:
-- Rationale: Git is the industry standard for version control. Lyx is the industry standard for formatting. Markdown is widespread and very easy to use.
+- Rationale: Git is the industry standard for version control. Markdown is widespread and the lightweight format is well suited for version controlled documents that need to be peer reviewed.
 - Parents: REQ-TRAQ-SWH-001
 - Verification: Unit test
 - Safety impact: None
@@ -208,7 +204,9 @@ Deleted requirements SHALL not be checked for completeness and all the tasks ass
 
 ##### REQ-TRAQ-SWL-015 Data structure for keeping requirements and their hierarchy
 
-The interface between the parsing tool and the report generation tool SHALL be a data structure that maps requirement IDs to a requirement structure. The requirement structure will hold all the data about the requirement that is needed for the report generation (ID, body, attributes, parents, children, etc.). The data structure is built by traversing the entire git repository and parsing all files that may contain or reference requirements, such as `.lyx`/`.md` requirement files and `.cc`/`.hh` source files).
+The interface between the parsing tool and the report generation tool SHALL be a data structure that maps requirement IDs to a requirement structure. The requirement structure will hold all the data about the requirement that is needed for the report generation (ID, body, attributes, parents, children, etc.). The data structure is built by traversing the entire git repository and parsing:
+- `.md` certification documents files that may define requirements,
+- `.cc`, `.hh`, `.go` source files that may reference requirements.
 
 ###### Attributes:
 - Rationale: this data structure will be used for report generation and graph verification.
@@ -419,13 +417,26 @@ The command must be executed in the repository for which the reports will be gen
 - Safety impact: None
 
 
+##### REQ-TRAQ-SWL-021 Requirement definition detection
+
+Reqtraq SHALL discover requirements definitions in certification documents `.md` files by detecting the beginning and end:
+  - a requirement starts with an [ATX heading](https://github.github.com/gfm/#atx-headings) which has at the beginning a requirement ID
+  - a requirement ends when another requirement starts, or when a higher-level heading starts.
+
+###### Attributes:
+- Rationale: Using existing markdown elements is preferable to introducing new syntax
+- Parents: REQ-TRAQ-SWH-001
+- Verification: Unit test
+- Safety impact: None
+
+
 ##### REQ-TRAQ-SWL-013 Requirement attributes
 
 The RMT SHALL be able to store a number of predefined attributes and enforce/flag mandatory/optional rules for them.
 
 The attributes of each requirement MUST appear at the end of the requirement definition, one per line.
 
-Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in an `attributes.json` file in the `certdocs` directory. For example, the attributes.json for the current document would be:
+Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in an `attributes.json` file in the `certdocs` directory. For example, the `attributes.json` for the current document would be:
 
 ```
 { "attributes": [

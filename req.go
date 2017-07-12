@@ -210,8 +210,8 @@ func changelistUrlsForFilepath(filepath string) []string {
 	return urls
 }
 
-// @llr REQ-TRAQ-SWL-015
 // A ReqGraph maps IDs and Paths to Req structures.
+// @llr REQ-TRAQ-SWL-015
 type reqGraph map[string]*Req
 
 func CreateReqGraph(certdocsPath, codePath string) (reqGraph, error) {
@@ -459,7 +459,7 @@ func (rg reqGraph) UpdateTasks(filterIDs map[string]bool) error {
 	if err != nil {
 		return err
 	}
-	parentOfAllPHID := ""
+	var parentOfAllPHID string
 	if parentOfAll == nil {
 		log.Printf("Creating parent of all requirements: '%s'", parentTaskTitle)
 
@@ -633,9 +633,9 @@ const (
 
 type ReqFilter map[FilterType]*regexp.Regexp
 
-// @llr REQ-TRAQ-SWL-012
 // Matches returns true if the requirement matches the filter AND its ID is
 // in the diffs map, if any.
+// @llr REQ-TRAQ-SWL-012
 func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
 	for t, e := range filter {
 		switch t {

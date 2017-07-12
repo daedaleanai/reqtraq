@@ -1,4 +1,3 @@
-// @llr REQ-TRAQ-SWL-001
 package main
 
 import (
@@ -24,8 +23,8 @@ var (
 	reReqKWD     = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
 )
 
+// formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
 // @llr REQ-TRAQ-SWL-019
-// Given a string containing markdown, convert it to HTML using pandoc
 func formatBodyAsHTML(txt string) template.HTML {
 	cmd := exec.Command("pandoc", "--mathjax")
 	stdin, err := cmd.StdinPipe()
@@ -64,8 +63,9 @@ func formatBodyAsHTML(txt string) template.HTML {
 //
 // Since the parsing is rather 'soft', ParseReq returns verbose errors indicating problems in
 // a helpful way, meaning they at least provide enough context for the user to find the text.
+//
+// @llr REQ-TRAQ-SWL-013
 func ParseReq(txt string) (*Req, error) {
-	lyx := strings.HasPrefix(txt, "\n")
 	head := txt
 	if len(head) > 40 {
 		head = head[:40]
@@ -78,14 +78,8 @@ func ParseReq(txt string) (*Req, error) {
 		return nil, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
 	}
 
-	if lyx {
-		if defid[0] > 20 {
-			return nil, fmt.Errorf("malformed requirement: too much heading garbage before ID: %q", head)
-		}
-	} else {
-		if defid[0] > 0 {
-			return nil, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
-		}
+	if defid[0] > 0 {
+		return nil, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
 	}
 
 	r := &Req{
@@ -97,16 +91,11 @@ func ParseReq(txt string) (*Req, error) {
 	txt = strings.TrimLeftFunc(txt[defid[1]:], unicode.IsPunct)
 	txt = strings.TrimLeftFunc(txt, unicode.IsSpace)
 
-	var attributesStart int
 	kwdMatches := reReqKWD.FindAllStringSubmatchIndex(txt, -1)
 	if len(kwdMatches) == 0 {
 		return nil, fmt.Errorf("requirement %s contains no attributes", r.ID)
 	}
-	if lyx {
-		attributesStart = kwdMatches[0][0]
-	} else {
-		attributesStart = strings.Index(txt, "\n###### Attributes:\n")
-	}
+	attributesStart := strings.Index(txt, "\n###### Attributes:\n")
 	for i, v := range kwdMatches {
 		key := strings.ToUpper(txt[v[4]:v[5]])
 		if key == "PARENT" { // make our lives easier, accept both, output only PARENTS
