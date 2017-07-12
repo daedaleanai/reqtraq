@@ -42,3 +42,13 @@ This is just a test. This text does not mean anything.
 - Parents: REQ-TEST-SYS-1.
 - Verification: Demonstration.
 - Safety impact: None.
+
+### REQ-TEST-SWL-05 [NOT OK] Cannot start with leading zero
+
+This is just a test. This text does not mean anything.
+
+###### Attributes:
+- Rationale: This is just a test. This text does not mean anything.
+- Parents: REQ-TEST-SYS-1.
+- Verification: Demonstration.
+- Safety impact: None.

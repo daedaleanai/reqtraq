@@ -13,7 +13,7 @@ func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
 	assert.NotNil(t, err, "Expected some errors but got 0.")
 
 	nLines := strings.Count(err.Error(), "\n")
-	assert.Equal(t, 21, nLines, "Number of errors is not correct.")
+	assert.Equal(t, 22, nLines, "Number of errors is not correct.")
 
 	assert.Contains(t, err.Error(), "Problems found while parsing")
 	assert.Contains(t, err.Error(), "Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.")
@@ -35,6 +35,7 @@ func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
 
 	assert.Contains(t, err.Error(), "Requirement REQ-TEST-SWH-7 in file /testdata/TestPreCommitCreateReqGraphMarkdown/TEST-137-SRD.md has no parents.")
 	assert.Contains(t, err.Error(), "Requirement body must not be empty: REQ-TEST-SWL-4")
+	assert.Contains(t, err.Error(), "Requirement number cannot begin with a 0: REQ-TEST-SWL-05. Got 05.")
 }
 
 func TestPreCommitCheckReqReferencesMarkdown(t *testing.T) {
