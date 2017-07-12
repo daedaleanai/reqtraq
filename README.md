@@ -31,7 +31,7 @@ Reqtraq has 3 main components:
 
 ### Installation
 ```
-$ go get github.com/daedaleanai/reqtraq
+$ go install github.com/daedaleanai/reqtraq
 $ export PATH=$PATH:$GOPATH/bin
 ```
 
