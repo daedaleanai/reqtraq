@@ -697,7 +697,7 @@ func NextId(f string) (string, error) {
 			}
 		}
 		ii := ReReqID.FindStringSubmatchIndex(lastReq.ID)
-		nextReqID = fmt.Sprintf("%s%03d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
+		nextReqID = fmt.Sprintf("%s%d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
 	} else {
 		// infer next (=first) req ID from file name
 		fNameWithExt := path.Base(f)

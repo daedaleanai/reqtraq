@@ -156,7 +156,7 @@ The RMT SHALL check that the requirements defined in each document have a correc
     - `HWH` for hardware high-level requirements (defined in HRD documents)
     - `HWL` for hardware low-level requirements (defined in HDD documents)
 
-4. a three digit sequence number n such that requirements 0, 1, ..., n-1 all exist, not necessarily in order
+4. a sequence number n such that requirements 1, 2, ..., n all exist, not necessarily in order
 
 ###### Attributes:
 - Rationale: correct IDs are essential for tracing requirements.
