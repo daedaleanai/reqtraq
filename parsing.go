@@ -21,7 +21,7 @@ var (
 	reReqIDBad                 = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
 	ReReqDeleted               = regexp.MustCompile(reReqIdStr + ` DELETED`)
 	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n###### Attributes:$`)
-	reReqKWD                   = regexp.MustCompile(`(?i)(- )?(rationale|parent|parents|safety impact|verification|urgent|important|mode|provenance):`)
+	reReqKWD                   = regexp.MustCompile(`(?i)- ([^:]+): `)
 )
 
 // formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
@@ -111,7 +111,7 @@ func ParseReq(txt string) (*Req, error) {
 			return nil, fmt.Errorf("Requirement %s contains an attribute section but no attributes", r.ID)
 		}
 		for i, v := range kwdMatches {
-			key := strings.ToUpper(attributes[v[4]:v[5]])
+			key := strings.ToUpper(attributes[v[2]:v[3]])
 			if key == "PARENT" { // make our lives easier, accept both, output only PARENTS
 				key = "PARENTS"
 			}
