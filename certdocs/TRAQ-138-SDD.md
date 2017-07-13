@@ -432,7 +432,9 @@ Reqtraq SHALL discover requirements definitions in certification documents `.md`
 
 ##### REQ-TRAQ-SWL-13 Requirement attributes
 
-The RMT SHALL read the attributes of each requirement from the attributes section at the end of the requirement definition. The attributes section starts with a level 6 [ATX heading](https://github.github.com/gfm/#atx-headings). The requirement attributes are formatted one per line.
+The RMT SHALL read the attributes of each requirement from the attributes section at the end of the requirement definition. The attributes section starts with an [ATX heading](https://github.github.com/gfm/#atx-headings) with the title "Attributes:". Since attributes belong to a requirement, the attribute ATX heading level will be higher than the containing requirement heading level. For example, a requirement defined with an ATX heading level of 3 will have attributes with ATX heading level 4 or higher.
+
+The requirement attributes are formatted one per line:
 
     ###### Attributes:
     - NAME1: VALUE1

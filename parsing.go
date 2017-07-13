@@ -20,7 +20,7 @@ var (
 	ReReqID                    = regexp.MustCompile(reReqIdStr)
 	reReqIDBad                 = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
 	ReReqDeleted               = regexp.MustCompile(reReqIdStr + ` DELETED`)
-	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n###### Attributes:$`)
+	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n#{2,6} Attributes:$`)
 	reReqKWD                   = regexp.MustCompile(`(?i)- ([^:]+): `)
 )
 

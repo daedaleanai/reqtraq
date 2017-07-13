@@ -26,6 +26,16 @@ body
 	assert.Equal(t, []string{"REQ-TEST-SYS-1"}, r.ParentIds)
 }
 
+func TestParseReq_FlexibleAttributesHeading(t *testing.T) {
+	r, err := ParseReq(`REQ-TEST-SWL-1 title
+body
+## Attributes:
+- Rationale: This is why.
+`)
+	assert.Nil(t, err)
+	assert.Equal(t, "This is why.", r.Attributes["RATIONALE"])
+}
+
 func TestParseReq_NoAttributes(t *testing.T) {
 	r, err := ParseReq(`REQ-TEST-SWL-1 title
 body`)
