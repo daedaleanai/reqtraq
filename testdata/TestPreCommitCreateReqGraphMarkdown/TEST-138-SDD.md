@@ -34,16 +34,8 @@ This is just a test. This text does not mean anything.
 - Verification: Demonstration.
 - Safety impact: None.
 
-### REQ-TEST-SWL-4 [NOT OK] Empty requirement body is not permitted and fails gracefully (no segfault)
 
-
-###### Attributes:
-- Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-1.
-- Verification: Demonstration.
-- Safety impact: None.
-
-### REQ-TEST-SWL-05 [NOT OK] Cannot start with leading zero
+### REQ-TEST-SWL-04 [NOT OK] Cannot start with leading zero
 
 This is just a test. This text does not mean anything.
 

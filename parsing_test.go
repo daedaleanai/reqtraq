@@ -26,6 +26,24 @@ body
 	assert.Equal(t, []string{"REQ-TEST-SYS-1"}, r.ParentIds)
 }
 
+func TestParseReq_Empty(t *testing.T) {
+	_, err := ParseReq(`REQ-TEST-SWL-1 title
+
+`)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, "Requirement must not be empty: REQ-TEST-SWL-1")
+}
+
+func TestParseReq_EmptyBody(t *testing.T) {
+	_, err := ParseReq(`REQ-TEST-SWL-1 title
+
+## Attributes:
+- A: B
+`)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, "Requirement body must not be empty: REQ-TEST-SWL-1")
+}
+
 func TestParseReq_FlexibleAttributesHeading(t *testing.T) {
 	r, err := ParseReq(`REQ-TEST-SWL-1 title
 body
@@ -50,4 +68,33 @@ body
 `)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "Requirement REQ-TEST-SWL-1 contains an attribute section but no attributes")
+}
+
+func TestParseReq_DuplicateAttributes(t *testing.T) {
+	_, err := ParseReq(`REQ-TEST-SWL-1 title
+body
+## Attributes:
+- Rationale: This is why.
+- Rationale: This is why.
+`)
+	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 contains duplicate attribute: "RATIONALE"`)
+}
+
+func TestParseReq_Parents(t *testing.T) {
+	r, err := ParseReq(`REQ-T-SWL-1 title
+body
+## Attributes:
+- Parent: REQ-T-SWH-1, REQ-T-SWH-1000 REQ-T-SWH-1001
+`)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"REQ-T-SWH-1", "REQ-T-SWH-1000", "REQ-T-SWH-1001"}, r.ParentIds)
+}
+
+func TestParseReq_InvalidParents(t *testing.T) {
+	_, err := ParseReq(`REQ-TEST-SWL-1 title
+body
+## Attributes:
+- Parents: REQ-TEST-SWH-1 and REQ-TEST-SWH-2
+`)
+	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: " and " in "REQ-TEST-SWH-1 and REQ-TEST-SWH-2"`)
 }
