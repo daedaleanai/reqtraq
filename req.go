@@ -1,8 +1,8 @@
-// @llr REQ-TRAQ-SWL-015
-// @llr REQ-TRAQ-SWL-006
-// @llr REQ-TRAQ-SWL-007
-// @llr REQ-TRAQ-SWL-011
-// @llr REQ-TRAQ-SWL-013
+// @llr REQ-TRAQ-SWL-15
+// @llr REQ-TRAQ-SWL-6
+// @llr REQ-TRAQ-SWL-7
+// @llr REQ-TRAQ-SWL-11
+// @llr REQ-TRAQ-SWL-13
 
 package main
 
@@ -162,7 +162,7 @@ func (r *Req) Tasklists() map[string]*taskmgr.Task {
 	return m
 }
 
-// @llr REQ-TRAQ-SWL-009
+// @llr REQ-TRAQ-SWL-9
 func (r *Req) Changelists() map[string]string {
 	m := map[string]string{}
 	if r.Level == config.LOW {
@@ -211,7 +211,7 @@ func changelistUrlsForFilepath(filepath string) []string {
 }
 
 // A ReqGraph maps IDs and Paths to Req structures.
-// @llr REQ-TRAQ-SWL-015
+// @llr REQ-TRAQ-SWL-15
 type reqGraph map[string]*Req
 
 func CreateReqGraph(certdocsPath, codePath string) (reqGraph, error) {
@@ -296,7 +296,7 @@ func (rg reqGraph) CheckAttributes(as []map[string]string) []error {
 	return errs
 }
 
-// @llr REQ-TRAQ-SWL-004
+// @llr REQ-TRAQ-SWL-4
 func (rg reqGraph) checkReqReferences(certdocPath string) error {
 	reParents := regexp.MustCompile(`Parents: REQ-`)
 
@@ -343,7 +343,7 @@ func (rg reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {
 	rg[fileName] = &Req{ID: id, Path: fileName, FileHash: fileHash, ParentIds: reqIds, Level: config.CODE}
 }
 
-// @llr REQ-TRAQ-SWL-017
+// @llr REQ-TRAQ-SWL-17
 func (rg reqGraph) Resolve() error {
 	errorResult := ""
 
@@ -635,7 +635,7 @@ type ReqFilter map[FilterType]*regexp.Regexp
 
 // Matches returns true if the requirement matches the filter AND its ID is
 // in the diffs map, if any.
-// @llr REQ-TRAQ-SWL-012
+// @llr REQ-TRAQ-SWL-12
 func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
 	for t, e := range filter {
 		switch t {
@@ -697,7 +697,7 @@ func NextId(f string) (string, error) {
 			}
 		}
 		ii := ReReqID.FindStringSubmatchIndex(lastReq.ID)
-		nextReqID = fmt.Sprintf("%s%03d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
+		nextReqID = fmt.Sprintf("%s%d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
 	} else {
 		// infer next (=first) req ID from file name
 		fNameWithExt := path.Base(f)
@@ -724,7 +724,7 @@ func ParseCertdoc(fileName string) ([]string, error) {
 }
 
 // IsValidDocName checks the f filename is a valid certdoc name.
-// @llr REQ-TRAQ-SWL-020
+// @llr REQ-TRAQ-SWL-20
 func IsValidDocName(f string) error {
 	ext := path.Ext(f)
 	if strings.ToLower(ext) != ".md" {

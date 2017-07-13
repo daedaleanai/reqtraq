@@ -15,7 +15,7 @@ import (
 
 var (
 	// REQ, project number, project abbreviation, req type, req number
-	// For example: REQ-TRAQ-SWH-004
+	// For example: REQ-TRAQ-SWH-4
 	reReqIdStr   = `REQ-(\w+)-(SYS|SWH|SWL|HWH|HWL)-(\d+)`
 	ReReqID      = regexp.MustCompile(reReqIdStr)
 	reReqIDBad   = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
@@ -24,7 +24,7 @@ var (
 )
 
 // formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
-// @llr REQ-TRAQ-SWL-019
+// @llr REQ-TRAQ-SWL-19
 func formatBodyAsHTML(txt string) template.HTML {
 	cmd := exec.Command("pandoc", "--mathjax")
 	stdin, err := cmd.StdinPipe()
@@ -64,7 +64,7 @@ func formatBodyAsHTML(txt string) template.HTML {
 // Since the parsing is rather 'soft', ParseReq returns verbose errors indicating problems in
 // a helpful way, meaning they at least provide enough context for the user to find the text.
 //
-// @llr REQ-TRAQ-SWL-013
+// @llr REQ-TRAQ-SWL-13
 func ParseReq(txt string) (*Req, error) {
 	head := txt
 	if len(head) > 40 {

@@ -15,7 +15,7 @@ var (
 
 // ParseMarkdown parses a certification document and returns the found
 // requirements.
-// @llr REQ-TRAQ-SWL-021
+// @llr REQ-TRAQ-SWL-21
 func ParseMarkdown(f string) ([]string, error) {
 	var (
 		reqs []string
