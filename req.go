@@ -623,6 +623,58 @@ func parseCertdocToGraph(fileName string, graph reqGraph) []error {
 	return errs
 }
 
+// lintReq is called for each requirement while building the req graph
+// @llr REQ-TRAQ-SWL-3
+// @llr REQ-TRAQ-SWL-5
+func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
+	// extract file name without extension
+	fNameWithExt := path.Base(fileName)
+	extension := filepath.Ext(fNameWithExt)
+	fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
+
+	// figure out req type from doc type
+	fNameComps := strings.Split(fName, "-")
+	docType := fNameComps[len(fNameComps)-1]
+	reqType := config.DocTypeToReqType[docType]
+
+	var errs []error
+	reqIDComps := strings.Split(r.ID, "-") // results in an array such as [REQ PROJECT REQTYPE 1234]
+	// check requirement name
+	if reqIDComps[0] != "REQ" {
+		errs = append(errs, fmt.Errorf("Incorrect requirement name %s. Every requirement needs to start with REQ, got %s.", r.ID, reqIDComps[0]))
+	}
+	if reqIDComps[1] != fNameComps[0] {
+		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, fNameComps[0], reqIDComps[1]))
+	}
+	if reqIDComps[2] != reqType {
+		errs = append(errs, fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, reqType, reqIDComps[2]))
+	}
+	if reqIDComps[3][0] == '0' {
+		errs = append(errs, fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]))
+	}
+
+	currentID, err2 := strconv.Atoi(reqIDComps[3])
+	if err2 != nil {
+		errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]))
+	} else {
+		// check requirement sequence number
+		if currentID > nReqs {
+			errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Total number of requirements is %d.", r.ID, nReqs))
+		} else {
+			if currentID < 1 {
+				errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID))
+			} else {
+				if isReqPresent[currentID-1] {
+					errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID))
+				}
+				isReqPresent[currentID-1] = true
+			}
+		}
+	}
+
+	return errs
+}
+
 type FilterType int
 
 const (

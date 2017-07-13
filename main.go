@@ -439,11 +439,10 @@ func precommit(certdocPath, codePath, reportJsonConfPath string) error {
 			errorResult += e.Error()
 		}
 	}
-	if errorResult == "" {
-		return nil
-	} else {
+	if errorResult != "" {
 		return fmt.Errorf(errorResult)
 	}
+	return nil
 }
 
 func buildGraph(commit string) (reqGraph, string, error) {
