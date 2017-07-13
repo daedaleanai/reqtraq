@@ -222,7 +222,7 @@ func CreateReqGraph(certdocsPath, codePath string) (reqGraph, error) {
 		func(fileName string, info os.FileInfo, err error) error {
 			var errs []error
 			switch strings.ToLower(path.Ext(fileName)) {
-			case ".lyx", ".md":
+			case ".md":
 				errs = parseCertdocToGraph(fileName, rg)
 			}
 			if len(errs) > 0 {
