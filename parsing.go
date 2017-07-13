@@ -16,7 +16,7 @@ import (
 var (
 	// REQ, project number, project abbreviation, req type, req number
 	// For example: REQ-TRAQ-SWH-4
-	reReqIdStr                 = `REQ-(\w+)-(SYS|SWH|SWL|HWH|HWL)-(\d+)`
+	reReqIdStr                 = `REQ-(\w+)-(\w+)-(\d+)`
 	ReReqID                    = regexp.MustCompile(reReqIdStr)
 	reReqIDBad                 = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
 	ReReqDeleted               = regexp.MustCompile(reReqIdStr + ` DELETED`)
