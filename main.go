@@ -46,7 +46,6 @@ and the source code for references to them.
 
 command is one of:
 	help		prints this help message
-	linkify		changes the lyx content by adding named destinations and links to parent requirements
 	list    	parses and lists the requirements found in certification documents
 	nextid		generates the next requirement id for the given document
 	precommit	runs the precommit checks for the requirement documents in the current repository
@@ -64,23 +63,16 @@ Run
 	reqtraq help <command>
 for more information on a specific command`
 
-const linkifyUsage = `Changes the lyx content by adding named destinations and links to parent requirements. Usage:
-	reqtraq linkify <input_lyx_filename> <output_lyx_filename>
-Parameters:
-	<input_lyx_filename>	Lyx file to be linkified
-	<output_lyx_filename>	linkified Lyx file
-`
-
 const listUsage = `Parses and lists all requirements found in certification documents. Usage:
-	reqtraq list <input_lyx_filename>
+	reqtraq list <input_md_filename>
 Parameters:
-	<input_lyx_filename>	Lyx file to be parsed
+	<input_md_filename>	Markdown file to be parsed
 `
 
 const nextidUsage = `Generates the next requirement id for the given document. Usage:
-	reqtraq nextid <input_lyx_filename>
+	reqtraq nextid <input_md_filename>
 Parameters:
-	<input_lyx_filename>	Lyx file to generate the next requirement id for
+	<input_md_filename>	Markdown file to generate the next requirement id for
 `
 
 const precommitUsage = `Runs the pre-commit checks for the requirement documents in the current repository. Usage:
@@ -156,8 +148,6 @@ func showHelp() {
 	switch subCommand {
 	case "help", "": // general help
 		fmt.Println(usage)
-	case "linkify":
-		fmt.Println(linkifyUsage)
 	case "list":
 		fmt.Println(listUsage)
 	case "nextid":
@@ -226,7 +216,7 @@ func main() {
 	case "help":
 		showHelp()
 		os.Exit(0)
-	case "linkify", "list", "nextid":
+	case "list", "nextid":
 		if f == "" {
 			log.Fatal("Missing file name")
 		}
@@ -288,20 +278,6 @@ func main() {
 		}
 		if failureCount > 0 {
 			log.Fatalf("Requirements failed to parse: %d", failureCount)
-		}
-	case "linkify":
-		output := flag.Arg(1)
-		if output == "" {
-			log.Fatal("Missing output file name")
-		}
-		o, err := os.Create(output)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = ParseLyx(f, o)
-
-		if err != nil {
-			log.Fatal(err)
 		}
 	case "reportdown":
 		of, err := os.Create(*fReportPrefix + "down.html")
