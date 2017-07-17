@@ -115,7 +115,7 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 			case "name":
 				if _, ok := r.Attributes[strings.ToUpper(v)]; !ok {
 					if !(r.Level == config.SYSTEM && strings.ToUpper(v) == "PARENTS") {
-						errs = append(errs, fmt.Errorf("Requirement '%s' is missing attribute '%s'.\n", r.ID, v))
+						errs = append(errs, fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, v))
 					}
 				}
 			case "value":
@@ -127,7 +127,7 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 						log.Fatal(err)
 					}
 					if !expr.MatchString(r.Attributes[aName]) {
-						errs = append(errs, fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'. Expected %s.\n", r.ID, r.Attributes[aName], aName, v))
+						errs = append(errs, fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'. Expected %s.", r.ID, r.Attributes[aName], aName, v))
 					}
 				}
 			}
@@ -286,21 +286,21 @@ func (rg reqGraph) AddReq(req *Req, path string) error {
 	return nil
 }
 
-func (rg reqGraph) CheckAttributes(as []map[string]string) []error {
+func (rg reqGraph) CheckAttributes(reportConf JsonConf, filter ReqFilter, diffs map[string][]string) ([]error, error) {
 	var errs []error
 	for _, req := range rg {
-		if req.Level != config.CODE {
-			errs = append(errs, req.CheckAttributes(as)...)
+		if req.Level != config.CODE && req.Matches(filter, diffs) {
+			errs = append(errs, req.CheckAttributes(reportConf.Attributes)...)
 		}
 	}
-	return errs
+	return errs, nil
 }
 
 // @llr REQ-TRAQ-SWL-4
-func (rg reqGraph) checkReqReferences(certdocPath string) error {
+func (rg reqGraph) checkReqReferences(certdocPath string) ([]error, error) {
 	reParents := regexp.MustCompile(`Parents: REQ-`)
 
-	errorResult := ""
+	errors := make([]error, 0)
 
 	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
 		func(fileName string, info os.FileInfo, err error) error {
@@ -315,14 +315,13 @@ func (rg reqGraph) checkReqReferences(certdocPath string) error {
 				// parents have alreay been checked in Resolve(), and we don't throw an eror at the place where the deleted req is defined
 				discardRefToDeleted := reParents.MatchString(line) || ReReqDeleted.MatchString(line)
 				parmatch := ReReqID.FindAllStringSubmatchIndex(line, -1)
-
 				for _, ids := range parmatch {
 					reqID := line[ids[0]:ids[1]]
 					v, reqFound := rg[reqID]
 					if !reqFound {
-						errorResult += "Invalid reference to inexistent requirement " + reqID + " in " + fileName + ":" + strconv.Itoa(lno) + "\n"
+						errors = append(errors, fmt.Errorf("Invalid reference to inexistent requirement %s in %s:%d", reqID, fileName, lno))
 					} else if v.IsDeleted() && !discardRefToDeleted {
-						errorResult += "Invalid reference to deleted requirement " + reqID + " in " + fileName + ":" + strconv.Itoa(lno) + "\n"
+						errors = append(errors, fmt.Errorf("Invalid reference to deleted requirement %s in %s:%d", reqID, fileName, lno))
 					}
 				}
 			}
@@ -330,13 +329,10 @@ func (rg reqGraph) checkReqReferences(certdocPath string) error {
 		})
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if errorResult != "" {
-		return fmt.Errorf(errorResult)
-	}
-	return nil
+	return errors, nil
 }
 
 func (rg reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {

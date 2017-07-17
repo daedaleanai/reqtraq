@@ -43,7 +43,7 @@ func TestPreCommitCheckReqReferencesMarkdown(t *testing.T) {
 	assert.NotNil(t, err, "Errors expected")
 
 	nLines := strings.Count(err.Error(), "\n")
-	assert.Equal(t, 5, nLines, "Number of errors is not correct.")
+	assert.Equal(t, 5, nLines, fmt.Sprintf("Number of errors is not correct:\n%sEND", err))
 
 	assert.Contains(t, err.Error(), "Invalid reference to inexistent requirement REQ-TEST-SYS-22")
 	assert.Contains(t, err.Error(), "Invalid reference to deleted requirement REQ-TEST-SYS-2")

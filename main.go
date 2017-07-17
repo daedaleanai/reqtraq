@@ -24,7 +24,7 @@ var (
 	fReportTitleFilterString = flag.String("title_filter", "", "regular expression to filter by requirement title.")
 	fReportIdFilterString    = flag.String("id_filter", "", "regular expression to filter by requirement id.")
 	fReportBodyFilterString  = flag.String("body_filter", "", "regular expression to filter by requirement body.")
-	fReportJsonConfPath      = flag.String("attributes", git.RepoPath()+"/certdocs/attributes.json", "path to json with requirement attribute specification.")
+	fReportConfPath          = flag.String("attributes", git.RepoPath()+"/certdocs/attributes.json", "path to json with requirement attribute specification.")
 	addr                     = flag.String("addr", ":8080", "The ip:port where to serve.")
 	since                    = flag.String("since", "", "The commit representing the start of the range.")
 	at                       = flag.String("at", "", "The commit representing the end of the range.")
@@ -223,8 +223,8 @@ func main() {
 	}
 
 	var (
-		rg, prg reqGraph
-		diffs   map[string][]string
+		rg    reqGraph
+		diffs map[string][]string
 	)
 	switch command {
 	case "reportdown", "reportup", "reportissues", "prepush":
@@ -235,11 +235,12 @@ func main() {
 		}
 		defer os.RemoveAll(dir)
 
+		var prg reqGraph
 		if *since != "" {
 			var dir string
 			prg, dir, err = buildGraph(*since)
 			if err != nil {
-				log.Println(err)
+				log.Fatal(err)
 			}
 			defer os.RemoveAll(dir)
 		}
@@ -350,7 +351,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "precommit":
-		err := precommit(*fCertdocPath, *fCodePath, *fReportJsonConfPath)
+		err := precommit(*fCertdocPath, *fCodePath, *fReportConfPath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -387,33 +388,44 @@ func logFileCreate(fileName string) {
 	log.Print("Creating ", fileName, " (this may take a while)...")
 }
 
-func precommit(certdocPath, codePath, reportJsonConfPath string) error {
-	var reportConf JsonConf
-	b, err := ioutil.ReadFile(reportJsonConfPath)
+func parseConf(confPath string) (JsonConf, error) {
+	var conf JsonConf
+	b, err := ioutil.ReadFile(confPath)
 	if err != nil {
-		fmt.Printf("Can't find attributes.json in '%s'. Attributes won't be checked.\n",
-			reportJsonConfPath)
-		reportConf = JsonConf{}
-	} else {
-		if err := json.Unmarshal(b, &reportConf); err != nil {
-			return fmt.Errorf("Error while parsing attributes: ", err)
-		}
+		return conf, fmt.Errorf("Attributes specification file missing: %s", confPath)
 	}
+	if err := json.Unmarshal(b, &conf); err != nil {
+		return conf, fmt.Errorf("Error while parsing attributes: %s", err)
+	}
+	return conf, nil
+}
 
+func precommit(certdocPath, codePath, confPath string) error {
 	rg, err := CreateReqGraph(certdocPath, codePath)
 	if err != nil {
 		return err
 	}
-	errorResult := ""
-	err = rg.checkReqReferences(certdocPath)
-	if err != nil {
-		errorResult += err.Error()
-	}
 
-	if errs := rg.CheckAttributes(reportConf.Attributes); len(errs) > 0 {
-		for _, e := range errs {
-			errorResult += e.Error()
-		}
+	errs := make([]error, 0)
+	errs2, err := rg.checkReqReferences(certdocPath)
+	if err != nil {
+		return err
+	}
+	errs = append(errs, errs2...)
+
+	conf, err := parseConf(confPath)
+	if err != nil {
+		return err
+	}
+	errs2, err = rg.CheckAttributes(conf, nil, nil)
+	if err != nil {
+		return err
+	}
+	errs = append(errs, errs2...)
+
+	errorResult := ""
+	for _, e := range errs {
+		errorResult += e.Error() + "\n"
 	}
 	if errorResult != "" {
 		return fmt.Errorf(errorResult)

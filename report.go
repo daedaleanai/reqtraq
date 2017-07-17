@@ -213,13 +213,12 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	{{ template "FOOTER" }}
 {{ end }}
 
-
 {{ define "ISSUES" }}
 	{{template "HEADER"}}
 		<h2>Issues</h2>
 		<hr>
 	</section>
-	<h3>Dangling Requirements:</h3>
+	<h3>Dangling Requirements</h3>
 	<ul>
 	{{ range .Reqs.DanglingReqsByPosition }}
 		<li>
@@ -227,6 +226,26 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		</li>
 	{{ else }}
 		<li class="text-success">No dangling HLRs or LLRs found.</li>
+	{{ end }}
+	</ul>
+	<h3>Invalid Attributes</h3>
+	<ul>
+	{{ range .AttributesErrors }}
+	  <li>
+			{{ . }}
+		</li>
+	{{ else }}
+		<li class="text-success">No attributes errors found.</li>
+	{{ end }}
+	</ul>
+	<h3>Invalid References</h3>
+	<ul>
+	{{ range .ReferencesErrors }}
+	  <li>
+			{{ . }}
+		</li>
+	{{ else }}
+		<li class="text-success">No references errors found.</li>
 	{{ end }}
 	</ul>
 	{{ template "FOOTER" }}
@@ -292,11 +311,29 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<hr>
 	</section>
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
-	<h3>Dangling Requirements:</h3>
+	<h3>Dangling Requirements</h3>
 	<ul>
 	{{ range .Reqs.DanglingReqsByPosition }}
+		{{ if .Matches $.Filter }}
+			<li>
+				{{ template "REQUIREMENT" ($.Once.Once .) }}
+			</li>
+		{{ end }}
+	{{ end }}
+	</ul>
+	<h3>Invalid Attributes</h3>
+	<ul>
+	{{ range .AttributesErrors }}
 		<li>
-			{{ if .Matches $.Filter  }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
+			{{ . }}
+		</li>
+	{{ end }}
+	</ul>
+	<h3>Invalid References</h3>
+	<ul>
+	{{ range .ReferencesErrors }}
+		<li>
+			{{ . }}
 		</li>
 	{{ end }}
 	</ul>
@@ -305,34 +342,61 @@ var reportTmpl = template.Must(template.New("").Parse(`
 `))
 
 type reportData struct {
-	Reqs   reqGraph
-	Filter ReqFilter
-	Once   Oncer
-	Diffs  map[string][]string
+	Reqs             reqGraph
+	Filter           ReqFilter
+	Once             Oncer
+	Diffs            map[string][]string
+	AttributesErrors []error
+	ReferencesErrors []error
 }
 
 func (rg reqGraph) ReportDown(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{rg, nil, Oncer{}, nil})
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{rg, nil, Oncer{}, nil, nil, nil})
 }
 
 func (rg reqGraph) ReportUp(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{rg, nil, Oncer{}, nil})
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{rg, nil, Oncer{}, nil, nil, nil})
 }
 
 func (rg reqGraph) ReportIssues(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{rg, nil, Oncer{}, nil})
+	conf, err := parseConf(*fReportConfPath)
+	if err != nil {
+		return err
+	}
+	attributesErrors, err := rg.CheckAttributes(conf, nil, nil)
+	if err != nil {
+		return err
+	}
+	referencesErrors, err := rg.checkReqReferences(*fCertdocPath)
+	if err != nil {
+		return err
+	}
+	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{rg, nil, Oncer{}, nil, attributesErrors, referencesErrors})
 }
 
 // @llr REQ-TRAQ-SWL-6
 func (rg reqGraph) ReportDownFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs})
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs, nil, nil})
 }
 
 // @llr REQ-TRAQ-SWL-7
 func (rg reqGraph) ReportUpFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs})
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs, nil, nil})
 }
 
-func (rg reqGraph) ReportIssuesFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{rg, f, Oncer{}, diffs})
+func (rg reqGraph) ReportIssuesFiltered(w io.Writer, filter ReqFilter, diffs map[string][]string) error {
+	conf, err := parseConf(*fReportConfPath)
+	if err != nil {
+		return err
+	}
+	attributesErrors, err := rg.CheckAttributes(conf, filter, diffs)
+	if err != nil {
+		return err
+	}
+	// TODO(ab): Allow filtering references errors.
+	referencesErrors, err := rg.checkReqReferences(*fCertdocPath)
+	if err != nil {
+		return err
+	}
+	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{rg, filter, Oncer{}, diffs, attributesErrors, referencesErrors})
 }
