@@ -63,6 +63,7 @@ var ReqTypeToDocType = map[string]string{
 var DocTypeToDocId = map[string]string{
 	"H":       "0",
 	"DS":      "1",
+	"CLSRS":   "5",
 	"SRS":     "6",
 	"SDS":     "7",
 	"SCS":     "8",
