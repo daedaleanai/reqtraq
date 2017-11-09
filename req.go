@@ -140,13 +140,17 @@ func (r *Req) Tasklists() map[string]*taskmgr.Task {
 	m := map[string]*taskmgr.Task{}
 	projectID, err1 := taskmgr.TaskMgr.GetProject(config.ProjectName)
 	if err1 != nil {
-		log.Println(err1)
+		log.Printf("Failed to get project '%s' from the task manager: %v", config.ProjectName, err1)
 		return m
 	}
 	// Find and add primary task corresponding to Req
 	task, err2 := taskmgr.TaskMgr.FindTask(r.ID, r.Title, projectID)
 	if err2 != nil {
-		log.Println(err2)
+		log.Printf("Failed to find the task for requirement %s '%s' in project %s: %v", r.ID, r.Title, projectID, err2)
+		return m
+	}
+	if task == nil {
+		log.Printf("No task found for requirement %s '%s' in project %s", r.ID, r.Title, projectID)
 		return m
 	}
 	m[task.ID] = task
@@ -154,7 +158,7 @@ func (r *Req) Tasklists() map[string]*taskmgr.Task {
 	for _, phid := range task.DependsOnTaskIDs {
 		subTask, e := taskmgr.TaskMgr.FindTaskByID(phid)
 		if e != nil {
-			log.Println(e)
+			log.Printf("Failed to find subtask %s: %v", phid, e)
 			continue
 		}
 		m[subTask.ID] = subTask
