@@ -9,9 +9,13 @@ Document Approval:
 
 ### Purpose
 
-This document contains the definition of the software architecture and the <abbr title="Software Low-Level Requirement">SWL</abbr>s for the Reqtraq tool that will satisfy the <abbr title="Software High-Level Requirement">SWH</abbr>s specified in TRAQ-137-SRD. It follows Section 11.10 of DO-178C / ED-12C.
+This document contains the definition of the software architecture and the <abbr
+title="Software Low-Level Requirement">SWL</abbr>s for the Reqtraq tool that
+will satisfy the <abbr title="Software High-Level Requirement">SWH</abbr>s
+specified in TRAQ-137-SRD. It follows Section 11.10 of DO-178C / ED-12C.
 
-The purpose of the Reqtraq tool is to comply with the DO-178C / ED-12C traceability data requirements.
+The purpose of the Reqtraq tool is to comply with the DO-178C / ED-12C
+traceability data requirements.
 
 ### Scope
 
@@ -56,7 +60,8 @@ This document discusses the following topics:
 
 Data comes in from the requirements documents and code files in the same Git repository.
 
-Reqtraq interacts with a Phabricator server using the Phabricator Conduit <abbr title="Application Programming Interface">API</abbr>.
+Reqtraq interacts with a Phabricator server using the Phabricator Conduit <abbr
+title="Application Programming Interface">API</abbr>.
 
 Reqtraq has the following outputs:
 - Traceability reports and issues, including hyperlinking between documents
@@ -64,7 +69,9 @@ Reqtraq has the following outputs:
 
 ### Software Design and Implementation Details
 
-Any report is generated from a `reqGraph` object which is a dictionary of requirements by IDs at a particular Git commit. A requirement is represented by an instance of the `Req` data structure.
+Any report is generated from a `reqGraph` object which is a dictionary of
+requirements by IDs at a particular Git commit. A requirement is represented by
+an instance of the `Req` data structure.
 
 ## Low-level Software Requirements Identification
 
@@ -73,9 +80,13 @@ The SWLs of the system are as follows:
 
 ##### REQ-TRAQ-SWL-1 Requirements storage
 
-Requirements SHALL be stored in Markdown files version controlled by Git. Reqtraq is not responsible for the actual formatting or version control of each document. Instead Reqtraq leverages Git for storage and version control and Markdown for formatting.
+Requirements SHALL be stored in Markdown files version controlled by Git.
+Reqtraq is not responsible for the actual formatting or version control of each
+document. Instead Reqtraq leverages Git for storage and version control and
+Markdown for formatting.
 
-Reqtraq will discover all the `.md` files in the `certdocs` directory and will parse them as certification documents to look for requirements.
+Reqtraq will discover all the `.md` files in the `certdocs` directory and will
+parse them as certification documents to look for requirements.
 
 ###### Attributes:
 - Rationale: Git is the industry standard for version control. Markdown is widespread and the lightweight format is well suited for version controlled documents that need to be peer reviewed.
@@ -86,7 +97,9 @@ Reqtraq will discover all the `.md` files in the `certdocs` directory and will p
 
 ##### REQ-TRAQ-SWL-20 Certification document names
 
-Reqtraq will check the validity of a certification document name by checking the parts delimited by `-`:
+Reqtraq will check the validity of a certification document name by checking the
+parts delimited by `-`:
+
 1. Project abbreviation, which shall be the same for all the certification documents of a system, e.g. "TRAQ"
 2. Document type sequence number, e.g. "138"
 3. Document type, e.g. "SDD"
@@ -100,7 +113,8 @@ Reqtraq will check the validity of a certification document name by checking the
 
 ##### REQ-TRAQ-SWL-14 Accessing and linking to requirements
 
-Each time a change to a requirement document is committed, Reqtraq SHALL parse the document and alter the following information:
+Each time a change to a requirement document is committed, Reqtraq SHALL parse
+the document and alter the following information:
 
 - each requirement described in the document, is wrapped into a **named anchor** so that the requirement can be directly linked to, e.g.
 
@@ -114,9 +128,13 @@ Each time a change to a requirement document is committed, Reqtraq SHALL parse t
 <a href="https://a/REQ-TRAQ-SYS-1">REQ-TRAQ-SYS-1</a>
 ```
 
-Where `http://a` is the Daedalean URL redirector. The URL redirector will infer the name of the document where the requirement is defined (TRAQ-137-SRD in our case) and use the Google Drive API or other methods to find the URL of the document, then redirect to it.
+Where `http://a` is the Daedalean URL redirector. The URL redirector will infer
+the name of the document where the requirement is defined (TRAQ-137-SRD in our
+case) and use the Google Drive API or other methods to find the URL of the
+document, then redirect to it.
 
-Note that the URL redirector needs to infer the name of the document the requirement is defined in, as described in REQ-TRAQ-SWL-2.
+Note that the URL redirector needs to infer the name of the document the
+requirement is defined in, as described in REQ-TRAQ-SWL-2.
 
 ###### Attributes:
 - Rationale: this ensures that all documents defining or reference requirements don’t introduce typing mistakes.
@@ -127,7 +145,11 @@ Note that the URL redirector needs to infer the name of the document the require
 
 ##### REQ-TRAQ-SWL-2 Construct the requirement URL.
 
-The <abbr title="Requirements Management Tool">RMT</abbr> SHALL infer the document where a requirement is defined solely based on the name of the requirement. The correct name as defined by REQ-TRAQ-SWL-20 can be uniquely constructed as follows:
+The <abbr title="Requirements Management Tool">RMT</abbr> SHALL infer the
+document where a requirement is defined solely based on the name of the
+requirement. The correct name as defined by REQ-TRAQ-SWL-20 can be uniquely
+constructed as follows:
+
 - take the second part of the requirement id, representing the project/system abbrev, e.g. "TRAQ" for "REQ-TRAQ-SYS-1"
 - depending on the third part of the requirement id, representing the requirement type, append the document type:
   - for SWL and <abbr title="Hardware Low-Level Requirement">HWL</abbr>, append `-138-SDD`
@@ -143,7 +165,8 @@ The <abbr title="Requirements Management Tool">RMT</abbr> SHALL infer the docume
 
 ##### REQ-TRAQ-SWL-3 Uniform requirement ID format.
 
-The RMT SHALL check that the requirements defined in each document have a correct id, composed of four parts separated by `-`:
+The RMT SHALL check that the requirements defined in each document have a
+correct id, composed of four parts separated by `-`:
 
 1. `REQ`
 
@@ -167,7 +190,8 @@ The RMT SHALL check that the requirements defined in each document have a correc
 
 ##### REQ-TRAQ-SWL-4 Valid requirement references.
 
-The RMT SHALL check that the requirements referred to in each document exist (and thus have a correct id):
+The RMT SHALL check that the requirements referred to in each document exist
+(and thus have a correct id):
 
 - for each requirement reference, check if the referenced requirement exists in the requirement map constructed as described in REQ-TRAQ-SWL-15
 
@@ -180,10 +204,12 @@ The RMT SHALL check that the requirements referred to in each document exist (an
 
 ##### REQ-TRAQ-SWL-5 ID allocation.
 
-The RMT SHALL check that given a requirement ID with sequence number N, all requirements with the same prefix and sequence numbers 0...N-1 exist and are defined in the current document (in any order).
+The RMT SHALL check that given a requirement ID with sequence number N, all
+requirements with the same prefix and sequence numbers 0...N-1 exist and are
+defined in the current document (in any order).
 
 ###### Attributes:
-- Rationale: this helps ensure that no requirement sequence numbers are accidentally skipped.
+- Rationale: This helps ensure that no requirement sequence numbers are accidentally skipped.
 - Verification: Unit test.
 - Safety impact: None.
 - Parent: REQ-TRAQ-SWH-3
@@ -195,11 +221,20 @@ Deleted requirements are requirements that do not apply anymore (e.g. they are
 obsolete). A requirement can be marked as deleted by replacing or prefixing the
 title with `DELETED`, for example: `REQ-TRAQ-SWL-15 DELETED`.
 
-Deleted requirements SHALL not be checked for completeness. All references to
-a deleted requirement SHALL be reported as errors.
+Deleted requirements SHALL not be checked for completeness.
+
+All references to a deleted requirement SHALL be reported as errors.
+
+Reqtraq SHALL check that requirements at the end of the numbering sequence are
+not entirely deleted.
+
+Reqtraq SHALL check that new requirements are not marked as deleted.
+
+Reqtraq SHALL check the deleted requirements are kept at the end so they don't
+clutter the document.
 
 ###### Attributes:
-- Rationale: Continuous requirement numbering helps ensure that no requirements were accidentally skipped and completely deleting requirements would create gaps in the numbering.
+- Rationale: We can detect invalid references to an obsolete requirement only if it's marked as deleted without erasing it.
 - Verification: Unit test
 - Safety impact: None
 - Parent: REQ-TRAQ-SWH-3
@@ -207,7 +242,13 @@ a deleted requirement SHALL be reported as errors.
 
 ##### REQ-TRAQ-SWL-15 Data structure for keeping requirements and their hierarchy
 
-The interface between the parsing tool and the report generation tool SHALL be a data structure that maps requirement IDs to a requirement structure. The requirement structure will hold all the data about the requirement that is needed for the report generation (ID, body, attributes, parents, children, etc.). The data structure is built by traversing the entire git repository and parsing:
+The interface between the parsing tool and the report generation tool SHALL be a
+data structure that maps requirement IDs to a requirement structure. The
+requirement structure will hold all the data about the requirement that is
+needed for the report generation (ID, body, attributes, parents, children,
+etc.). The data structure is built by traversing the entire git repository and
+parsing:
+
 - `.md` certification documents files that may define requirements,
 - `.cc`, `.hh`, `.go` source files that may reference requirements.
 
@@ -218,9 +259,33 @@ The interface between the parsing tool and the report generation tool SHALL be a
 - Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-5
 
 
+##### REQ-TRAQ-SWL-22 Safety impact propagation
+
+The RMT SHALL enforce that the Safety impact of a requirement is passed on to
+the children requirement(s) if not `None`.
+
+###### Attributes:
+- Rationale: Requirements with a Safety impact are important and the ones they depend on are also.
+- Verification: Unit test
+- Safety impact: None
+- Parents: REQ-TRAQ-SWH-21
+
+##### REQ-TRAQ-SWL-23 Safety impact origination
+
+The RMT SHALL enforce that the Safety impact of a requirement originates from at
+least one parent requirement.
+
+###### Attributes:
+- Rationale: Requirements with a Safety impact are important, and at least one parent is also.
+- Verification: Unit test
+- Safety impact: None
+- Parents: REQ-TRAQ-SWH-21
+
 ##### REQ-TRAQ-SWL-6 Tracing system to high, low level, implementation, test
 
-Given a list of requirements, the RMT SHALL be able to generate parent and child requirements and code ordered from system to high level to low level requirement to implementation and test, including missing continuations.
+Given a list of requirements, the RMT SHALL be able to generate parent and child
+requirements and code ordered from system to high level to low level requirement
+to implementation and test, including missing continuations.
 
 ###### Report structure
 
@@ -246,8 +311,6 @@ The information will be organized as following:
 
             - Source files: list the source files implementing this requirement
 
-            - Changelists: list of differential requests implementing the requirement
-
         - LOW\_LEVEL\_REQUIREMENT\_2
 
             - ...
@@ -269,7 +332,7 @@ The information will be organized as following:
 
 ###### Attributes:
 - Rationale: the report will be used by the certification authority to visualize requirement tracing.
-- Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-7
+- Parents: REQ-TRAQ-SWH-4
 - Verification: Test.
 - Safety impact: None.
 
@@ -299,7 +362,7 @@ The report generation described in REQ-TRAQ-SWL-6 will be able to receive the fo
 
 - two git commit IDs (or git refs): in this case the report will contain all requirements that were changed between the given commits. If the 2nd commit id is missing, the current state of the repository is used.
 
-Suggested usage (the directory in which reqtraq is run determines the project for which the report is generated):
+Suggested usage (the directory in which Reqtraq is run determines the project for which the report is generated):
 
 ```
 reqtraq report 
@@ -316,35 +379,17 @@ Note: a requirement is considered "changed" if either it was directly edited or 
 - Safety impact: None.
 
 
-##### REQ-TRAQ-SWL-18 Phabricator export
-
-The RMT SHALL be able to export all requirements as Phabricator tasks, in the following format:
-
-- Title: requirement title, e.g. "REQ-TRAQ-SWL-18 Phabricator export"
-- Assigned To: empty
-- Status: Open
-- Priority: Normal
-- Description: The requirement description
-- Tags: Project code (e.g. TRAQ in this case)
-- Subscribers: empty
-- Parents\: the parent requirements
-- Children: the child requirements
-
-If a task with the given requirement ID already exists, then the RMT SHALL update the title, description and parents of the task, but all other fields will be left unchanged.
-
-If the requirement is marked as deleted, as described in REQ-TRAQ-SWL-17, the associated task and all its subtasks SHALL be marked as WONTFIX.
-
-###### Attributes:
-- Parents: REQ-TRAQ-SWH-6
-- Verification: Test
-- Safety impact: None
+##### REQ-TRAQ-SWL-18 DELETED
 
 
 ##### REQ-TRAQ-SWL-9. Change history tracing
 
-The RMT MUST be able to generate a list of all changelists that touched the definition or implementation of a given set of requirements, and the corresponding Problem Reports that these changelists belong to.
+The RMT SHALL be able to generate a list of all changelists that touched the
+definition or implementation of a given set of requirements, and the
+corresponding Problem Reports that these changelists belong to.
 
-The report described in REQ-TRAQ-SWL-6 addresses this requirement. Each LLR will contain both the source files that implement it and the CLs that implemented it.
+The report described in REQ-TRAQ-SWL-6 addresses this requirement. Each LLR will
+contain both the source files that implement it and the CLs that implemented it.
 
 ###### Attributes:
 - Parents: REQ-TRAQ-SWH-7
@@ -355,18 +400,15 @@ The report described in REQ-TRAQ-SWL-6 addresses this requirement. Each LLR will
 ##### REQ-TRAQ-SWL-10 DELETED
 
 
-##### REQ-TRAQ-SWL-11. Report readability
+##### REQ-TRAQ-SWL-11. Output
 
-The formats supported by RMT will be HTML and PDF, using the following syntax:
+The output, such as reports, SHALL be created as HTML.
 
-```
-reqtraq report --format pdf
-reqtraq report --format html
-```
+This applies for example to the report generated in REQ-TRAQ-SWL-6.
 
 ###### Attributes:
-- Rationale: reports on the bidirectional traceability have to be submitted as evidence in certification trajectories. The report generated in REQ-TRAQ-SWL-6 addresses this issue.
-- Parents: REQ-TRAQ-SWH-9
+- Rationale: The HTML can be used to create static HTML files and also to serve pages in the web app.
+- Parents: REQ-TRAQ-SWH-9, REQ-TRAQ-SWH-13
 - Verification: Demonstration.
 - Safety impact: None
 
