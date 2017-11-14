@@ -121,14 +121,9 @@ The RMT SHALL be able to generate a list of all changelists that touched the def
 - Verification: Test.
 - Safety impact: None.
 
-#### REQ-TRAQ-SYS-4. Change justification tracing.
 
-The RMT SHALL guarantee that changelists touching definitions or implementation of a requirement have a rationale-for-change field.
+#### REQ-TRAQ-SYS-4 DELETED
 
-###### Attributes:
-- Rationale: all changes must be vetted and verified by an independent reviewer.
-- Verification: Test.
-- Safety impact: None.
 
 #### REQ-TRAQ-SYS-5. DERIVED.
 

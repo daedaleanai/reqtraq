@@ -103,12 +103,16 @@ func (r *Req) resolveDown() RequirementStatus {
 }
 
 // IsDeleted checks if the requirement title starts with 'DELETED'
+// @REQ-TRAQ-SWL-17
 func (r *Req) IsDeleted() bool {
 	return strings.HasPrefix(r.Title, "DELETED")
 }
 
 func (r *Req) CheckAttributes(as []map[string]string) []error {
 	var errs []error
+	if r.IsDeleted() {
+		return errs
+	}
 	for _, a := range as {
 		for k, v := range a {
 			switch k {
@@ -348,7 +352,7 @@ func (rg reqGraph) Resolve() error {
 	errorResult := ""
 
 	for _, req := range rg {
-		if len(req.ParentIds) == 0 && req.Level != config.SYSTEM {
+		if len(req.ParentIds) == 0 && !(req.Level == config.SYSTEM || req.IsDeleted()) {
 			errorResult += "Requirement " + req.ID + " in file " + req.Path + " has no parents.\n"
 		}
 		for _, parentID := range req.ParentIds {

@@ -189,16 +189,19 @@ The RMT SHALL check that given a requirement ID with sequence number N, all requ
 - Parent: REQ-TRAQ-SWH-3
 
 
-##### REQ-TRAQ-SWL-17 Deleted requirements.
+##### REQ-TRAQ-SWL-17 Deleted requirements
 
-Deleted requirements are requirements that do not apply anymore (e.g. they are obsolete). Deleted requirements SHALL be marked by changing the title to "Deleted", for example "REQ-TRAQ-SWL-15 Deleted"
+Deleted requirements are requirements that do not apply anymore (e.g. they are
+obsolete). A requirement can be marked as deleted by replacing or prefixing the
+title with `DELETED`, for example: `REQ-TRAQ-SWL-15 DELETED`.
 
-Deleted requirements SHALL not be checked for completeness and all the tasks associated with them SHALL be closed as WONTFIX. All references to a deleted requirement SHALL be marked as errors.
+Deleted requirements SHALL not be checked for completeness. All references to
+a deleted requirement SHALL be reported as errors.
 
 ###### Attributes:
-- Rationale: continuous requirement numbering helps ensure that no requirements were accidentally skipped and completely deleting requirements would create gaps in the numbering.
-- Verification: Unit test.
-- Safety impact: None.
+- Rationale: Continuous requirement numbering helps ensure that no requirements were accidentally skipped and completely deleting requirements would create gaps in the numbering.
+- Verification: Unit test
+- Safety impact: None
 - Parent: REQ-TRAQ-SWH-3
 
 
@@ -300,7 +303,7 @@ Suggested usage (the directory in which reqtraq is run determines the project fo
 
 ```
 reqtraq report 
-reqtraq report REQ-TRAQ-SWL-8,REQ-TRAQ-SWL-9,REQ-TRAQ-SWL-10
+reqtraq report REQ-TRAQ-SWL-8,REQ-TRAQ-SWL-9
 reqtraq report d6cd1e2bd19e03a81132a23b2025920577f84e37
 ```
 
@@ -315,7 +318,7 @@ Note: a requirement is considered "changed" if either it was directly edited or 
 
 ##### REQ-TRAQ-SWL-18 Phabricator export
 
-The RMT SHALL export all requirements as Phabricator tasks, in the following format:
+The RMT SHALL be able to export all requirements as Phabricator tasks, in the following format:
 
 - Title: requirement title, e.g. "REQ-TRAQ-SWL-18 Phabricator export"
 - Assigned To: empty
@@ -327,14 +330,14 @@ The RMT SHALL export all requirements as Phabricator tasks, in the following for
 - Parents\: the parent requirements
 - Children: the child requirements
 
-If a task with the given requirement id already exists, then RMT will update the title, description and parents of the task, but all other fields will be left unchanged.
+If a task with the given requirement ID already exists, then the RMT SHALL update the title, description and parents of the task, but all other fields will be left unchanged.
 
-If a task’s title changes to "Deleted" it’s associated task and all its children will be marked as WONTFIX.
+If the requirement is marked as deleted, as described in REQ-TRAQ-SWL-17, the associated task and all its subtasks SHALL be marked as WONTFIX.
 
 ###### Attributes:
 - Parents: REQ-TRAQ-SWH-6
-- Verification: Test.
-- Safety impact: None.
+- Verification: Test
+- Safety impact: None
 
 
 ##### REQ-TRAQ-SWL-9. Change history tracing
@@ -349,17 +352,7 @@ The report described in REQ-TRAQ-SWL-6 addresses this requirement. Each LLR will
 - Safety impact: None.
 
 
-##### REQ-TRAQ-SWL-10. Change justification tracing
-
-The RMT SHALL verify and flag violations that changelists touching definitions or implementation of a requirement have a rationale-for-change field.
-
-The current workflow forces each changelist to have a description and an associated task/problem report. The changelist description can be viewed as the rationale-for-change.
-
-###### Attributes:
-- Rationale: no changes should be allowed unless they were vetted and the justification accepted by an independent reviewer.
-- Parents: REQ-TRAQ-SWH-8
-- Verification: Test.
-- Safety impact: None.
+##### REQ-TRAQ-SWL-10 DELETED
 
 
 ##### REQ-TRAQ-SWL-11. Report readability

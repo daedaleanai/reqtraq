@@ -41,6 +41,30 @@ func TestParseReq_Empty(t *testing.T) {
 	assert.EqualError(t, err, "Requirement must not be empty: REQ-TEST-SWL-1")
 }
 
+// @llr REQ-TRAQ-SWL-17
+func TestParseReq_Deleted(t *testing.T) {
+	// Make sure it can be parsed even when it has no description.
+	r, err := ParseReq(`REQ-T-SYS-1 DELETED`)
+	assert.Nil(t, err)
+	assert.True(t, r.IsDeleted())
+
+	// Make sure it can be parsed when it has description.
+	r, err = ParseReq(`REQ-TEST-SWL-1 DELETED Some title
+body
+
+###### Attributes:
+- Rationale: This is why.
+- Parents: REQ-TEST-SYS-1
+`)
+	assert.Nil(t, err)
+	assert.Equal(t, "REQ-TEST-SWL-1", r.ID)
+	assert.Equal(t, "DELETED Some title", r.Title)
+	assert.Equal(t, "<p>body</p>\n", string(r.Body))
+	assert.Equal(t, "This is why.", r.Attributes["RATIONALE"])
+	assert.Equal(t, []string{"REQ-TEST-SYS-1"}, r.ParentIds)
+	assert.True(t, r.IsDeleted())
+}
+
 func TestParseReq_EmptyBody(t *testing.T) {
 	_, err := ParseReq(`REQ-TEST-SWL-1 title
 

@@ -69,7 +69,7 @@ The RMT SHALL persistently store and retrieve requirements that it manages and t
 
 ###### Attributes:
 - Rationale: requirements must be change-controlled. We do this in Git repositories. The RMT must use this and only this to store the requirements. Work done in Git repositories is tracked in a separate PR/ticket system, but all data that needs to be controlled shall be stored with the commits in Git.
-- Parents: REQ-TRAQ-SYS-1, REQ-TRAQ-SYS-2, REQ-TRAQ-SYS-3, REQ-TRAQ-SYS-4
+- Parents: REQ-TRAQ-SYS-1, REQ-TRAQ-SYS-2, REQ-TRAQ-SYS-3
 - Verification: Demonstration
 - Safety impact: None
 
@@ -167,15 +167,9 @@ The RMT SHALL be able to generate a list of all changelists that touched the def
 - Verification: Test
 - Safety impact: None
 
-##### REQ-TRAQ-SWH-8 Change justification tracing
 
-The RMT SHALL verify and flag violations that changelists touching definitions or implementation of a requirement have a rationale-for-change field.
+##### REQ-TRAQ-SWH-8 DELETED
 
-###### Attributes:
-- Rationale: no changes should be allowed unless they were vetted and the justification accepted by an independent reviewer.
-- Parents: REQ-TRAQ-SYS-3
-- Verification: Test
-- Safety impact: None
 
 ##### REQ-TRAQ-SWH-9 Output readability
 

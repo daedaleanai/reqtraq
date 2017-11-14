@@ -88,16 +88,27 @@ func ParseReq(txt string) (*Req, error) {
 		Attributes: map[string]string{},
 	}
 
+	var ok bool
+	if r.Level, ok = config.ReqTypeToReqLevel[r.ReqType()]; !ok {
+		return nil, fmt.Errorf("Invalid request type: %q", r.ReqType())
+	}
+
 	// chop defining ID and any punctuation
 	txt = strings.TrimLeftFunc(txt[defid[1]:], IsPunctOrSpace)
 
 	// The first line is the title.
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
+	r.Title = parts[0]
+
 	if len(parts) < 2 {
-		// It means there is a single line.
+		if r.IsDeleted() {
+			// This is a placeholder for an obsolete requirement.
+			return r, nil
+		}
+		// The definition of the non-deleted requirement has a single line,
+		// so it has no description (body, attributes).
 		return nil, fmt.Errorf("Requirement must not be empty: %s", r.ID)
 	}
-	r.Title = parts[0]
 
 	// Next is the body, until the attributes section.
 	bodyAndAttributes := parts[1]
@@ -144,12 +155,6 @@ func ParseReq(txt string) (*Req, error) {
 			}
 		}
 	}
-
-	level, ok := config.ReqTypeToReqLevel[r.ReqType()]
-	if !ok {
-		return nil, fmt.Errorf("Invalid request type: %q", r.ReqType())
-	}
-	r.Level = level
 
 	return r, nil
 }

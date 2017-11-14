@@ -208,7 +208,13 @@ func TestParsing(t *testing.T) {
 	}
 }
 
+// @llr REQ-TRAQ-SWL-17
 func TestReq_IsDeleted(t *testing.T) {
-	req := Req{ID: "REQ-TEST-SYS-2", Title: "DELETED Requirement", Body: "This is the body"}
-	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Body)
+	req := Req{ID: "REQ-TEST-SYS-2", Title: "DELETED"}
+	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Title)
+	req = Req{ID: "REQ-TEST-SYS-2", Title: "DELETED Requirement"}
+	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Title)
+
+	req = Req{ID: "REQ-TEST-SYS-2", Title: "Deleted Requirements"}
+	assert.False(t, req.IsDeleted(), "Requirement with title %s should NOT have status DELETED", req.Title)
 }
