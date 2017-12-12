@@ -9,15 +9,15 @@ import (
 )
 
 // ChangedSince produces a report of how requirements have changed between prg and this reqGraph
-func (rg reqGraph) ChangedSince(prg reqGraph) (diffs map[string][]string) {
+func (rg reqGraph) ChangedSince(prg *reqGraph) (diffs map[string][]string) {
 	if prg == nil {
 		return
 	}
 	keys := map[string]bool{}
-	for k := range rg {
+	for k := range rg.Reqs {
 		keys[k] = true
 	}
-	for k := range prg {
+	for k := range prg.Reqs {
 		keys[k] = true
 	}
 	var kk []string
@@ -27,7 +27,7 @@ func (rg reqGraph) ChangedSince(prg reqGraph) (diffs map[string][]string) {
 	sort.Strings(kk)
 	diffs = make(map[string][]string)
 	for _, k := range kk {
-		if dd := rg[k].ChangedSince(prg[k]); dd != nil {
+		if dd := rg.Reqs[k].ChangedSince(prg.Reqs[k]); dd != nil {
 			diffs[k] = dd
 		}
 	}

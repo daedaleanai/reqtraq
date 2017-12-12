@@ -22,7 +22,8 @@ func serve(addr string) error {
 }
 
 var errorTemplate *template.Template = template.Must(template.New("error").Parse(
-	`<html>OOPS, {{.Error}}`))
+	`<html>OOPS!
+<pre>{{.Error}}</pre>`))
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, r.URL)
@@ -130,26 +131,11 @@ func get(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		defer os.RemoveAll(dir)
-		filter := ReqFilter{}
-		if len(r.FormValue("title_filter")) > 0 {
-			filter[TitleFilter], err = regexp.Compile(r.FormValue("title_filter"))
-			if err != nil {
-				return err
-			}
+		filter, err := createFilter(r)
+		if err != nil {
+			return fmt.Errorf("Failed to create filter: %v", err)
 		}
-		if len(r.FormValue("id_filter")) > 0 {
-			filter[IdFilter], err = regexp.Compile(r.FormValue("id_filter"))
-			if err != nil {
-				return err
-			}
-		}
-		if len(r.FormValue("body_filter")) > 0 {
-			filter[BodyFilter], err = regexp.Compile(r.FormValue("body_filter"))
-			if err != nil {
-				return err
-			}
-		}
-		var prg reqGraph
+		var prg *reqGraph
 		since := r.FormValue("since_commit")
 		if since != "" {
 			sinceCommit := strings.Split(since, " ")[0]
@@ -179,4 +165,28 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	return nil
+}
+
+func createFilter(r *http.Request) (ReqFilter, error) {
+	filter := ReqFilter{}
+	var err error
+	if r.FormValue("title_filter") != "" {
+		filter[TitleFilter], err = regexp.Compile(r.FormValue("title_filter"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if r.FormValue("id_filter") != "" {
+		filter[IdFilter], err = regexp.Compile(r.FormValue("id_filter"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if r.FormValue("body_filter") != "" {
+		filter[BodyFilter], err = regexp.Compile(r.FormValue("body_filter"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return filter, nil
 }

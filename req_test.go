@@ -12,10 +12,10 @@ import (
 )
 
 func TestReqGraph_AddCodeRef(t *testing.T) {
-	rg := reqGraph{}
+	rg := reqGraph{Reqs: make(map[string]*Req)}
 	const id = "certdocs/a.cc"
 	rg.AddCodeRefs(id, "a.cc", "", []string{"REQ-TRAQ-0-SWH-001"})
-	v := rg["a.cc"]
+	v := rg.Reqs["a.cc"]
 	if v == nil {
 		// fatal instead of error
 		t.Fatalf("Failure adding code reference %q: %v", id, rg)
@@ -31,7 +31,7 @@ func TestReqGraph_AddCodeRef(t *testing.T) {
 }
 
 func TestReqGraph_AddReq(t *testing.T) {
-	rg := reqGraph{}
+	rg := reqGraph{Reqs: make(map[string]*Req)}
 
 	req := &Req{ID: "REQ-TRAQ-SWH-1"}
 	req2 := &Req{ID: "REQ-TRAQ-SWL-1", ParentIds: []string{"REQ-TRAQ-SWH-1"}}
@@ -43,21 +43,21 @@ func TestReqGraph_AddReq(t *testing.T) {
 	if expectedReq := (&Req{
 		ID:   "REQ-TRAQ-SWH-1",
 		Path: "./TRAQ-0-SRD.md",
-	}); !reflect.DeepEqual(expectedReq, rg["REQ-TRAQ-SWH-1"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-TRAQ-SWH-1"])
+	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TRAQ-SWH-1"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TRAQ-SWH-1"])
 	}
 
 	if expectedReq := (&Req{
 		ID:        "REQ-TRAQ-SWL-1",
 		Path:      "./TRAQ-1-SDD.md",
 		ParentIds: []string{"REQ-TRAQ-SWH-1"},
-	}); !reflect.DeepEqual(expectedReq, rg["REQ-TRAQ-SWL-1"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg["REQ-TRAQ-SWL-1"])
+	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TRAQ-SWL-1"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TRAQ-SWL-1"])
 	}
 }
 
 func TestReqGraph_AddReqSomeMore(t *testing.T) {
-	rg := reqGraph{}
+	rg := reqGraph{Reqs: make(map[string]*Req)}
 
 	for _, v := range []*Req{
 		{ID: "REQ-TRAQ-SWH-1", Position: 1},
@@ -91,8 +91,8 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 			Position:  1,
 		}},
 	} {
-		if !reflect.DeepEqual(v.expect, *rg[v.id]) {
-			t.Errorf("case %d:\nexpected %#v,\n     got %#v", i, v.expect, *rg[v.id])
+		if !reflect.DeepEqual(v.expect, *rg.Reqs[v.id]) {
+			t.Errorf("case %d:\nexpected %#v,\n     got %#v", i, v.expect, *rg.Reqs[v.id])
 		}
 	}
 }
@@ -184,8 +184,8 @@ func TestReq_MatchesDiffs(t *testing.T) {
 // @tests @llr REQ-TRAQ-SWL-15
 func TestParsing(t *testing.T) {
 	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
-	rg := reqGraph{}
-	errors := parseCertdocToGraph(f, rg)
+	rg := &reqGraph{Reqs: make(map[string]*Req)}
+	errors, _ := parseCertdocToGraph(f, rg)
 	assert.Empty(t, errors, "Unexpected errors while parsing "+f)
 	var systemReqs [5]Req
 	for i := 0; i < 5; i++ {

@@ -218,6 +218,16 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<h2>Issues</h2>
 		<hr>
 	</section>
+	<h3>Basic</h3>
+	<ul>
+	{{ range .Reqs.Errors }}
+		<li>
+			{{ . }}
+		</li>
+	{{ else }}
+		<li class="text-success">No basic errors found.</li>
+	{{ end }}
+	</ul>
 	<h3>Dangling Requirements</h3>
 	<ul>
 	{{ range .Reqs.DanglingReqsByPosition }}
@@ -231,7 +241,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	<h3>Invalid Attributes</h3>
 	<ul>
 	{{ range .AttributesErrors }}
-	  <li>
+		<li>
 			{{ . }}
 		</li>
 	{{ else }}
@@ -311,6 +321,16 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<hr>
 	</section>
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
+	<h3>Basic</h3>
+	<ul>
+	{{ range .Reqs.Errors }}
+		<li>
+			{{ . }}
+		</li>
+	{{ else }}
+		<li class="text-success">No basic errors found.</li>
+	{{ end }}
+	</ul>
 	<h3>Dangling Requirements</h3>
 	<ul>
 	{{ range .Reqs.DanglingReqsByPosition }}

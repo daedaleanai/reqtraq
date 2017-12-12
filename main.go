@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -223,7 +225,7 @@ func main() {
 	}
 
 	var (
-		rg    reqGraph
+		rg    *reqGraph
 		diffs map[string][]string
 	)
 	switch command {
@@ -235,7 +237,7 @@ func main() {
 		}
 		defer os.RemoveAll(dir)
 
-		var prg reqGraph
+		var prg *reqGraph
 		if *since != "" {
 			var dir string
 			prg, dir, err = buildGraph(*since)
@@ -370,7 +372,7 @@ func main() {
 			log.Fatal(err)
 		}
 		reqIds := map[string]bool{}
-		for k := range rg {
+		for k := range rg.Reqs {
 			reqIds[k] = true
 		}
 		if err := rg.UpdateTasks(reqIds); err != nil {
@@ -405,38 +407,52 @@ func precommit(certdocPath, codePath, confPath string) error {
 	if err != nil {
 		return err
 	}
+	errs := rg.Errors
+	if len(errs) == 0 {
+		errs2, err := rg.checkReqReferences(certdocPath)
+		if err != nil {
+			return err
+		}
+		errs = append(errs, errs2...)
 
-	errs := make([]error, 0)
-	errs2, err := rg.checkReqReferences(certdocPath)
-	if err != nil {
-		return err
+		conf, err := parseConf(confPath)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("Failed to parse project config file: %s", err.Error()))
+		} else {
+			errs2, err = rg.CheckAttributes(conf, nil, nil)
+			if err != nil {
+				return err
+			}
+			errs = append(errs, errs2...)
+		}
 	}
-	errs = append(errs, errs2...)
 
-	conf, err := parseConf(confPath)
-	if err != nil {
-		return err
-	}
-	errs2, err = rg.CheckAttributes(conf, nil, nil)
-	if err != nil {
-		return err
-	}
-	errs = append(errs, errs2...)
-
-	errorResult := ""
-	for _, e := range errs {
-		errorResult += e.Error() + "\n"
-	}
-	if errorResult != "" {
-		return fmt.Errorf(errorResult)
+	if len(errs) > 0 {
+		return combineErrors(errs)
 	}
 	return nil
 }
 
-func buildGraph(commit string) (reqGraph, string, error) {
+// combineErrors creates an error out of other errors.
+func combineErrors(errs []error) error {
+	var res bytes.Buffer
+	for _, e := range errs {
+		if res.Len() > 0 {
+			res.WriteByte('\n')
+		}
+		res.WriteString(e.Error())
+	}
+	return errors.New(res.String())
+}
+
+// buildGraph returns the requirements graph at the specified commit, or
+// the graph for the current files if commit is empty. In case the commit
+// is specified, a temporary clone of the repository is created and the
+// path to it is returned.
+func buildGraph(commit string) (*reqGraph, string, error) {
 	if commit == "" {
 		rg, err := CreateReqGraph(*fCertdocPath, *fCodePath)
-		return rg, "", err
+		return rg, "", errors.Wrap(err, "Failed to create graph in current dir")
 	}
 
 	cwd, err := os.Getwd()
@@ -452,10 +468,10 @@ func buildGraph(commit string) (reqGraph, string, error) {
 	}
 	rg, err := CreateReqGraph(*fCertdocPath, *fCodePath)
 	if err != nil {
-		return nil, dir, err
+		return rg, dir, errors.Wrap(err, fmt.Sprintf("Failed to create graph in %s", dir))
 	}
 	if err := os.Chdir(cwd); err != nil {
-		return nil, dir, err
+		return rg, dir, err
 	}
 	return rg, dir, nil
 }
