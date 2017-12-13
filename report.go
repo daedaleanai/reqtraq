@@ -327,14 +327,12 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<li>
 			{{ . }}
 		</li>
-	{{ else }}
-		<li class="text-success">No basic errors found.</li>
 	{{ end }}
 	</ul>
 	<h3>Dangling Requirements</h3>
 	<ul>
 	{{ range .Reqs.DanglingReqsByPosition }}
-		{{ if .Matches $.Filter }}
+		{{ if .Matches $.Filter $.Diffs }}
 			<li>
 				{{ template "REQUIREMENT" ($.Once.Once .) }}
 			</li>
