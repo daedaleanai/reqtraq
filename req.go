@@ -553,7 +553,7 @@ func (rg *reqGraph) UpdateTasks(filterIDs map[string]bool) error {
 func (rg reqGraph) DanglingReqsByPosition() []*Req {
 	var r []*Req
 	for _, req := range rg.Reqs {
-		if !req.Seen {
+		if !req.Seen && !req.IsDeleted() {
 			r = append(r, req)
 		}
 	}
