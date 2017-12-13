@@ -44,7 +44,6 @@ func onlyLetters(s string) string {
 // ChangedSince returns a set of messages that describe how r has changed
 // from a previous version pr.
 func (r *Req) ChangedSince(pr *Req) (diffs []string) {
-
 	if r == nil && pr == nil {
 		return nil
 	}

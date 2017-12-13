@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReqGraph_AddCodeRef(t *testing.T) {
+func TestReqGraph_AddCodeRefs(t *testing.T) {
 	rg := reqGraph{Reqs: make(map[string]*Req)}
 	const id = "certdocs/a.cc"
 	rg.AddCodeRefs(id, "a.cc", "", []string{"REQ-TRAQ-0-SWH-001"})
@@ -56,7 +56,7 @@ func TestReqGraph_AddReq(t *testing.T) {
 	}
 }
 
-func TestReqGraph_AddReqSomeMore(t *testing.T) {
+func TestReqGraph_AddReq_someMore(t *testing.T) {
 	rg := reqGraph{Reqs: make(map[string]*Req)}
 
 	for _, v := range []*Req{
@@ -98,86 +98,118 @@ func TestReqGraph_AddReqSomeMore(t *testing.T) {
 }
 
 func TestReq_ReqType(t *testing.T) {
-	req := Req{ID: "REQ-TRAQ-SWL-1"}
+	tests := []struct {
+		req     Req
+		reqType string
+	}{
+		{Req{ID: "REQ-TRAQ-SWL-1"}, "SWL"},
+		{Req{ID: "Garbage"}, ""},
+	}
 
-	if v := req.ReqType(); v != "SWL" {
-		t.Error("Expected SWL got", v)
+	for _, test := range tests {
+		assert.Equal(t, test.reqType, test.req.ReqType())
 	}
 }
 
-func TestReq_ReqTypeNoMatch(t *testing.T) {
-	req := Req{ID: "Garbage"}
+func TestReq_Significant(t *testing.T) {
+	tests := []struct {
+		filter ReqFilter
+		empty  bool
+	}{
+		{ReqFilter{}, true},
+		{ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{}}, true},
 
-	if v := req.ReqType(); v != "" {
-		t.Error("Expected nothing got", v)
+		{ReqFilter{IDRegexp: regexp.MustCompile("REQ-TRAQ-SWH-*")}, false},
+		{ReqFilter{TitleRegexp: regexp.MustCompile("thrust")}, false},
+		{ReqFilter{BodyRegexp: regexp.MustCompile("thrust")}, false},
+		{ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Demo*")}, false},
+		{ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}}, false},
+	}
+
+	for _, test := range tests {
+		if test.empty {
+			assert.True(t, test.filter.IsEmpty(), "filter is not empty: %v", test.filter)
+		} else {
+			assert.False(t, test.filter.IsEmpty(), "filter is empty: %v", test.filter)
+		}
 	}
 }
 
-func TestReq_IdFilter(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWH-1", Body: "thrust control"}
-	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-TRAQ-SWH-*")}
-	if !r.Matches(filter, nil) {
-		t.Errorf("expected matching requirement but did not match")
-	}
-}
+func TestReq_Matches_filter(t *testing.T) {
+	tests := []struct {
+		req     Req
+		filter  ReqFilter
+		diffs   map[string][]string
+		matches bool
+	}{
+		{Req{ID: "REQ-TRAQ-SWH-1", Body: "thrust control"},
+			ReqFilter{IDRegexp: regexp.MustCompile("REQ-TRAQ-SWH-*")},
+			nil,
+			true},
+		{Req{ID: "REQ-TRAQ-SWH-1", Title: "The control unit will calculate thrust.", Body: "It will also do much more."},
+			ReqFilter{TitleRegexp: regexp.MustCompile("thrust")},
+			nil,
+			true},
+		{Req{ID: "REQ-TRAQ-SWH-1", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."},
+			ReqFilter{TitleRegexp: regexp.MustCompile("thrust")},
+			nil,
+			false},
+		{Req{ID: "REQ-TRAQ-SWH-1", Body: "thrust control"},
+			ReqFilter{BodyRegexp: regexp.MustCompile("thrust")},
+			nil,
+			true},
+		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
+			ReqFilter{IDRegexp: regexp.MustCompile("REQ-*"), BodyRegexp: regexp.MustCompile("thrust")},
+			nil,
+			true},
+		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
+			ReqFilter{IDRegexp: regexp.MustCompile("REQ-DDLN-*"), BodyRegexp: regexp.MustCompile("thrust")},
+			nil,
+			false},
 
-func TestReq_TitleFilter(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWH-1", Title: "The control unit will calculate thrust.", Body: "It will also do much more."}
-	filter := ReqFilter{TitleFilter: regexp.MustCompile("thrust")}
-	if !r.Matches(filter, nil) {
-		t.Errorf("expected matching requirement but did not match")
-	}
-}
+		// filter attributes
+		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
+			ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Demo*")},
+			nil,
+			true},
+		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
+			ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Test*")},
+			nil,
+			false},
+		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
+			ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}},
+			nil,
+			true},
+		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Color": "Brown"}},
+			ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}},
+			nil,
+			false},
+		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
+			ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Test*")}},
+			nil,
+			false},
 
-func TestReq_TitleFilterNegative(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWH-1", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."}
-	filter := ReqFilter{TitleFilter: regexp.MustCompile("thrust")}
-	if r.Matches(filter, nil) {
-		t.Errorf("expected mismatching requirement but found match")
-	}
-}
-
-func TestReq_BodyFilter(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWH-1", Body: "thrust control"}
-	filter := ReqFilter{BodyFilter: regexp.MustCompile("thrust")}
-	if !r.Matches(filter, nil) {
-		t.Errorf("expected matching requirement but did not match")
-	}
-}
-
-func TestReq_IdAndBodyFilter(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"}
-	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-*"), BodyFilter: regexp.MustCompile("thrust")}
-	if !r.Matches(filter, nil) {
-		t.Errorf("expected matching requirement but did not match")
-	}
-}
-
-func TestReq_IdAndBodyFilterNegative(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"}
-	filter := ReqFilter{IdFilter: regexp.MustCompile("REQ-DDLN-*"), BodyFilter: regexp.MustCompile("thrust")}
-	if r.Matches(filter, nil) {
-		t.Errorf("expected mismatching requirement but found match")
-	}
-}
-
-func TestReq_MatchesDiffs(t *testing.T) {
-	r := Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"}
-	// Matching filter.
-	filter := ReqFilter{}
-	diffs := make(map[string][]string)
-	if r.Matches(filter, diffs) {
-		t.Errorf("expected mismatching requirement but found match")
-	}
-	diffs[r.ID] = make([]string, 0)
-	if !r.Matches(filter, diffs) {
-		t.Errorf("expected matching requirement but found mismatch")
+		// diffs
+		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
+			ReqFilter{},
+			map[string][]string{"REQ-TRAQ-SWL-1": make([]string, 0)},
+			false},
+		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
+			ReqFilter{},
+			map[string][]string{"REQ-TRAQ-SWL-14": make([]string, 0)},
+			true},
+		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
+			ReqFilter{IDRegexp: regexp.MustCompile("X")},
+			map[string][]string{"REQ-TRAQ-SWL-14": make([]string, 0)},
+			false},
 	}
 
-	// Mismatching filter.
-	filter[IdFilter] = regexp.MustCompile("X")
-	if r.Matches(filter, diffs) {
-		t.Errorf("expected mismatching requirement but found match (mismatching filter)")
+	for _, test := range tests {
+		if test.matches {
+			assert.True(t, test.req.Matches(&test.filter, test.diffs), "expected requirement to match: %v filter=%v diffs=%v", test.req, test.filter, test.diffs)
+		} else {
+			assert.False(t, test.req.Matches(&test.filter, test.diffs), "expected requirement to not match: %v filter=%v diffs=%v", test.req, test.filter, test.diffs)
+		}
 	}
 }
 

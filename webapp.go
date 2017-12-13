@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/git"
+	"github.com/pkg/errors"
 )
 
 func serve(addr string) error {
@@ -80,6 +81,16 @@ var indexTemplate *template.Template = template.Must(template.New("index").Parse
 <div class="rTableCell"><input name="body_filter" type="text"></div>
 </div>
 <div class="rTableRow">
+<div class="rTableCell">Attributes:</div>
+<div class="rTableCell"><input name="any_attribute_filter" type="text"></div>
+</div>
+{{ range .Attributes }}
+<div class="rTableRow">
+<div class="rTableCell" style="padding-left: 2em;">{{ . }}:</div>
+<div class="rTableCell"><input name="attribute_filter_{{ . }}" type="text"></div>
+</div>
+{{ end }}
+<div class="rTableRow">
 <div class="rTableCell">Since:</div>
 <div class="rTableCell"><select name="since_commit">
 <option value="">Beginning</option>
@@ -105,8 +116,9 @@ var indexTemplate *template.Template = template.Must(template.New("index").Parse
 </html>`))
 
 type indexData struct {
-	RepoName string
-	Commits  []string
+	RepoName   string
+	Attributes []string
+	Commits    []string
 }
 
 func get(w http.ResponseWriter, r *http.Request) error {
@@ -114,11 +126,19 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	path := r.URL.Path
 	switch {
 	case path == "/":
+		conf, err := parseConf(*fReportConfPath)
+		if err != nil {
+			return errors.Wrap(err, "Failed to parse config")
+		}
+		attributes := make([]string, 0, len(conf.Attributes)+1)
+		for _, a := range conf.Attributes {
+			attributes = append(attributes, a["name"])
+		}
 		commits, err := git.AllCommits()
 		if err != nil {
 			return err
 		}
-		indexTemplate.Execute(w, indexData{repoName, commits})
+		indexTemplate.Execute(w, indexData{repoName, attributes, commits})
 
 	case path == "/report":
 		at := r.FormValue("at_commit")
@@ -148,17 +168,17 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		diffs := rg.ChangedSince(prg)
 		switch r.FormValue("report-type") {
 		case "Bottom Up":
-			if len(filter) > 0 || diffs != nil {
+			if !filter.IsEmpty() || diffs != nil {
 				return rg.ReportUpFiltered(w, filter, diffs)
 			}
 			return rg.ReportUp(w)
 		case "Top Down":
-			if len(filter) > 0 || diffs != nil {
+			if !filter.IsEmpty() || diffs != nil {
 				return rg.ReportDownFiltered(w, filter, diffs)
 			}
 			return rg.ReportDown(w)
 		case "Issues":
-			if len(filter) > 0 || diffs != nil {
+			if !filter.IsEmpty() || diffs != nil {
 				return rg.ReportIssuesFiltered(w, filter, diffs)
 			}
 			return rg.ReportIssues(w)
@@ -167,26 +187,48 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func createFilter(r *http.Request) (ReqFilter, error) {
-	filter := ReqFilter{}
+func createFilter(r *http.Request) (*ReqFilter, error) {
+	filter := &ReqFilter{}
+	filter.AttributeRegexp = make(map[string]*regexp.Regexp, 0)
 	var err error
-	if r.FormValue("title_filter") != "" {
-		filter[TitleFilter], err = regexp.Compile(r.FormValue("title_filter"))
+	if r.FormValue("id_filter") != "" {
+		filter.IDRegexp, err = regexp.Compile(r.FormValue("id_filter"))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "id_filter regex invalid")
 		}
 	}
-	if r.FormValue("id_filter") != "" {
-		filter[IdFilter], err = regexp.Compile(r.FormValue("id_filter"))
+	if r.FormValue("title_filter") != "" {
+		filter.TitleRegexp, err = regexp.Compile(r.FormValue("title_filter"))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "title_filter regex invalid")
 		}
 	}
 	if r.FormValue("body_filter") != "" {
-		filter[BodyFilter], err = regexp.Compile(r.FormValue("body_filter"))
+		filter.BodyRegexp, err = regexp.Compile(r.FormValue("body_filter"))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "body_filter regex invalid")
 		}
+	}
+	if r.FormValue("any_attribute_filter") != "" {
+		filter.AnyAttributeRegexp, err = regexp.Compile(r.FormValue("any_attribute_filter"))
+		if err != nil {
+			return nil, errors.Wrap(err, "attributes regex invalid")
+		}
+	}
+	for field := range r.Form {
+		if !strings.HasPrefix(field, "attribute_filter_") {
+			continue
+		}
+		attribute := strings.ToUpper(field[17:])
+		rawValue := r.FormValue(field)
+		if rawValue == "" {
+			continue
+		}
+		value, err := regexp.Compile(rawValue)
+		if err != nil {
+			return nil, errors.Wrap(err, "title_filter regex invalid")
+		}
+		filter.AttributeRegexp[attribute] = value
 	}
 	return filter, nil
 }

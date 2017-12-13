@@ -114,6 +114,7 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 	if r.IsDeleted() {
 		return errs
 	}
+	// Iterate the attribute specs.
 	for _, a := range as {
 		for k, v := range a {
 			switch k {
@@ -297,7 +298,7 @@ func (rg *reqGraph) AddReq(req *Req, path string) error {
 	return nil
 }
 
-func (rg *reqGraph) CheckAttributes(reportConf JsonConf, filter ReqFilter, diffs map[string][]string) ([]error, error) {
+func (rg *reqGraph) CheckAttributes(reportConf JsonConf, filter *ReqFilter, diffs map[string][]string) ([]error, error) {
 	var errs []error
 	for _, req := range rg.Reqs {
 		if req.Level != config.CODE && req.Matches(filter, diffs) {
@@ -404,7 +405,7 @@ func (rg *reqGraph) Resolve() []error {
 	return nil
 }
 
-func (rg *reqGraph) OrdsByPosition() []*Req {
+func (rg reqGraph) OrdsByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg.Reqs {
 		if v.Level == config.SYSTEM {
@@ -680,41 +681,66 @@ func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
 	return errs
 }
 
-type FilterType int
+type ReqFilter struct {
+	IDRegexp           *regexp.Regexp
+	TitleRegexp        *regexp.Regexp
+	BodyRegexp         *regexp.Regexp
+	AnyAttributeRegexp *regexp.Regexp
+	AttributeRegexp    map[string]*regexp.Regexp
+}
 
-const (
-	TitleFilter FilterType = iota
-	IdFilter
-	BodyFilter
-)
-
-type ReqFilter map[FilterType]*regexp.Regexp
+// IsEmpty returns whether the filter has no restriction.
+func (f ReqFilter) IsEmpty() bool {
+	return f.IDRegexp == nil && f.TitleRegexp == nil &&
+		f.BodyRegexp == nil && f.AnyAttributeRegexp == nil &&
+		len(f.AttributeRegexp) == 0
+}
 
 // Matches returns true if the requirement matches the filter AND its ID is
 // in the diffs map, if any.
 // @llr REQ-TRAQ-SWL-12
-func (r *Req) Matches(filter ReqFilter, diffs map[string][]string) bool {
-	for t, e := range filter {
-		switch t {
-		case TitleFilter:
-			if !e.MatchString(r.Title) {
+func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
+	if filter != nil {
+		if filter.IDRegexp != nil {
+			if !filter.IDRegexp.MatchString(r.ID) {
 				return false
 			}
-		case IdFilter:
-			if !e.MatchString(r.ID) {
+		}
+		if filter.TitleRegexp != nil {
+			if !filter.TitleRegexp.MatchString(r.Title) {
 				return false
 			}
-		case BodyFilter:
-			if !e.MatchString(string(r.Body)) {
+		}
+		if filter.BodyRegexp != nil {
+			if !filter.BodyRegexp.MatchString(string(r.Body)) {
+				return false
+			}
+		}
+		if filter.AnyAttributeRegexp != nil {
+			var matches bool
+			// Any of the existing attributes must match.
+			for _, value := range r.Attributes {
+				if filter.AnyAttributeRegexp.MatchString(value) {
+					matches = true
+					break
+				}
+			}
+			if !matches {
+				return false
+			}
+		}
+		// Each of the filtered attributes must match.
+		for a, e := range filter.AttributeRegexp {
+			if !e.MatchString(r.Attributes[a]) {
 				return false
 			}
 		}
 	}
-	if diffs == nil {
-		return true
+	if diffs != nil {
+		_, ok := diffs[r.ID]
+		return ok
 	}
-	_, ok := diffs[r.ID]
-	return ok
+	return true
 }
 
 func NextId(f string) (string, error) {

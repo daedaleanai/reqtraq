@@ -198,19 +198,19 @@ func main() {
 	switch command {
 	case "reportdown", "reportup", "reportissues":
 		if len(*fReportTitleFilterString) > 0 {
-			filter[TitleFilter], err = regexp.Compile(*fReportTitleFilterString)
+			filter.TitleRegexp, err = regexp.Compile(*fReportTitleFilterString)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 		if len(*fReportIdFilterString) > 0 {
-			filter[IdFilter], err = regexp.Compile(*fReportIdFilterString)
+			filter.IDRegexp, err = regexp.Compile(*fReportIdFilterString)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 		if len(*fReportBodyFilterString) > 0 {
-			filter[BodyFilter], err = regexp.Compile(*fReportBodyFilterString)
+			filter.BodyRegexp, err = regexp.Compile(*fReportBodyFilterString)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -293,13 +293,13 @@ func main() {
 		}
 		of.Close()
 
-		if len(filter) > 0 || diffs != nil {
+		if !filter.IsEmpty() || diffs != nil {
 			of, err := os.Create(*fReportPrefix + "down-filtered.html")
 			if err != nil {
 				log.Fatal(err)
 			}
 			logFileCreate(of.Name())
-			if err := rg.ReportDownFiltered(of, filter, diffs); err != nil {
+			if err := rg.ReportDownFiltered(of, &filter, diffs); err != nil {
 				log.Fatal(err)
 			}
 			of.Close()
@@ -315,13 +315,13 @@ func main() {
 		}
 		of.Close()
 
-		if len(filter) > 0 || diffs != nil {
+		if !filter.IsEmpty() || diffs != nil {
 			of, err := os.Create(*fReportPrefix + "up-filtered.html")
 			if err != nil {
 				log.Fatal(err)
 			}
 			logFileCreate(of.Name())
-			if err := rg.ReportUpFiltered(of, filter, diffs); err != nil {
+			if err := rg.ReportUpFiltered(of, &filter, diffs); err != nil {
 				log.Fatal(err)
 			}
 			of.Close()
@@ -336,13 +336,13 @@ func main() {
 			log.Fatal(err)
 		}
 		of.Close()
-		if len(filter) > 0 || diffs != nil {
+		if !filter.IsEmpty() || diffs != nil {
 			of, err := os.Create(*fReportPrefix + "issues-filtered.html")
 			if err != nil {
 				log.Fatal(err)
 			}
 			logFileCreate(of.Name())
-			if err := rg.ReportIssuesFiltered(of, filter, diffs); err != nil {
+			if err := rg.ReportIssuesFiltered(of, &filter, diffs); err != nil {
 				log.Fatal(err)
 			}
 			of.Close()

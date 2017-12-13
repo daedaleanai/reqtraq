@@ -361,7 +361,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 
 type reportData struct {
 	Reqs             reqGraph
-	Filter           ReqFilter
+	Filter           *ReqFilter
 	Once             Oncer
 	Diffs            map[string][]string
 	AttributesErrors []error
@@ -393,16 +393,16 @@ func (rg reqGraph) ReportIssues(w io.Writer) error {
 }
 
 // @llr REQ-TRAQ-SWL-6
-func (rg reqGraph) ReportDownFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
+func (rg reqGraph) ReportDownFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
 	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs, nil, nil})
 }
 
 // @llr REQ-TRAQ-SWL-7
-func (rg reqGraph) ReportUpFiltered(w io.Writer, f ReqFilter, diffs map[string][]string) error {
+func (rg reqGraph) ReportUpFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
 	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs, nil, nil})
 }
 
-func (rg reqGraph) ReportIssuesFiltered(w io.Writer, filter ReqFilter, diffs map[string][]string) error {
+func (rg reqGraph) ReportIssuesFiltered(w io.Writer, filter *ReqFilter, diffs map[string][]string) error {
 	conf, err := parseConf(*fReportConfPath)
 	if err != nil {
 		return err
