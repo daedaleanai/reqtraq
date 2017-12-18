@@ -405,10 +405,12 @@ func (rg *reqGraph) Resolve() []error {
 	return nil
 }
 
+// OrdsByPosition returns the SYSTEM requirements which don't have any parent,
+// ordered by position.
 func (rg reqGraph) OrdsByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg.Reqs {
-		if v.Level == config.SYSTEM {
+		if v.Level == config.SYSTEM && len(v.ParentIds) == 0 {
 			r = append(r, v)
 		}
 	}

@@ -97,6 +97,20 @@ func TestReqGraph_AddReq_someMore(t *testing.T) {
 	}
 }
 
+func TestReqGraph_OrdsByPosition(t *testing.T) {
+	rg := reqGraph{Reqs: make(map[string]*Req)}
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-2", Level: config.SYSTEM, Position: 1}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-1", Level: config.SYSTEM, Position: 2}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
+	assert.Empty(t, rg.Resolve())
+
+	reqs := rg.OrdsByPosition()
+	assert.Len(t, reqs, 2)
+	assert.Equal(t, "REQ-TRAQ-SYS-2", reqs[0].ID)
+	assert.Equal(t, "REQ-TRAQ-SYS-1", reqs[1].ID)
+}
+
 func TestReq_ReqType(t *testing.T) {
 	tests := []struct {
 		req     Req
