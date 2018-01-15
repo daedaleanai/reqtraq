@@ -358,14 +358,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "prepush":
-		changedReqIds := map[string]bool{}
-		for k := range diffs {
-			changedReqIds[k] = true
-			fmt.Println("Changed requirement ", k)
-		}
-		if err := rg.UpdateTasks(changedReqIds); err != nil {
-			log.Fatal(err)
-		}
+		// Noop.
 	case "updatetasks": // update all task title/descriptions/attributes based on the requirement documents
 		rg, err := CreateReqGraph(*fCertdocPath, *fCodePath)
 		if err != nil {
