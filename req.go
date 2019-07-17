@@ -418,7 +418,7 @@ func (rg reqGraph) OrdsByPosition() []*Req {
 	return r
 }
 
-func (rg *reqGraph) CodeFilesByPosition() []*Req {
+func (rg reqGraph) CodeFilesByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg.Reqs {
 		if v.Level == config.CODE {
