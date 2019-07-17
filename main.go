@@ -277,7 +277,12 @@ func main() {
 				}
 				body = append(body, line)
 			}
-			fmt.Printf("Requirement %s %s\n%s…\n\n", r.ID, r.Title, body[0])
+			fmt.Printf("Requirement %s %s\n", r.ID, r.Title)
+			// Check for empty body because deleted requirements have no body.
+			if len(body) > 0 {
+				fmt.Printf("%s…\n", body[0])
+			}
+			fmt.Println()
 		}
 		if failureCount > 0 {
 			log.Fatalf("Requirements failed to parse: %d", failureCount)
