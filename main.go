@@ -55,7 +55,6 @@ command is one of:
 	reportdown 	creates an HTML traceability report from system requirements down to code
 	reportissues	creates an HTML report with all issues found in the requirement documents
 	reportup 	creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements
-	updatetasks	updates the tasks associated with the given requirements (requires a Phabricator/JIRA/Bugzilla instance)
 	web		starts a local web server to facilitate interaction with reqtraq
 
 
@@ -114,23 +113,6 @@ Parameters:
 	--certdoc_path: location of certification documents within the current repository
 `
 
-const updateTaskUsage = `Updates the tasks associated with the given requirements (requires a Phabricator/JIRA/Bugzilla instance). Usage:
-	reqtraq updatetasks --certdoc_path=<path>
-Parameters:
-	--certdoc_path: location of certification documents within the current repository
-
-For each requirement the method will:
-	- find the task associated with the requirement, by searching for the requirement ID in the task title using the taskmgr API
-	- if a task was found and the requirement was not deleted, its title and description are updated
-	- if a task was found and the requirement was deleted, the task is set as INVALID
-	- if the task was not found, it is created and filled in with the following values:
-	 	Title: <Req ID> <Req Title>
-		Description: <Requirement Body>
-		Status: Open
-		Tags: Project Abbreviation (e.g. DDLN, VXU, etc.)
-      		Parents: the first parent task (Phabricator doesn't yet support multiple parents in the api)
-`
-
 const webUsage = `Starts a local web server to facilitate interaction with reqtraq. Usage:
 	reqtraq web --addr="hostport" --certdoc_path=<path>
 Parameters:
@@ -160,8 +142,6 @@ func showHelp() {
 		fmt.Println(prepushUsage)
 	case "reportup", "reportdown", "reportissues":
 		fmt.Println(reportUsage)
-	case "updatetasks":
-		fmt.Println(updateTaskUsage)
 	case "web":
 		fmt.Println(webUsage)
 	default:
@@ -364,18 +344,6 @@ func main() {
 		}
 	case "prepush":
 		// Noop.
-	case "updatetasks": // update all task title/descriptions/attributes based on the requirement documents
-		rg, err := CreateReqGraph(*fCertdocPath, *fCodePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		reqIds := map[string]bool{}
-		for k := range rg.Reqs {
-			reqIds[k] = true
-		}
-		if err := rg.UpdateTasks(reqIds); err != nil {
-			log.Fatal(err)
-		}
 	default:
 		fmt.Printf(`Invalid command "%s"`, command)
 		fmt.Println("")

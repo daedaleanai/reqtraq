@@ -67,20 +67,6 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		{{ end }}
 {{ end }}
 
-{{ define "PROBLEMREPORTS" }}
-	<p>Problem Reports:
-		{{ range $k, $v := . }}
-			{{if $v.IsClosed}}
-				<a href="{{ $v.URI }}" target="_blank"> <span class="label label-success">T{{ $v.DisplayID }}</span></a>
-			{{else}}
-				<a href="{{ $v.URI }}" target="_blank"> <span class="label label-danger">T{{ $v.DisplayID }}</span></a>
-			{{end}}
-		{{ else }}
-			<span class="text-danger">No problem reports</span>
-		{{ end }}
-	</p>
-{{ end }}
-
 {{define "HEADER"}}
 <html lang="en">
 	<head>
@@ -144,7 +130,6 @@ var reportTmpl = template.Must(template.New("").Parse(`
 									{{ template "REQUIREMENT" ($.Once.Once .) }}
 									{{ template "CODEFILES" .Children }}
 									{{ template "CHANGELIST" .Changelists }}
-									{{ template "PROBLEMREPORTS" .Tasklists }}
 								</li>
 							{{ else }}
 								<li class="text-danger">No children</li>
@@ -178,7 +163,6 @@ var reportTmpl = template.Must(template.New("").Parse(`
 					<li>
 						{{ template "REQUIREMENT" ($.Once.Once .) }}
 						{{ template "CHANGELIST" .Changelists }}
-						{{ template "PROBLEMREPORTS" .Tasklists }}
 
 						<!-- HLRs -->
 							<ul>
@@ -277,7 +261,6 @@ var reportTmpl = template.Must(template.New("").Parse(`
 						{{ template "REQUIREMENT" ($.Once.Once .) }}
 						{{ template "CODEFILES" .Children }}
 						{{ template "CHANGELIST" .Changelists }}
-						{{ template "PROBLEMREPORTS" .Tasklists }}
 
 					{{ end }}
 				{{ end }}
@@ -300,7 +283,6 @@ var reportTmpl = template.Must(template.New("").Parse(`
 					{{ template "REQUIREMENT" ($.Once.Once .) }}
 					{{ template "CODEFILES" .Children }}
 					{{ template "CHANGELIST" .Changelists }}
-					{{ template "PROBLEMREPORTS" .Tasklists }}
 
 				{{ end }}
 				{{ range .Parents }}

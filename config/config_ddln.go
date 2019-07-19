@@ -4,9 +4,6 @@
 
 package config
 
-// Project name
-const ProjectName = "Reqtraq"
-
 type RequirementLevel int
 
 // Requirement levels according to DO-178C (do not change!)

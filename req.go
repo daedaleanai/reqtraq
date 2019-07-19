@@ -25,7 +25,6 @@ import (
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
-	"github.com/daedaleanai/reqtraq/taskmgr"
 )
 
 type RequirementStatus int
@@ -140,36 +139,6 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 		}
 	}
 	return errs
-}
-
-func (r *Req) Tasklists() map[string]*taskmgr.Task {
-	m := map[string]*taskmgr.Task{}
-	projectID, err1 := taskmgr.TaskMgr.GetProject(config.ProjectName)
-	if err1 != nil {
-		log.Printf("Failed to get project '%s' from the task manager: %v", config.ProjectName, err1)
-		return m
-	}
-	// Find and add primary task corresponding to Req
-	task, err2 := taskmgr.TaskMgr.FindTask(r.ID, r.Title, projectID)
-	if err2 != nil {
-		log.Printf("Failed to find the task for requirement %s '%s' in project %s: %v", r.ID, r.Title, projectID, err2)
-		return m
-	}
-	if task == nil {
-		log.Printf("No task found for requirement %s '%s' in project %s", r.ID, r.Title, projectID)
-		return m
-	}
-	m[task.ID] = task
-	// Get all tasks that "task" depends on and add them
-	for _, phid := range task.DependsOnTaskIDs {
-		subTask, e := taskmgr.TaskMgr.FindTaskByID(phid)
-		if e != nil {
-			log.Printf("Failed to find subtask %s: %v", phid, e)
-			continue
-		}
-		m[subTask.ID] = subTask
-	}
-	return m
 }
 
 // @llr REQ-TRAQ-SWL-9
@@ -427,130 +396,6 @@ func (rg reqGraph) CodeFilesByPosition() []*Req {
 	}
 	sort.Sort(byPosition(r))
 	return r
-}
-
-// Updates the tasks associated with each requirement.For each requirement in rg, the method will:
-// - find the task associated with the requirement, by searching for the requirement ID in the task title using the taskmgr API
-// - if a task was found and the requirement was not deleted, its title and description are updated
-// - if a task was found and the requirement was deleted, the task is set as INVALID
-// - if the task was not found, it is created and filled in with the following values:
-// 	Title: <Req ID> <Req Title>
-//	Description: <Requirement Body>
-//	Status: Open
-//	Tags: Project Abbreviation (e.g. DDLN, VXU, etc.)
-//      Parents: the first parent task (Phabricator doesn't yet support multiple parents in the api)
-// The method performs a breadth-first search of the requirement graph, which ensures that all parent tasks have already
-// been created by the time a child is visited.
-func (rg *reqGraph) UpdateTasks(filterIDs map[string]bool) error {
-	queue := rg.OrdsByPosition()  // breadth-first traversal queue
-	enqueued := map[string]bool{} // set of elements that have already been enqueued for traversal
-	reqIDToTaskPHID := map[string]string{}
-	const projectNameSYS = config.ProjectName + "-SYS"
-	const projectNameHLR = config.ProjectName + "-HLR"
-	const projectNameLLR = config.ProjectName
-	sysProjectID, err := taskmgr.TaskMgr.GetOrCreateProject(projectNameSYS, "")
-	if err != nil {
-		return err
-	}
-
-	hlrsProjectID, err := taskmgr.TaskMgr.GetOrCreateProject(projectNameHLR, sysProjectID)
-	if err != nil {
-		return err
-	}
-
-	llrsProjectID, err := taskmgr.TaskMgr.GetOrCreateProject(config.ProjectName, hlrsProjectID)
-	if err != nil {
-		return err
-	}
-
-	parentTaskTitle := "Implement " + config.ProjectName
-	parentOfAll, err := taskmgr.TaskMgr.FindTaskByTitle(parentTaskTitle, sysProjectID)
-	if err != nil {
-		return err
-	}
-	var parentOfAllPHID string
-	if parentOfAll == nil {
-		log.Printf("Creating parent of all requirements: '%s'", parentTaskTitle)
-
-		parentOfAllPHID, err = taskmgr.TaskMgr.CreateTask(parentTaskTitle, "Meta-task that incorporates all tasks needed to implement "+config.ProjectName,
-			sysProjectID, map[string]string{}, []string{})
-		if err != nil {
-			return fmt.Errorf("Error creating parent of all tasks, %v", err)
-		}
-	} else {
-		parentOfAllPHID = parentOfAll.ID
-	}
-
-	taskLevelToProjectPHID := map[config.RequirementLevel]string{config.SYSTEM: sysProjectID, config.HIGH: hlrsProjectID, config.LOW: llrsProjectID}
-	for len(queue) > 0 {
-		currentReq := queue[0]
-		queue = queue[1:]
-		if currentReq.Level == config.CODE {
-			continue
-		}
-		projectPHID := taskLevelToProjectPHID[currentReq.Level]
-		task, err := taskmgr.TaskMgr.FindTask(currentReq.ID, currentReq.Title, projectPHID)
-		if err != nil {
-			return fmt.Errorf("Error finding task for requirement %s, caused by\n%v", currentReq.ID, err)
-		}
-
-		var parentTaskIDs []string
-
-		if currentReq.Level == config.SYSTEM {
-			parentTaskIDs = []string{parentOfAllPHID}
-		} else { // HLR or LLR
-			for _, parentReq := range currentReq.Parents {
-				taskID, ok := reqIDToTaskPHID[parentReq.ID]
-				if !ok {
-					return fmt.Errorf("Error updating requirement %s. Parent %s has no corresponding task", currentReq.ID, parentReq.ID)
-				}
-				parentTaskIDs = append(parentTaskIDs, taskID)
-			}
-		}
-		//TODO: add support for deleted tasks
-		if filterIDs[currentReq.ID] { // don't update requirements that are filtered
-			if task == nil {
-				if !currentReq.IsDeleted() {
-					log.Printf("Creating task for requirement %s", currentReq.ID)
-
-					taskPHID, err := taskmgr.TaskMgr.CreateTask(currentReq.ID+": "+currentReq.Title, string(currentReq.Body),
-						projectPHID, currentReq.Attributes, parentTaskIDs)
-					if err != nil {
-						return fmt.Errorf("Error creating requirement %s, caused by\n%v", currentReq.ID, err)
-					}
-					reqIDToTaskPHID[currentReq.ID] = taskPHID
-				}
-			} else {
-				if currentReq.IsDeleted() {
-					if task.Status != "invalid" {
-						log.Printf("Marking task T%s for DELETED requirement %s as invalid", task.ID, currentReq.ID)
-
-						err = taskmgr.TaskMgr.DeleteTask(task.ID, currentReq.ID+": "+currentReq.Title, projectPHID)
-						if err != nil {
-							return fmt.Errorf("Error updating requirement %s, caused by\n%v", currentReq.ID, err)
-						}
-					}
-				} else {
-					log.Printf("Updating task T%s for requirement %s", task.ID, currentReq.ID)
-					err = taskmgr.TaskMgr.UpdateTask(task.ID, currentReq.ID+": "+currentReq.Title, string(currentReq.Body),
-						projectPHID, currentReq.Attributes, parentTaskIDs)
-					if err != nil {
-						return fmt.Errorf("Error updating requirement %s, caused by\n%v", currentReq.ID, err)
-					}
-				}
-			}
-		}
-		if task != nil {
-			reqIDToTaskPHID[currentReq.ID] = task.ID
-		}
-		for _, childReq := range currentReq.Children {
-			if _, ok := enqueued[childReq.ID]; !ok {
-				enqueued[childReq.ID] = true
-				queue = append(queue, childReq)
-			}
-		}
-	}
-	return nil
 }
 
 func (rg reqGraph) DanglingReqsByPosition() []*Req {
