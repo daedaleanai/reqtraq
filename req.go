@@ -54,6 +54,7 @@ var (
 //  rationale safety_impact verification urgent important mode provenance
 type Req struct {
 	ID        string // code files do not have an ID, use Path as primary key
+	IDNumber  int    // the number contained in the ID, if any.
 	Level     config.RequirementLevel
 	Path      string // certification document or code file this was found in relative to repo root
 	FileHash  string // for code files, the sha1 of the contents

@@ -40,7 +40,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var indexTemplate *template.Template = template.Must(template.New("index").Parse(
+var indexTemplate = template.Must(template.New("index").Parse(
 	`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,12 +59,24 @@ var indexTemplate *template.Template = template.Must(template.New("index").Parse
 .rTableBody {
   	display: table-row-group;
 }
+
+.matrices {
+	display: table;
+	margin-right: 4em;
+}
+.matrices div {
+	display: table-row;
+}
+.matrices div div {
+	display: table-cell;
+}
 </style>
 </head>
 
 <body>
 <h1><img src="https://www.daedalean.ai/favicon-32x32.png"> {{.RepoName}}</h1>
 
+<h2>Reports</h2>
 <form action="/report" method="get">
 <p>Filter by:
 <div class="rTable">
@@ -112,6 +124,30 @@ var indexTemplate *template.Template = template.Must(template.New("index").Parse
 <input type="submit" name="report-type" value="Issues"/>
 </p>
 </form>
+
+<h2>Trace Matrices</h2>
+<div style="display: flex;">
+	<div class="matrices">
+		<div>
+			<div><a href="/matrix?from=SYS&to=SWH">SYS&ndash;SWH</a></div>
+		</div>
+		<div>
+			<div><a href="/matrix?from=SWH&to=SWL">SWH&ndash;SWL</a></div>
+		</div>
+		<div>
+			<div><a href="/matrix?from=SWL&to=CODE">SWL&ndash;CODE</a></div>
+		</div>
+	</div>
+
+	<div class="matrices">
+		<div>
+			<div><a href="/matrix?from=SWH&to=HTC">SWH&ndash;HTC</a></div>
+		</div>
+		<div>
+			<div><a href="/matrix?from=SWL&to=LTC">SWL&ndash;LTC</a></div>
+		</div>
+	</div>
+</div>
 </body>
 </html>`))
 
@@ -124,8 +160,7 @@ type indexData struct {
 func get(w http.ResponseWriter, r *http.Request) error {
 	repoName := git.RepoName()
 	path := r.URL.Path
-	switch {
-	case path == "/":
+	if path == "/" {
 		conf, err := parseConf(*fReportConfPath)
 		if err != nil {
 			return errors.Wrap(err, "Failed to parse config")
@@ -138,19 +173,22 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		indexTemplate.Execute(w, indexData{repoName, attributes, commits})
+		return indexTemplate.Execute(w, indexData{repoName, attributes, commits})
+	}
 
+	at := r.FormValue("at_commit")
+	var atCommit string
+	if at != "" {
+		atCommit = strings.Split(at, " ")[0]
+	}
+	rg, dir, err := buildGraph(atCommit)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir)
+
+	switch {
 	case path == "/report":
-		at := r.FormValue("at_commit")
-		var atCommit string
-		if at != "" {
-			atCommit = strings.Split(at, " ")[0]
-		}
-		rg, dir, err := buildGraph(atCommit)
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(dir)
 		filter, err := createFilter(r)
 		if err != nil {
 			return fmt.Errorf("Failed to create filter: %v", err)
@@ -183,6 +221,10 @@ func get(w http.ResponseWriter, r *http.Request) error {
 			}
 			return rg.ReportIssues(w)
 		}
+	case path == "/matrix":
+		from := r.FormValue("from")
+		to := r.FormValue("to")
+		return rg.ReportHoles(w, from, to)
 	}
 	return nil
 }

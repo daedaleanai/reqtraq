@@ -16,7 +16,65 @@ func (o Oncer) Once(r *Req) *Req {
 	return &Req{ID: r.ID, Title: r.Title, Body: r.Body, Level: -1}
 }
 
-var reportTmpl = template.Must(template.New("").Parse(`
+var headerFooterTmplText = `
+{{define "HEADER"}}
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+	    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	    <meta name="viewport" content="width=device-width, initial-scale=1">
+	    <meta name="description" content="">
+	    <meta name="author" content="">
+
+		<title>Reqtraq - Daedalean AG</title>
+
+		<!-- BOOTSTRAP -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+		<!-- CUSTOM -->
+		<style>
+			h1 {
+				text-align: left;
+			}
+			body {
+				font-family: Roboto, Arial, sans-serif;
+				max-width: 1200px;
+				margin-left: 5%;
+				margin-right: 5%;
+			}
+			a, a:hover {
+				text-decoration: none;
+			}
+			div.trace-matrix-table {
+				display: table;
+				border: 1px solid black
+			}
+			div.trace-matrix-table > div {
+				display: table-row;
+			}
+			div.trace-matrix-table > div > div {
+				display: table-cell;
+				padding: 0em 0.5em;
+			}
+		</style>
+		<!-- Load MathJax for rendering of equations -->
+		<script type="text/javascript" async
+			src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+		</script>
+
+	</head>
+	<body>
+{{end}}
+
+{{define "FOOTER"}}
+	</body>
+</html>
+{{end}}
+`
+
+var reportTmpl = template.Must(template.Must(template.New("").Parse(headerFooterTmplText)).Parse(reportTmplText))
+
+var reportTmplText = `
 {{ define "REQUIREMENT" }}
 	{{if ne .Level -1 }}
 		<h3><a name="{{ .ID }}"></a>{{ .ID }} {{ .Title }}</h3>
@@ -67,53 +125,11 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		{{ end }}
 {{ end }}
 
-{{define "HEADER"}}
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-	    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-	    <meta name="viewport" content="width=device-width, initial-scale=1">
-	    <meta name="description" content="">
-	    <meta name="author" content="">
-
-		<title>Reqtraq - Daedalean AG</title>
-
-		<!-- BOOTSTRAP -->
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-		<!-- CUSTOM -->
-		<style>
-			body {
-				font-family: Roboto, Arial, sans-serif;
-				max-width: 1200px;
-				margin-left: 5%;
-				margin-right: 5%;
-			}
-			a, a:hover {
-				text-decoration: none;
-			}
-		</style>
-		<!-- Load MathJax for rendering of equations -->
-		<script type="text/javascript" async
-			src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-		</script>
-
-	</head>
-	<body>
-		<section style="max-width:100%; text-align:center;">
-			<h1>Reqtraq Report</h1>
-
-{{end}}
-{{define "FOOTER"}}
-	</body>
-</html>
-{{end}}
 
 {{define "TOPDOWN"}}
 	{{template "HEADER"}}
-		<h2>Top Down Tracing</h2>
-		<hr>
-	</section>
+	<h1>Top Down Tracing</h1>
+	
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.OrdsByPosition }}
 			<li>
@@ -149,9 +165,8 @@ var reportTmpl = template.Must(template.New("").Parse(`
 {{end}}
 {{define "BOTTOMUP"}}
 	{{template "HEADER"}}
-		<h2>Bottom Up Tracing</h2>
-		<hr>
-	</section>
+	<h1>Bottom Up Tracing</h1>
+	
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeFilesByPosition }}
 			<li>
@@ -199,9 +214,8 @@ var reportTmpl = template.Must(template.New("").Parse(`
 
 {{ define "ISSUES" }}
 	{{template "HEADER"}}
-		<h2>Issues</h2>
-		<hr>
-	</section>
+	<h1>Issues</h1>
+	
 	<h3>Basic</h3>
 	<ul>
 	{{ range .Reqs.Errors }}
@@ -212,6 +226,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<li class="text-success">No basic errors found.</li>
 	{{ end }}
 	</ul>
+
 	<h3>Dangling Requirements</h3>
 	<ul>
 	{{ range .Reqs.DanglingReqsByPosition }}
@@ -222,6 +237,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<li class="text-success">No dangling HLRs or LLRs found.</li>
 	{{ end }}
 	</ul>
+
 	<h3>Invalid Attributes</h3>
 	<ul>
 	{{ range .AttributesErrors }}
@@ -232,6 +248,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 		<li class="text-success">No attributes errors found.</li>
 	{{ end }}
 	</ul>
+
 	<h3>Invalid References</h3>
 	<ul>
 	{{ range .ReferencesErrors }}
@@ -247,9 +264,8 @@ var reportTmpl = template.Must(template.New("").Parse(`
 
 {{ define "TOPDOWNFILT"}}
 	{{template "HEADER"}}
-		<h2>Top Down Tracing</h2>
-		<hr>
-	</section>
+	<h1>Top Down Tracing</h1>
+	
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.OrdsByPosition }}
@@ -272,9 +288,8 @@ var reportTmpl = template.Must(template.New("").Parse(`
 
 {{ define "BOTTOMUPFILT" }}
 	{{template "HEADER" }}
-		<h2>Bottom Up Tracing</h2>
-		<hr>
-	</section>
+	<h1>Bottom Up Tracing</h1>
+	
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeFilesByPosition }}
@@ -299,9 +314,8 @@ var reportTmpl = template.Must(template.New("").Parse(`
 
 {{ define "ISSUESFILT" }}
 	{{template "HEADER"}}
-		<h2>Issues</h2>
-		<hr>
-	</section>
+	<h1>Issues</h1>
+
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<h3>Basic</h3>
 	<ul>
@@ -339,7 +353,7 @@ var reportTmpl = template.Must(template.New("").Parse(`
 	</ul>
 	{{ template "FOOTER" }}
 {{ end }}
-`))
+`
 
 type reportData struct {
 	Reqs             reqGraph

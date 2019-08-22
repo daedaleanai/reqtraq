@@ -7,6 +7,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -83,8 +84,14 @@ func ParseReq(txt string) (*Req, error) {
 		return nil, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
 	}
 
+	IDNumber, err := strconv.Atoi(txt[defid[6]:defid[7]])
+	if err != nil {
+		return nil, err
+	}
+
 	r := &Req{
 		ID:         txt[defid[0]:defid[1]],
+		IDNumber:   IDNumber,
 		Attributes: map[string]string{},
 	}
 
