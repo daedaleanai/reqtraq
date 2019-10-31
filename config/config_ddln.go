@@ -11,7 +11,6 @@ const (
 	SYSTEM RequirementLevel = iota
 	HIGH
 	LOW
-	CODE
 )
 
 // Document types:
