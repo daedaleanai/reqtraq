@@ -4,12 +4,17 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 
+	"github.com/alecthomas/chroma/formatters/html"
+	"github.com/alecthomas/chroma/lexers"
+	"github.com/alecthomas/chroma/styles"
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/pkg/errors"
 )
@@ -159,8 +164,8 @@ type indexData struct {
 
 func get(w http.ResponseWriter, r *http.Request) error {
 	repoName := git.RepoName()
-	path := r.URL.Path
-	if path == "/" {
+	reqPath := r.URL.Path
+	if reqPath == "/" {
 		conf, err := parseConf(*fReportConfPath)
 		if err != nil {
 			return errors.Wrap(err, "Failed to parse config")
@@ -176,6 +181,22 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		return indexTemplate.Execute(w, indexData{repoName, attributes, commits})
 	}
 
+	if strings.HasPrefix(reqPath, "/code/") {
+		lexer := lexers.Match(reqPath)
+		if lexer == nil {
+			return errors.New("unknown file type")
+		}
+		filePath := path.Join(git.RepoPath(), reqPath[6:])
+		contents, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			return errors.Wrap(err, "failed to read file")
+		}
+		iterator, err := lexer.Tokenise(nil, string(contents))
+		formatter := html.New(html.Standalone(true), html.WithLineNumbers(true), html.LinkableLineNumbers(true, "L"), html.WithClasses(true))
+		style := styles.Get("vs")
+		return formatter.Format(w, style, iterator)
+	}
+
 	at := r.FormValue("at_commit")
 	var atCommit string
 	if at != "" {
@@ -188,7 +209,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	defer os.RemoveAll(dir)
 
 	switch {
-	case path == "/report":
+	case reqPath == "/report":
 		filter, err := createFilter(r)
 		if err != nil {
 			return fmt.Errorf("Failed to create filter: %v", err)
@@ -221,7 +242,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 			}
 			return rg.ReportIssues(w)
 		}
-	case path == "/matrix":
+	case reqPath == "/matrix":
 		from := r.FormValue("from")
 		to := r.FormValue("to")
 		return rg.ReportHoles(w, from, to)

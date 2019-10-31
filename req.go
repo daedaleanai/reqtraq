@@ -8,11 +8,9 @@ package main
 
 import (
 	"bufio"
-	"crypto/sha1"
-	"errors"
 	"fmt"
 	"html/template"
-	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -25,6 +23,7 @@ import (
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/pkg/errors"
 )
 
 type RequirementStatus int
@@ -50,24 +49,27 @@ var (
 )
 
 // Req represenents a Requirement Node in the graph of Requirements.
-// The Attributes map has potential elements;
+// The Attributes map has potential elements:
 //  rationale safety_impact verification urgent important mode provenance
 type Req struct {
-	ID        string // code files do not have an ID, use Path as primary key
-	IDNumber  int    // the number contained in the ID, if any.
-	Level     config.RequirementLevel
-	Path      string // certification document or code file this was found in relative to repo root
-	FileHash  string // for code files, the sha1 of the contents
+	ID       string
+	IDNumber int
+	Level    config.RequirementLevel
+	// Path identifies the file this was found in relative to repo root.
+	Path      string
 	ParentIds []string
-	Parents   []*Req
-	Children  []*Req
-	Title     string
+	// Parents holds the parent requirements.
+	Parents []*Req
+	// Children holds the children requirements.
+	Children []*Req
+	// Tags holds the associated code functions.
+	Tags  []*Code
+	Title string
 	// Body contains various HTML tags (links, converted markdown, etc). Type must be HTML,
 	// not a string, so it's not HTML-escaped by the templating engine.
 	Body       template.HTML
 	Attributes map[string]string
 	Position   int
-	Seen       bool
 	Status     RequirementStatus
 }
 
@@ -81,30 +83,8 @@ func (r *Req) ReqType() string {
 	return parts[2]
 }
 
-func (r *Req) resolveUp() {
-	r.Seen = true
-	for _, p := range r.Parents {
-		p.resolveUp()
-	}
-}
-
-func (r *Req) resolveDown() RequirementStatus {
-	r.Seen = true
-	r.Status = COMPLETED
-	if r.Level != config.CODE && len(r.Children) == 0 {
-		r.Status = NOT_STARTED
-	} else {
-		for _, c := range r.Children {
-			if c.resolveDown() != COMPLETED {
-				r.Status = STARTED
-			}
-		}
-	}
-	return r.Status
-}
-
 // IsDeleted checks if the requirement title starts with 'DELETED'
-// @REQ-TRAQ-SWL-17
+// @llr REQ-TRAQ-SWL-17
 func (r *Req) IsDeleted() bool {
 	return strings.HasPrefix(r.Title, "DELETED")
 }
@@ -190,10 +170,49 @@ func changelistUrlsForFilepath(filepath string) []string {
 	return urls
 }
 
+// Code represents a Code Node in the graph of Requirements.
+type Code struct {
+	// Path is the code file this was found in relative to repo root.
+	Path string
+	// Tag is the name of the function.
+	Tag string
+	// Line number where the function starts.
+	Line int
+	// The comment above the function.
+	Comment []string
+	// FileHash is the sha1 of the contents.
+	FileHash  string
+	ParentIds []string
+	Parents   []*Req
+}
+
+var reLLRReference = regexp.MustCompile(fmt.Sprintf(`\s@llr (%s)\z`, reReqIdStr))
+
+func (code *Code) URL() string {
+	return fmt.Sprintf("/code/%s#L%d", code.Path, code.CommentLine())
+}
+
+func (code *Code) CommentLine() int {
+	return code.Line - len(code.Comment)
+}
+
+func (code *Code) ReqIDsInComment() []string {
+	refs := make([]string, 0)
+	for _, s := range code.Comment {
+		if parts := reLLRReference.FindStringSubmatch(s); len(parts) > 0 {
+			refs = append(refs, parts[1])
+		}
+	}
+	return refs
+}
+
 // A ReqGraph maps IDs and code files paths to Req structures.
 // @llr REQ-TRAQ-SWL-15
 type reqGraph struct {
+	// Reqs contains the requirements by ID.
 	Reqs map[string]*Req
+	// CodeTags contains the source code functions per file.
+	CodeTags map[string][]Code
 	// Errors which have been found while analyzing the graph.
 	// This is extended in multiple places.
 	Errors []error
@@ -205,9 +224,16 @@ type reqGraph struct {
 // The separate returned error specifies how reading the certdocs and code
 // failed, if it did.
 func CreateReqGraph(certdocsPath, codePath string) (*reqGraph, error) {
-	rg := &reqGraph{make(map[string]*Req, 0), make([]error, 0)}
+	rg := &reqGraph{make(map[string]*Req, 0), nil, make([]error, 0)}
 
-	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
+	filesListFile, err := ioutil.TempFile("", "list-*")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.Remove(filesListFile.Name())
+
+	// Walk through the documents.
+	err = filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
 		func(fileName string, info os.FileInfo, err error) error {
 			switch strings.ToLower(path.Ext(fileName)) {
 			case ".md":
@@ -216,31 +242,27 @@ func CreateReqGraph(certdocsPath, codePath string) (*reqGraph, error) {
 					return err
 				}
 				rg.Errors = append(rg.Errors, parseErrs...)
+			case ".go":
+				if _, err := filesListFile.WriteString(fileName); err != nil {
+					return err
+				}
 			}
 			return nil
 		})
 	if err != nil {
-		return rg, fmt.Errorf("Failed walking certdocs: %v", err)
+		return rg, errors.Wrap(err, "failed walking certdocs")
 	}
-	// walk the code
-	err = filepath.Walk(filepath.Join(git.RepoPath(), codePath), func(fileName string, info os.FileInfo, err error) error {
-		switch strings.ToLower(path.Ext(fileName)) {
-		case ".cc", ".c", ".h", ".hh", ".go":
-			// TODO (pk,lb): do that in a nicer way without hard-coded folder names
-			if strings.Contains(codePath, "testdata") || !strings.Contains(fileName, "testdata") {
-				id := relativePathToRepo(fileName, git.RepoPath())
-				if id == "" {
-					log.Fatalf("Malformed code file path: %s not in %s", fileName, git.RepoPath())
-				}
-				if err := parseCode(id, fileName, rg); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	})
+
+	// Tag the code.
+	absoluteCodePath := filepath.Join(git.RepoPath(), codePath)
+	rg.CodeTags, err = tagCode(codePath)
 	if err != nil {
-		return rg, fmt.Errorf("Failed walking code: %v", err)
+		return rg, errors.Wrap(err, "failed to tag code")
+	}
+
+	err = rg.parseComments(absoluteCodePath)
+	if err != nil {
+		return rg, errors.Wrap(err, "failed walking code")
 	}
 
 	rg.Errors = append(rg.Errors, rg.Resolve()...)
@@ -250,12 +272,20 @@ func CreateReqGraph(certdocsPath, codePath string) (*reqGraph, error) {
 
 // relativePathToRepo returns filePath relative to repoPath by
 // removing the path to the repository from filePath
-func relativePathToRepo(filePath, repoPath string) string {
-	fields := strings.SplitAfterN(filePath, repoPath, 2)
-	if len(fields) < 2 {
-		return ""
+func relativePathToRepo(filePath, repoPath string) (string, error) {
+	if filePath[:1] != "/" {
+		// Already a relative path.
+		return filePath, nil
 	}
-	return fields[1][1:] // omit leading slash
+	fields := strings.SplitN(filePath, repoPath, 2)
+	if len(fields) < 2 {
+		return "", fmt.Errorf("malformed code file path: %s not in %s", filePath, repoPath)
+	}
+	res := fields[1]
+	if res[:1] == "/" {
+		res = res[1:]
+	}
+	return res, nil
 }
 
 func (rg *reqGraph) AddReq(req *Req, path string) error {
@@ -271,7 +301,7 @@ func (rg *reqGraph) AddReq(req *Req, path string) error {
 func (rg *reqGraph) CheckAttributes(reportConf JsonConf, filter *ReqFilter, diffs map[string][]string) ([]error, error) {
 	var errs []error
 	for _, req := range rg.Reqs {
-		if req.Level != config.CODE && req.Matches(filter, diffs) {
+		if req.Matches(filter, diffs) {
 			errs = append(errs, req.CheckAttributes(reportConf.Attributes)...)
 		}
 	}
@@ -282,7 +312,7 @@ func (rg *reqGraph) CheckAttributes(reportConf JsonConf, filter *ReqFilter, diff
 func (rg *reqGraph) checkReqReferences(certdocPath string) ([]error, error) {
 	reParents := regexp.MustCompile(`Parents: REQ-`)
 
-	errors := make([]error, 0)
+	errs := make([]error, 0)
 
 	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
 		func(fileName string, info os.FileInfo, err error) error {
@@ -301,9 +331,9 @@ func (rg *reqGraph) checkReqReferences(certdocPath string) ([]error, error) {
 					reqID := line[ids[0]:ids[1]]
 					v, reqFound := rg.Reqs[reqID]
 					if !reqFound {
-						errors = append(errors, fmt.Errorf("Invalid reference to inexistent requirement %s in %s:%d", reqID, fileName, lno))
+						errs = append(errs, fmt.Errorf("Invalid reference to inexistent requirement %s in %s:%d", reqID, fileName, lno))
 					} else if v.IsDeleted() && !discardRefToDeleted {
-						errors = append(errors, fmt.Errorf("Invalid reference to deleted requirement %s in %s:%d", reqID, fileName, lno))
+						errs = append(errs, fmt.Errorf("Invalid reference to deleted requirement %s in %s:%d", reqID, fileName, lno))
 					}
 				}
 			}
@@ -314,11 +344,7 @@ func (rg *reqGraph) checkReqReferences(certdocPath string) ([]error, error) {
 		return nil, err
 	}
 
-	return errors, nil
-}
-
-func (rg *reqGraph) AddCodeRefs(id, fileName, fileHash string, reqIds []string) {
-	rg.Reqs[fileName] = &Req{ID: id, Path: fileName, FileHash: fileHash, ParentIds: reqIds, Level: config.CODE}
+	return errs, nil
 }
 
 // @llr REQ-TRAQ-SWL-17
@@ -333,32 +359,19 @@ func (rg *reqGraph) Resolve() []error {
 			parent := rg.Reqs[parentID]
 			if parent != nil {
 				if parent.IsDeleted() && !req.IsDeleted() {
-					if req.Level != config.CODE {
-						errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" is deleted."))
-					} else {
-						errs = append(errs, errors.New("Invalid reference in file "+req.Path+": "+parentID+" is deleted."))
-					}
+					errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" is deleted."))
 				}
 				parent.Children = append(parent.Children, req)
 				req.Parents = append(req.Parents, parent)
 			} else {
-				if req.Level != config.CODE {
-					errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" does not exist."))
-				} else {
-					errs = append(errs, errors.New("Invalid reference in file "+req.Path+": "+parentID+" does not exist."))
-				}
+				errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" does not exist."))
 			}
 		}
 	}
 
+	errs = rg.resolveCodeTags(errs)
 	if len(errs) > 0 {
 		return errs
-	}
-
-	for _, req := range rg.Reqs {
-		if req.Level == config.SYSTEM {
-			req.resolveDown()
-		}
 	}
 
 	for _, req := range rg.Reqs {
@@ -366,13 +379,36 @@ func (rg *reqGraph) Resolve() []error {
 		sort.Sort(byPosition(req.Children))
 	}
 
-	for _, req := range rg.Reqs {
-		if req.Level == config.CODE {
-			req.resolveUp()
-			req.Position = req.Parents[0].Position
+	return nil
+}
+
+func (rg *reqGraph) resolveCodeTags(errs []error) []error {
+	for _, tags := range rg.CodeTags {
+		for i := range tags {
+			code := &tags[i]
+			code.ParentIds = code.ReqIDsInComment()
+			if len(code.ParentIds) == 0 {
+				errs = append(errs, errors.New("Function "+code.Tag+" in file "+code.Path+" has no parents."))
+			}
+			for _, parentID := range code.ParentIds {
+				parent := rg.Reqs[parentID]
+				if parent != nil {
+					if parent.IsDeleted() {
+						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" is deleted."))
+					}
+					if parent.Level == config.LOW {
+						parent.Tags = append(parent.Tags, code)
+						code.Parents = append(code.Parents, parent)
+					} else {
+						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" must be a Software Low-Level Requirement."))
+					}
+				} else {
+					errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" does not exist."))
+				}
+			}
 		}
 	}
-	return nil
+	return errs
 }
 
 // OrdsByPosition returns the SYSTEM requirements which don't have any parent,
@@ -388,25 +424,14 @@ func (rg reqGraph) OrdsByPosition() []*Req {
 	return r
 }
 
-func (rg reqGraph) CodeFilesByPosition() []*Req {
-	var r []*Req
-	for _, v := range rg.Reqs {
-		if v.Level == config.CODE {
-			r = append(r, v)
+func (rg reqGraph) CodeFiles() []*Code {
+	var r []*Code
+	for filePath := range rg.CodeTags {
+		for i := range rg.CodeTags[filePath] {
+			r = append(r, &rg.CodeTags[filePath][i])
 		}
 	}
-	sort.Sort(byPosition(r))
-	return r
-}
-
-func (rg reqGraph) DanglingReqsByPosition() []*Req {
-	var r []*Req
-	for _, req := range rg.Reqs {
-		if !req.Seen && !req.IsDeleted() {
-			r = append(r, req)
-		}
-	}
-	sort.Sort(byPosition(r))
+	sort.Sort(byFilenameTag(r))
 	return r
 }
 
@@ -422,40 +447,24 @@ func (a byPosition) Len() int           { return len(a) }
 func (a byPosition) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byPosition) Less(i, j int) bool { return a[i].Position < a[j].Position }
 
-var reLLRReference = regexp.MustCompile(fmt.Sprintf(`//\s*@llr\s*(%s).*`, reReqIdStr))
+type byFilenameTag []*Code
 
-func parseCode(id, fileName string, graph *reqGraph) error {
-	f, err := os.Open(fileName)
-	if err != nil {
-		return err
+func (a byFilenameTag) Len() int      { return len(a) }
+func (a byFilenameTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byFilenameTag) Less(i, j int) bool {
+	switch strings.Compare(a[i].Path, a[j].Path) {
+	case -1:
+		return true
+	case 0:
+		return a[i].Tag < a[j].Tag
 	}
-	var refs []string
-	h := sha1.New()
-	// git compatible hash
-	if s, err := f.Stat(); err == nil {
-		fmt.Fprintf(h, "blob %d", s.Size())
-		h.Write([]byte{0})
-	}
-
-	scanner := bufio.NewScanner(io.TeeReader(f, h))
-	for scanner.Scan() {
-		if parts := reLLRReference.FindStringSubmatch(scanner.Text()); len(parts) > 0 {
-			refs = append(refs, parts[1])
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	if len(refs) > 0 {
-		graph.AddCodeRefs(id, fileName, string(h.Sum(nil)), refs)
-	}
-	return nil
+	return false
 }
 
 func parseCertdocToGraph(fileName string, graph *reqGraph) ([]error, error) {
 	reqs, err := ParseCertdoc(fileName)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing %s: %v", fileName, err)
+		return nil, fmt.Errorf("error parsing %s: %v", fileName, err)
 	}
 
 	isReqPresent := make([]bool, len(reqs))

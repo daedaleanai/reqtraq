@@ -11,25 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReqGraph_AddCodeRefs(t *testing.T) {
-	rg := reqGraph{Reqs: make(map[string]*Req)}
-	const id = "certdocs/a.cc"
-	rg.AddCodeRefs(id, "a.cc", "", []string{"REQ-TRAQ-0-SWH-001"})
-	v := rg.Reqs["a.cc"]
-	if v == nil {
-		// fatal instead of error
-		t.Fatalf("Failure adding code reference %q: %v", id, rg)
-	}
-
-	if v.Level != config.CODE {
-		t.Errorf("expected level CODE, got %v", v.Level)
-	}
-
-	if v.Path != "a.cc" {
-		t.Errorf("expected path /tmp/a.cc, got %q", v.Path)
-	}
-}
-
 func TestReqGraph_AddReq(t *testing.T) {
 	rg := reqGraph{Reqs: make(map[string]*Req)}
 

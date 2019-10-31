@@ -94,24 +94,24 @@ var reportTmplText = `
  	{{end}}
 {{ end }}
 
-{{ define "CODEFILES"}}
-	<p>Code Files:
+{{ define "CODETAGS"}}
+	{{ if . }}
+		<p>Code:
 		{{ range . }}
-			<a href="file://{{ .Path }}" target="_blank">{{ .ID }}</a>
-		{{ else }}
-			<span class="text-danger">No code files</span>
+			<a href="{{ .URL }}" target="_blank">{{ .Path }}:{{ .Tag }}</a>
 		{{ end }}
-	</p>
+		</p>
+	{{ end }}
 {{ end }}
 
 {{ define "CHANGELIST" }}
-	<p>Changelists:
-		{{ range $k, $v := . }}
-			<a href="{{ $v }}" target="_blank"><span class="label label-primary">{{ $k }}</span></a>
-		{{ else }}
-			<span class="text-danger">No changelist</span>
-		{{ end }}
-	</p>
+	{{ if . }}
+		<p>Changelists:
+			{{ range $k, $v := . }}
+				<a href="{{ $v }}" target="_blank"><span class="label label-primary">{{ $k }}</span></a>
+			{{ end }}
+		</p>
+	{{ end }}
 {{ end }}
 
 {{ define "STATUSFIELD" }}
@@ -143,9 +143,11 @@ var reportTmplText = `
 							<ul>
 							{{ range .Children }}
 								<li>
-									{{ template "REQUIREMENT" ($.Once.Once .) }}
-									{{ template "CODEFILES" .Children }}
-									{{ template "CHANGELIST" .Changelists }}
+									{{ with ($.Once.Once .) }}
+										{{ template "REQUIREMENT" . }}
+										{{ template "CODETAGS" .Tags }}
+										{{ template "CHANGELIST" .Changelists }}
+									{{ end }}
 								</li>
 							{{ else }}
 								<li class="text-danger">No children</li>
@@ -163,43 +165,51 @@ var reportTmplText = `
 	</ul>
 	{{template "FOOTER"}}
 {{end}}
+
 {{define "BOTTOMUP"}}
 	{{template "HEADER"}}
 	<h1>Bottom Up Tracing</h1>
 	
 	<ul style="list-style: none; padding: 0; margin: 0;">
-		{{ range .Reqs.CodeFilesByPosition }}
+		{{ range .Reqs.CodeFiles }}
 			<li>
-				<h3><a href="{{ .Path }}" target="_blank">{{ .ID }}</a></h3>
-				{{ template "STATUSFIELD" . }}
+				<h3><a href="{{ .URL }}" target="_blank">{{ .Path }}:{{ .Tag }}</a></h3>
+
 				<!-- LLRs -->
 				<ul>
-				{{ range .Parents }}
+					{{ range .Parents }}
+					{{ with ($.Once.Once .) }}
 					<li>
-						{{ template "REQUIREMENT" ($.Once.Once .) }}
+						{{ template "REQUIREMENT" . }}
 						{{ template "CHANGELIST" .Changelists }}
 
 						<!-- HLRs -->
-							<ul>
+						<ul>
 							{{ range .Parents }}
-								<li>
-									{{ template "REQUIREMENT" ($.Once.Once .) }}
-									<!-- SYSTEM -->
-									<ul>
+							{{ with ($.Once.Once .) }}
+							<li>
+								{{ template "REQUIREMENT" . }}
+
+								<!-- SYSTEM -->
+								<ul>
 									{{ range .Parents }}
-										<li>
-											{{ template "REQUIREMENT" ($.Once.Once .) }}
-										</li>
+									{{ with ($.Once.Once .) }}
+									<li>
+										{{ template "REQUIREMENT" . }}
+									</li>
+									{{ end }}
 									{{ else }}
 										<li class="text-danger">No parents</li>
 									{{ end }}
-									</ul>
-								</li>
+								</ul>
+							</li>
+							{{ end }}
 							{{ else }}
 								<li class="text-danger">No parents</li>
 							{{ end }}
-							</ul>
+						</ul>
 					</li>
+					{{ end }}
 					{{ else }}
 						<li class="text-danger">No parents</li>
 					{{ end }}
@@ -224,17 +234,6 @@ var reportTmplText = `
 		</li>
 	{{ else }}
 		<li class="text-success">No basic errors found.</li>
-	{{ end }}
-	</ul>
-
-	<h3>Dangling Requirements</h3>
-	<ul>
-	{{ range .Reqs.DanglingReqsByPosition }}
-		<li>
-			{{ template "REQUIREMENT" ($.Once.Once .) }}
-		</li>
-	{{ else }}
-		<li class="text-success">No dangling HLRs or LLRs found.</li>
 	{{ end }}
 	</ul>
 
@@ -274,10 +273,11 @@ var reportTmplText = `
 				{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
 				{{ range .Children }}
 					{{ if .Matches $.Filter $.Diffs }}
-						{{ template "REQUIREMENT" ($.Once.Once .) }}
-						{{ template "CODEFILES" .Children }}
-						{{ template "CHANGELIST" .Changelists }}
-
+						{{ with ($.Once.Once .) }}
+							{{ template "REQUIREMENT" . }}
+							{{ template "CODETAGS" .Tags }}
+							{{ template "CHANGELIST" .Changelists }}
+						{{ end }}
 					{{ end }}
 				{{ end }}
 			{{ end }}
@@ -295,10 +295,11 @@ var reportTmplText = `
 		{{ range .Reqs.CodeFilesByPosition }}
 			{{ range .Parents }}
 				{{ if .Matches $.Filter $.Diffs }}
-					{{ template "REQUIREMENT" ($.Once.Once .) }}
-					{{ template "CODEFILES" .Children }}
-					{{ template "CHANGELIST" .Changelists }}
-
+					{{ with ($.Once.Once .) }}
+						{{ template "REQUIREMENT" . }}
+						{{ template "CODETAGS" .Tags }}
+						{{ template "CHANGELIST" .Changelists }}
+					{{ end }}
 				{{ end }}
 				{{ range .Parents }}
 					{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
