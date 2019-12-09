@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -24,6 +25,15 @@ func matrixIDs(matrix [][2]*Req) []string {
 	return parts
 }
 
+func SortErrs(errs []error) []string {
+	res := make([]string, len(errs))
+	for i, err := range errs {
+		res[i] = err.Error()
+	}
+	sort.Strings(res)
+	return res
+}
+
 func TestReqGraph_createMatrix(t *testing.T) {
 	rg := reqGraph{Reqs: make(map[string]*Req)}
 	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-2", Level: config.SYSTEM}, "./TRAQ-0-SRD.md"))
@@ -37,10 +47,10 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-1", Level: config.LOW, ParentIds: []string{"REQ-TRAQ-SWH-2"}}, "./TRAQ-0-SRD.md"))
 	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-2", Level: config.LOW, ParentIds: []string{"REQ-TRAQ-SWH-1", "REQ-TRAQ-SWH-2"}}, "./TRAQ-0-SRD.md"))
 
-	errs := rg.Resolve()
+	errs := SortErrs(rg.Resolve())
 	assert.Equal(t, 2, len(errs))
-	assert.Equal(t, "Requirement REQ-TRAQ-SWH-1 in file ./TRAQ-0-SRD.md has no parents.", errs[0].Error())
-	assert.Equal(t, "Requirement REQ-TRAQ-SWL-3 in file ./TRAQ-0-SRD.md has no parents.", errs[1].Error())
+	assert.Equal(t, "Requirement REQ-TRAQ-SWH-1 in file ./TRAQ-0-SRD.md has no parents.", errs[0])
+	assert.Equal(t, "Requirement REQ-TRAQ-SWL-3 in file ./TRAQ-0-SRD.md has no parents.", errs[1])
 
 	sys1 := rg.Reqs["REQ-TRAQ-SYS-1"]
 	sys2 := rg.Reqs["REQ-TRAQ-SYS-2"]

@@ -33,7 +33,6 @@ Invalid parent of requirement REQ-TEST-SWH-5: REQ-TEST-SYS-3 does not exist.`
 
 func TestPreCommitCheckReqReferencesMarkdown(t *testing.T) {
 	d := "testdata/TestPreCommitCheckReqReferencesMarkdown"
-	filepath.Join(git.RepoPath(), d)
 	err := precommit(d, d, git.RepoPath()+"/certdocs/attributes.json")
 	expected := fmt.Sprintf(`Invalid reference to inexistent requirement REQ-TEST-SYS-22 in %s
 Invalid reference to deleted requirement REQ-TEST-SYS-2 in %s
