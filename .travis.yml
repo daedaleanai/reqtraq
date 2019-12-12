@@ -1,14 +1,25 @@
 os:
   - linux
 
+dist: bionic
+
 addons:
-  apt_packages:
-    - pandoc
+  apt:
+    packages:
+      - pandoc
+  snaps:
+    # Install as apt once we can use Ubuntu focal LTS 20.04
+    # https://packages.ubuntu.com/disco/universal-ctags
+    - universal-ctags
 
 language: go
 
 go:
-  - 1.8.x
+  - 1.13.x
+
+env:
+  # universal-ctags should be available as "ctags" but does not seem to work.
+  REQTRAQ_CTAGS=universal-ctags
 
 script:
   - go test
