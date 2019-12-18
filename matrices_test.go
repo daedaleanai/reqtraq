@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func matrixIDs(matrix [][2]*Req) []string {
+// matrixRows creates a simple textual representation of the matrix,
+// for comparison purposes.
+func (rg *reqGraph) matrixRows(matrix [][2]*MatrixItem) []string {
+	rg.sortMatrices(matrix)
 	parts := make([]string, 0)
 	for _, reqs := range matrix {
 		e := make([]string, 0)
@@ -17,7 +20,7 @@ func matrixIDs(matrix [][2]*Req) []string {
 			if r == nil {
 				e = append(e, "NIL")
 			} else {
-				e = append(e, r.ID)
+				e = append(e, r.Name)
 			}
 		}
 		parts = append(parts, strings.Join(e, " -> "))
@@ -35,63 +38,54 @@ func SortErrs(errs []error) []string {
 }
 
 func TestReqGraph_createMatrix(t *testing.T) {
-	rg := reqGraph{Reqs: make(map[string]*Req)}
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-2", Level: config.SYSTEM}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-1", Level: config.SYSTEM}, "./TRAQ-0-SRD.md"))
+	rg := &reqGraph{Reqs: make(map[string]*Req)}
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-2", IDNumber: 2, Level: config.SYSTEM}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-1", IDNumber: 1, Level: config.SYSTEM}, "./TRAQ-0-SRD.md"))
 
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-2", Level: config.HIGH, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-1", Level: config.HIGH}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-3", Level: config.HIGH, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-2", IDNumber: 2, Level: config.HIGH, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-1", IDNumber: 1, Level: config.HIGH}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-3", IDNumber: 3, Level: config.HIGH, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
 
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-3", Level: config.LOW}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-1", Level: config.LOW, ParentIds: []string{"REQ-TRAQ-SWH-2"}}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-2", Level: config.LOW, ParentIds: []string{"REQ-TRAQ-SWH-1", "REQ-TRAQ-SWH-2"}}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-3", IDNumber: 3, Level: config.LOW}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-1", IDNumber: 1, Level: config.LOW, ParentIds: []string{"REQ-TRAQ-SWH-2"}}, "./TRAQ-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWL-2", IDNumber: 2, Level: config.LOW, ParentIds: []string{"REQ-TRAQ-SWH-1", "REQ-TRAQ-SWH-2"}}, "./TRAQ-0-SRD.md"))
 
 	errs := SortErrs(rg.Resolve())
 	assert.Equal(t, 2, len(errs))
 	assert.Equal(t, "Requirement REQ-TRAQ-SWH-1 in file ./TRAQ-0-SRD.md has no parents.", errs[0])
 	assert.Equal(t, "Requirement REQ-TRAQ-SWL-3 in file ./TRAQ-0-SRD.md has no parents.", errs[1])
 
-	sys1 := rg.Reqs["REQ-TRAQ-SYS-1"]
-	sys2 := rg.Reqs["REQ-TRAQ-SYS-2"]
-	swh1 := rg.Reqs["REQ-TRAQ-SWH-1"]
-	swh2 := rg.Reqs["REQ-TRAQ-SWH-2"]
-	swh3 := rg.Reqs["REQ-TRAQ-SWH-3"]
-	swl1 := rg.Reqs["REQ-TRAQ-SWL-1"]
-	swl2 := rg.Reqs["REQ-TRAQ-SWL-2"]
-	swl3 := rg.Reqs["REQ-TRAQ-SWL-3"]
+	assert.Equal(t,
+		[]string{
+			"REQ-TRAQ-SYS-1 -> REQ-TRAQ-SWH-2",
+			"REQ-TRAQ-SYS-1 -> REQ-TRAQ-SWH-3",
+			"REQ-TRAQ-SYS-2 -> NIL",
+		},
+		rg.matrixRows(rg.createDownstreamMatrix(config.SYSTEM, config.HIGH)))
 
 	assert.Equal(t,
-		matrixIDs([][2]*Req{
-			{sys1, swh2},
-			{sys1, swh3},
-			{sys2, nil},
-		}),
-		matrixIDs(rg.createMatrix(config.SYSTEM, config.HIGH)))
+		[]string{
+			"REQ-TRAQ-SWH-1 -> NIL",
+			"REQ-TRAQ-SWH-2 -> REQ-TRAQ-SYS-1",
+			"REQ-TRAQ-SWH-3 -> REQ-TRAQ-SYS-1",
+		},
+		rg.matrixRows(rg.createUpstreamMatrix(config.HIGH, config.SYSTEM)))
 
 	assert.Equal(t,
-		matrixIDs([][2]*Req{
-			{swh1, nil},
-			{swh2, sys1},
-			{swh3, sys1},
-		}),
-		matrixIDs(rg.createMatrix(config.HIGH, config.SYSTEM)))
+		[]string{
+			"REQ-TRAQ-SWH-1 -> REQ-TRAQ-SWL-2",
+			"REQ-TRAQ-SWH-2 -> REQ-TRAQ-SWL-1",
+			"REQ-TRAQ-SWH-2 -> REQ-TRAQ-SWL-2",
+			"REQ-TRAQ-SWH-3 -> NIL",
+		},
+		rg.matrixRows(rg.createDownstreamMatrix(config.HIGH, config.LOW)))
 
 	assert.Equal(t,
-		matrixIDs([][2]*Req{
-			{swh1, swl2},
-			{swh2, swl1},
-			{swh2, swl2},
-			{swh3, nil},
-		}),
-		matrixIDs(rg.createMatrix(config.HIGH, config.LOW)))
-
-	assert.Equal(t,
-		matrixIDs([][2]*Req{
-			{swl1, swh2},
-			{swl2, swh1},
-			{swl2, swh2},
-			{swl3, nil},
-		}),
-		matrixIDs(rg.createMatrix(config.LOW, config.HIGH)))
+		[]string{
+			"REQ-TRAQ-SWL-1 -> REQ-TRAQ-SWH-2",
+			"REQ-TRAQ-SWL-2 -> REQ-TRAQ-SWH-1",
+			"REQ-TRAQ-SWL-2 -> REQ-TRAQ-SWH-2",
+			"REQ-TRAQ-SWL-3 -> NIL",
+		},
+		rg.matrixRows(rg.createUpstreamMatrix(config.LOW, config.HIGH)))
 }

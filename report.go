@@ -172,6 +172,8 @@ var reportTmplText = `
 	
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeFiles }}
+		{{ with index $.Reqs.CodeTags . }}
+		{{ range . }}
 			<li>
 				<h3><a href="{{ .URL }}" target="_blank">{{ .Path }}:{{ .Tag }}</a></h3>
 
@@ -215,6 +217,8 @@ var reportTmplText = `
 					{{ end }}
 				</ul>
 			</li>
+		{{ end }}
+		{{ end }}
 		{{ else }}
 			<li class="text-danger">Empty graph</li>
 		{{ end }}
