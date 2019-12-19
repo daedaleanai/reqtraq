@@ -148,7 +148,7 @@ func (rg reqGraph) CodeOrderInfo() (info OrderInfo) {
 func (rg reqGraph) reqsOfLevel(level config.RequirementLevel) map[string]*Req {
 	reqs := make(map[string]*Req, 0)
 	for _, r := range rg.Reqs {
-		if r.Level == level {
+		if r.Level == level && !r.IsDeleted() {
 			reqs[r.ID] = r
 		}
 	}
