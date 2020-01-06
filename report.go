@@ -296,7 +296,9 @@ var reportTmplText = `
 	
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
-		{{ range .Reqs.CodeFilesByPosition }}
+		{{ range .Reqs.CodeFiles }}
+		{{ with index $.Reqs.CodeTags . }}
+		{{ range . }}
 			{{ range .Parents }}
 				{{ if .Matches $.Filter $.Diffs }}
 					{{ with ($.Once.Once .) }}
@@ -312,6 +314,8 @@ var reportTmplText = `
 						{{ end }}
 				{{ end }}
 			{{ end }}
+		{{ end }}
+		{{ end }}
 		{{ end }}
 	</ul>
 	{{ template "FOOTER" }}
