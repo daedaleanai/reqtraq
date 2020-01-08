@@ -26,18 +26,18 @@ var SourceCodeFileExtensions = map[string][]string{
 
 const InstallUniversalCtags = "Install as described in https://github.com/universal-ctags/ctags#the-latest-build-and-package"
 
-// runCtags executes Universal Ctags with the specified arguments.
-func runCtags(args ...string) (lines chan string, errors chan error) {
+// findCtags returns the location of the Universal Ctags executable.
+func findCtags() string {
 	ctags, ok := os.LookupEnv("REQTRAQ_CTAGS")
 	if !ok {
 		ctags = "ctags"
 	}
-	return linepipes.Run(ctags, args...)
+	return ctags
 }
 
 // checkCtagsAvailable returns an error when Universal Ctags cannot be found.
 func checkCtagsAvailable() error {
-	out, err := linepipes.All(runCtags("--version"))
+	out, err := linepipes.All(linepipes.Run(findCtags(), "--version"))
 	if err != nil {
 		return errors.Wrap(err, "universal-ctags not available. "+InstallUniversalCtags)
 	}
@@ -48,8 +48,8 @@ func checkCtagsAvailable() error {
 }
 
 // parseTags returns the tags found by ctags.
-func parseTags(lines chan string) ([]Code, error) {
-	res := make([]Code, 0)
+func parseTags(lines chan string) ([]*Code, error) {
+	res := make([]*Code, 0)
 	for line := range lines {
 		parts := strings.Split(line, "\t")
 		if len(parts) < 4 {
@@ -73,7 +73,7 @@ func parseTags(lines chan string) ([]Code, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse line number: %v", parts)
 		}
-		res = append(res, Code{Path: relativePath, Tag: tag, Line: line})
+		res = append(res, &Code{Path: relativePath, Tag: tag, Line: line})
 	}
 	return res, nil
 }
@@ -81,7 +81,7 @@ func parseTags(lines chan string) ([]Code, error) {
 // parseFileComments detects comments in the specified source code file and
 // associates them with the tags detected in the same file.
 // Returns a hash for the file
-func parseFileComments(absolutePath string, tags []Code) (string, error) {
+func parseFileComments(absolutePath string, tags []*Code) (string, error) {
 	f, err := os.Open(absolutePath)
 	if err != nil {
 		return "", err
@@ -128,15 +128,24 @@ func parseFileComments(absolutePath string, tags []Code) (string, error) {
 	return string(h.Sum(nil)), nil
 }
 
-// tagCode runs ctags over the specified directory and parses the generated
+// tagCode runs ctags over the specified code files and parses the generated
 // tags file.
-func tagCode(codePath string) (map[string][]Code, error) {
-	absoluteCodePath := filepath.Join(git.RepoPath(), codePath)
+func tagCode(codeFiles []string) (map[string][]*Code, error) {
+	repoPath := git.RepoPath()
+	r, w := io.Pipe()
+	go func() {
+		for _, f := range codeFiles {
+			fmt.Fprintln(w, path.Join(repoPath, f))
+		}
+		w.Close()
+	}()
+
 	languages := make([]string, 0, len(SourceCodeFileExtensions))
 	for l := range SourceCodeFileExtensions {
 		languages = append(languages, l)
 	}
-	lines, errs := runCtags(
+
+	lines, errs := linepipes.RunWithInput(findCtags(), r,
 		// We're only interested in a limited set of languages.
 		// Avoid scanning JSON, Markdown, etc.
 		"--languages="+strings.Join(languages, ","),
@@ -148,7 +157,9 @@ func tagCode(codePath string) (map[string][]Code, error) {
 		// To see the available fields: ctags --list-fields
 		// We need the line number.
 		"--fields=n",
-		"--recurse", "-f", "-", absoluteCodePath)
+		"--recurse",
+		"-f", "-",
+		"-L", "-")
 
 	tags, err := parseTags(lines)
 	if err != nil {
@@ -159,11 +170,11 @@ func tagCode(codePath string) (map[string][]Code, error) {
 		return nil, errors.Wrap(err, "failed to run ctags to find methods in the source code")
 	}
 
-	tagsByFile := make(map[string][]Code, 0)
+	tagsByFile := make(map[string][]*Code, 0)
 	for _, tag := range tags {
 		_, ok := tagsByFile[tag.Path]
 		if !ok {
-			tagsByFile[tag.Path] = make([]Code, 0)
+			tagsByFile[tag.Path] = make([]*Code, 0)
 		}
 		tagsByFile[tag.Path] = append(tagsByFile[tag.Path], tag)
 	}
@@ -186,9 +197,11 @@ func IsSourceCodeFile(name string) bool {
 	return false
 }
 
-// parseComments updates the specified tags with the discovered code comments.
-func (rg *reqGraph) parseComments(absoluteCodePath string) error {
-	// Walk through the code.
+// findCodeFiles returns the paths to the discovered code files in codePath
+// relative to the specified repoPath. The output is deterministic.
+func findCodeFiles(repoPath, codePath string) ([]string, error) {
+	files := make([]string, 0)
+	absoluteCodePath := filepath.Join(repoPath, codePath)
 	err := filepath.Walk(absoluteCodePath, func(filePath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			if !IsSourceCodeDir(filePath) {
@@ -198,16 +211,26 @@ func (rg *reqGraph) parseComments(absoluteCodePath string) error {
 			if !IsSourceCodeFile(info.Name()) {
 				return nil
 			}
-
-			p, err := relativePathToRepo(filePath, git.RepoPath())
+			p, err := relativePathToRepo(filePath, repoPath)
 			if err != nil {
-
-			}
-			if _, err := parseFileComments(filePath, rg.CodeTags[p]); err != nil {
 				return err
 			}
+			files = append(files, p)
 		}
 		return nil
 	})
-	return err
+	return files, err
+}
+
+// parseComments updates the specified tags with the comments discovered
+// in the CodeFiles.
+func (rg *reqGraph) parseComments() error {
+	repoPath := git.RepoPath()
+	for _, filePath := range rg.CodeFiles {
+		absoluteFilePath := path.Join(repoPath, filePath)
+		if _, err := parseFileComments(absoluteFilePath, rg.CodeTags[filePath]); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed comments discovery for %s", absoluteFilePath))
+		}
+	}
+	return nil
 }

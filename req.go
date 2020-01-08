@@ -212,7 +212,11 @@ type reqGraph struct {
 	// Reqs contains the requirements by ID.
 	Reqs map[string]*Req
 	// CodeTags contains the source code functions per file.
-	CodeTags map[string][]Code
+	// The keys are paths relative to the git repo path.
+	CodeTags map[string][]*Code
+	// CodeFiles are the paths to the discovered code files,
+	// relative to the git repo path.
+	CodeFiles []string
 	// Errors which have been found while analyzing the graph.
 	// This is extended in multiple places.
 	Errors []error
@@ -224,7 +228,7 @@ type reqGraph struct {
 // The separate returned error specifies how reading the certdocs and code
 // failed, if it did.
 func CreateReqGraph(certdocsPath, codePath string) (*reqGraph, error) {
-	rg := &reqGraph{make(map[string]*Req, 0), nil, make([]error, 0)}
+	rg := &reqGraph{make(map[string]*Req, 0), nil, make([]string, 0), make([]error, 0)}
 
 	filesListFile, err := ioutil.TempFile("", "list-*")
 	if err != nil {
@@ -253,15 +257,20 @@ func CreateReqGraph(certdocsPath, codePath string) (*reqGraph, error) {
 		return rg, errors.Wrap(err, "failed walking certdocs")
 	}
 
-	// Tag the code.
-	absoluteCodePath := filepath.Join(git.RepoPath(), codePath)
-	rg.CodeTags, err = tagCode(codePath)
+	// Find the code files.
+	rg.CodeFiles, err = findCodeFiles(git.RepoPath(), codePath)
+	if err != nil {
+		return rg, errors.Wrap(err, "failed to find code files")
+	}
+
+	// Discover the code procedures.
+	rg.CodeTags, err = tagCode(rg.CodeFiles)
 	if err != nil {
 		return rg, errors.Wrap(err, "failed to tag code")
 	}
 
-	err = rg.parseComments(absoluteCodePath)
-	if err != nil {
+	// Annotate the code procedures with the associated comment.
+	if err := rg.parseComments(); err != nil {
 		return rg, errors.Wrap(err, "failed walking code")
 	}
 
@@ -385,7 +394,7 @@ func (rg *reqGraph) Resolve() []error {
 func (rg *reqGraph) resolveCodeTags(errs []error) []error {
 	for _, tags := range rg.CodeTags {
 		for i := range tags {
-			code := &tags[i]
+			code := tags[i]
 			code.ParentIds = code.ReqIDsInComment()
 			if len(code.ParentIds) == 0 {
 				errs = append(errs, errors.New("Function "+code.Tag+" in file "+code.Path+" has no parents."))
@@ -421,17 +430,6 @@ func (rg reqGraph) OrdsByPosition() []*Req {
 		}
 	}
 	sort.Sort(byPosition(r))
-	return r
-}
-
-func (rg reqGraph) CodeFiles() []*Code {
-	var r []*Code
-	for filePath := range rg.CodeTags {
-		for i := range rg.CodeTags[filePath] {
-			r = append(r, &rg.CodeTags[filePath][i])
-		}
-	}
-	sort.Sort(byFilenameTag(r))
 	return r
 }
 

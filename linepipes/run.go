@@ -4,37 +4,44 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
 // global flag controlling debug output
 var Verbose = false
 
-func Run(prog string, args ...string) (lines chan string, errors chan error) {
+func Run(prog string, args ...string) (lines chan string, errs chan error) {
+	return RunWithInput(prog, os.Stdin, args...)
+}
+
+func RunWithInput(prog string, input io.Reader, args ...string) (lines chan string, errs chan error) {
 	lines = make(chan string)
-	errors = make(chan error, 1)
+	errs = make(chan error, 1)
+	escapedCommand := EscapeCommand(prog, args...)
 	if Verbose {
-		log.Println("Executing:", prog, strings.Join(args, " "))
+		log.Println("Executing:", escapedCommand)
 	}
 	cmd := exec.Command(prog, args...)
-	cmd.Stdin = os.Stdin
+	cmd.Stdin = input
 	pipeReader, pipeWriter, err := os.Pipe()
 	if err != nil {
-		errors <- err
+		errs <- err
 		close(lines)
-		close(errors)
-		return lines, errors
+		close(errs)
+		return lines, errs
 	}
 	cmd.Stdout = pipeWriter
 	cmd.Stderr = pipeWriter
 	if err := cmd.Start(); err != nil {
-		errors <- err
+		errs <- err
 		close(lines)
-		close(errors)
-		return lines, errors
+		close(errs)
+		return lines, errs
 	}
 	go func() {
 		defer close(lines)
@@ -44,13 +51,13 @@ func Run(prog string, args ...string) (lines chan string, errors chan error) {
 		}
 	}()
 	go func() {
-		defer close(errors)
+		defer close(errs)
 		if err := cmd.Wait(); err != nil {
-			errors <- err
+			errs <- fmt.Errorf("command failed: %s: %s", err, escapedCommand)
 		}
 		pipeWriter.Close()
 	}()
-	return lines, errors
+	return lines, errs
 }
 
 func writeLine(file *os.File, line string) error {
@@ -121,4 +128,24 @@ func All(lines <-chan string, errors <-chan error) (string, error) {
 		return "", err
 	}
 	return buffer.String(), nil
+}
+
+// unsafeCharRe contains the list of safe shell chars from Python's shlex.quote implementation.
+var unsafeCharRe = regexp.MustCompile(`[^\w@%+=:,./-]`)
+
+func EscapeArg(arg string) string {
+	if unsafeCharRe.MatchString(arg) {
+		return fmt.Sprintf("'%s'", strings.Replace(arg, `'`, `'"'"'`, -1))
+	}
+	return arg
+}
+
+// EscapeCommand formats the command such that it can be copy/pasted to be run.
+func EscapeCommand(prog string, args ...string) string {
+	res := make([]string, 0, len(args)+1)
+	res = append(res, EscapeArg(prog))
+	for _, arg := range args {
+		res = append(res, EscapeArg(arg))
+	}
+	return strings.Join(res, " ")
 }
