@@ -60,9 +60,6 @@ This document discusses the following topics:
 
 Data comes in from the requirements documents and code files in the same Git repository.
 
-Reqtraq interacts with a Phabricator server using the Phabricator Conduit <abbr
-title="Application Programming Interface">API</abbr>.
-
 Reqtraq has the following outputs:
 - Traceability reports and issues, including hyperlinking between documents
 - The next available requirement <abbr title="Identification">ID</abbr>

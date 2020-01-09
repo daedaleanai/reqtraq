@@ -7,18 +7,15 @@ Reqtraq is designed to stay out of your way. It requires no user interaction for
 Instead, it parses documents that are required in the certification process and extracts everything
 it needs from there.
 
-Reqtraq has 3 main components:
-1. **Precommit hook** makes sure the documents have the correct structure and linking:
+Reqtraq has two main use-cases:
+1. **Git hook** makes sure the documents have the correct structure and linking:
    * Files correctly named
    * Requirements correctly formatted and continuous
    * References exist, Parent requirements exist and not DELETED
    * Required attributes are there and correctly formatted
 
-2. **Prepush hook** exports tasks to desired task management tool (currently supports Phabricator; JIRA and others need to be added)
-
-3. **Standalone binary**
+2. **Standalone binary**
    * Report generation with filtering
-   * Phabricator export
    * Web tool for easy inspection
 
 
