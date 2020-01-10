@@ -1,4 +1,3 @@
-// @tests @llr REQ-TRAQ-SWL-15
 package main
 
 import (
@@ -208,7 +207,6 @@ func TestReq_Matches_filter(t *testing.T) {
 	}
 }
 
-// @tests @llr REQ-TRAQ-SWL-15
 func TestParsing(t *testing.T) {
 	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
 	rg := &reqGraph{Reqs: make(map[string]*Req)}
@@ -235,7 +233,6 @@ func TestParsing(t *testing.T) {
 	}
 }
 
-// @llr REQ-TRAQ-SWL-17
 func TestReq_IsDeleted(t *testing.T) {
 	req := Req{ID: "REQ-TEST-SYS-2", Title: "DELETED"}
 	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Title)

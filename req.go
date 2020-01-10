@@ -1,9 +1,3 @@
-// @llr REQ-TRAQ-SWL-15
-// @llr REQ-TRAQ-SWL-6
-// @llr REQ-TRAQ-SWL-7
-// @llr REQ-TRAQ-SWL-11
-// @llr REQ-TRAQ-SWL-13
-
 package main
 
 import (

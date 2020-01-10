@@ -1,4 +1,3 @@
-//@llr REQ-TRAQ-SWL-1
 package git
 
 import (

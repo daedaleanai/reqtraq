@@ -41,7 +41,6 @@ func TestParseReq_Empty(t *testing.T) {
 	assert.EqualError(t, err, "Requirement must not be empty: REQ-TEST-SWL-1")
 }
 
-// @llr REQ-TRAQ-SWL-17
 func TestParseReq_Deleted(t *testing.T) {
 	// Make sure it can be parsed even when it has no description.
 	r, err := ParseReq(`REQ-T-SYS-1 DELETED`)
