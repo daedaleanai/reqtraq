@@ -1,4 +1,3 @@
-// @llr REQ-TRAQ-SWL-16
 package main
 
 import (
@@ -19,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// @llr REQ-TRAQ-SWL-16
 func serve(addr string) error {
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
@@ -27,10 +27,11 @@ func serve(addr string) error {
 	return http.ListenAndServe(addr, http.HandlerFunc(handler))
 }
 
-var errorTemplate *template.Template = template.Must(template.New("error").Parse(
+var errorTemplate = template.Must(template.New("error").Parse(
 	`<html>OOPS!
 <pre>{{.Error}}</pre>`))
 
+// @llr REQ-TRAQ-SWL-16
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, r.URL)
 	var err error
@@ -162,6 +163,7 @@ type indexData struct {
 	Commits    []string
 }
 
+// @llr REQ-TRAQ-SWL-16
 func get(w http.ResponseWriter, r *http.Request) error {
 	repoName := git.RepoName()
 	reqPath := r.URL.Path

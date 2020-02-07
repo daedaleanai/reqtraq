@@ -1,9 +1,3 @@
-// @llr REQ-TRAQ-SWL-15
-// @llr REQ-TRAQ-SWL-6
-// @llr REQ-TRAQ-SWL-7
-// @llr REQ-TRAQ-SWL-11
-// @llr REQ-TRAQ-SWL-13
-
 package main
 
 import (
@@ -67,7 +61,8 @@ type Req struct {
 	Title string
 	// Body contains various HTML tags (links, converted markdown, etc). Type must be HTML,
 	// not a string, so it's not HTML-escaped by the templating engine.
-	Body       template.HTML
+	Body template.HTML
+	// Attributes of the requirement by uppercase name.
 	Attributes map[string]string
 	Position   int
 	Status     RequirementStatus

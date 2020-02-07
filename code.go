@@ -24,7 +24,7 @@ var SourceCodeFileExtensions = map[string][]string{
 	"GO":  {".go"},
 }
 
-const InstallUniversalCtags = "Install as described in https://github.com/universal-ctags/ctags#the-latest-build-and-package"
+const InstallUniversalCtags = "Make sure to install Universal ctags (NOT Exuberant ctags) as described in https://github.com/universal-ctags/ctags#the-latest-build-and-package"
 
 // findCtags returns the location of the Universal Ctags executable.
 func findCtags() string {
@@ -145,6 +145,9 @@ func tagCode(codeFiles []string) (map[string][]*Code, error) {
 		languages = append(languages, l)
 	}
 
+	if err := checkCtagsAvailable(); err != nil {
+		return nil, errors.Wrap(err, "need to use Universal ctags to tag the code")
+	}
 	lines, errs := linepipes.RunWithInput(findCtags(), r,
 		// We're only interested in a limited set of languages.
 		// Avoid scanning JSON, Markdown, etc.

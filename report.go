@@ -334,16 +334,6 @@ var reportTmplText = `
 		</li>
 	{{ end }}
 	</ul>
-	<h3>Dangling Requirements</h3>
-	<ul>
-	{{ range .Reqs.DanglingReqsByPosition }}
-		{{ if .Matches $.Filter $.Diffs }}
-			<li>
-				{{ template "REQUIREMENT" ($.Once.Once .) }}
-			</li>
-		{{ end }}
-	{{ end }}
-	</ul>
 	<h3>Invalid Attributes</h3>
 	<ul>
 	{{ range .AttributesErrors }}

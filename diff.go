@@ -1,4 +1,3 @@
-//@llr REQ-TRAQ-SWL-8
 package main
 
 import (
@@ -9,6 +8,7 @@ import (
 )
 
 // ChangedSince produces a report of how requirements have changed between prg and this reqGraph
+// @llr REQ-TRAQ-SWL-8
 func (rg reqGraph) ChangedSince(prg *reqGraph) (diffs map[string][]string) {
 	if prg == nil {
 		return
@@ -43,6 +43,7 @@ func onlyLetters(s string) string {
 
 // ChangedSince returns a set of messages that describe how r has changed
 // from a previous version pr.
+// @llr REQ-TRAQ-SWL-8
 func (r *Req) ChangedSince(pr *Req) (diffs []string) {
 	if r == nil && pr == nil {
 		return nil
