@@ -216,7 +216,9 @@ func main() {
 			log.Fatal(err)
 		}
 		defer os.RemoveAll(dir)
-
+	}
+	switch command {
+	case "reportdown", "reportup", "reportissues":
 		var prg *reqGraph
 		if *since != "" {
 			var dir string
