@@ -3,7 +3,7 @@
 Document Approval:
 - Engineering, Program Manager: Luuk van Dijk
 - Engineering, Engineer: Daniel Danciu
-- Quality, Quality Engineer: Mukta Prasad
+- Quality, Quality Engineer: Anna Chernova
 
 ## Introduction
 
