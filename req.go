@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"log"
 	"os"
@@ -59,9 +58,7 @@ type Req struct {
 	// Tags holds the associated code functions.
 	Tags  []*Code
 	Title string
-	// Body contains various HTML tags (links, converted markdown, etc). Type must be HTML,
-	// not a string, so it's not HTML-escaped by the templating engine.
-	Body template.HTML
+	Body  string
 	// Attributes of the requirement by uppercase name.
 	Attributes map[string]string
 	Position   int
@@ -562,7 +559,7 @@ func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
 			}
 		}
 		if filter.BodyRegexp != nil {
-			if !filter.BodyRegexp.MatchString(string(r.Body)) {
+			if !filter.BodyRegexp.MatchString(r.Body) {
 				return false
 			}
 		}

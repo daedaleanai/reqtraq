@@ -86,7 +86,7 @@ func (r *Req) ChangedSince(pr *Req) (diffs []string) {
 		// only bother with the bodies if the titles are the same
 		// compare modulo spaces and punctuation, ie only the letters
 
-		if onlyLetters(string(r.Body)) != onlyLetters(string(pr.Body)) {
+		if onlyLetters(r.Body) != onlyLetters(pr.Body) {
 			diffs = append(diffs, fmt.Sprintf("Body changed"))
 		}
 	}
