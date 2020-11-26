@@ -244,13 +244,7 @@ func main() {
 			log.Fatal(err)
 		}
 		failureCount := 0
-		for _, v := range reqs {
-			r, err2 := ParseReq(v)
-			if err2 != nil {
-				log.Printf("Requirement failed to parse: %q\n%s", err2, v)
-				failureCount++
-				continue
-			}
+		for _, r := range reqs {
 			body := make([]string, 0)
 			lines := strings.Split(r.Body, "\n")
 			for _, line := range lines {

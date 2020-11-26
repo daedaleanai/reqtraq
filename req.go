@@ -459,12 +459,7 @@ func parseCertdocToGraph(fileName string, graph *reqGraph) ([]error, error) {
 
 	isReqPresent := make([]bool, len(reqs))
 	var errs []error
-	for i, v := range reqs {
-		r, err := ParseReq(v)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
+	for i, r := range reqs {
 		errs2 := lintReq(fileName, len(reqs), isReqPresent, r)
 		if len(errs2) != 0 {
 			errs = append(errs, errs2...)
@@ -592,7 +587,7 @@ func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
 
 func NextId(f string) (string, error) {
 	var (
-		reqs      []string
+		reqs      []*Req
 		nextReqID string
 	)
 
@@ -607,11 +602,7 @@ func NextId(f string) (string, error) {
 			greatestID int = 0
 		)
 		// infer next req ID from existing req IDs
-		for _, v := range reqs {
-			r, err := ParseReq(v)
-			if err != nil {
-				return "", err
-			}
+		for _, r := range reqs {
 			parts := ReReqID.FindStringSubmatch(r.ID)
 			if parts == nil {
 				return "", fmt.Errorf("Requirement ID invalid: %s", r.ID)
@@ -643,39 +634,4 @@ func NextId(f string) (string, error) {
 	}
 
 	return nextReqID, nil
-}
-
-// ParseCertdoc parses raw requirements out of a certdoc.
-func ParseCertdoc(fileName string) ([]string, error) {
-	if err := IsValidDocName(fileName); err != nil {
-		return nil, err
-	}
-	return ParseMarkdown(fileName)
-}
-
-// IsValidDocName checks the f filename is a valid certdoc name.
-// @llr REQ-TRAQ-SWL-20
-func IsValidDocName(f string) error {
-	ext := path.Ext(f)
-	if strings.ToLower(ext) != ".md" {
-		return fmt.Errorf("Invalid extension: '%s'. Only '.md' is supported", strings.ToLower(ext))
-	}
-	filename := strings.TrimSuffix(path.Base(f), ext)
-	// check if the structure of the filename is correct
-	parts := reCertdoc.FindStringSubmatch(filename)
-	if parts == nil {
-		return fmt.Errorf("Invalid file name: '%s'. Certification doc file name must match %v", filename, reCertdoc)
-	}
-	// check the document type code
-	docType := parts[3]
-	correctNumber, ok := config.DocTypeToDocId[docType]
-	if !ok {
-		return fmt.Errorf("Invalid document type: '%s'. Must be one of %v", docType, config.DocTypeToDocId)
-	}
-	// check the document type number
-	docNumber := parts[2]
-	if correctNumber != docNumber {
-		return fmt.Errorf("Document number for type '%s' must be '%s', and not '%s'", docType, correctNumber, docNumber)
-	}
-	return nil
 }
