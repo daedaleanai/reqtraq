@@ -3,6 +3,8 @@ package main
 import (
 	"html/template"
 	"io"
+	"log"
+	"os/exec"
 )
 
 type Oncer map[string]bool
@@ -72,14 +74,36 @@ var headerFooterTmplText = `
 {{end}}
 `
 
-var reportTmpl = template.Must(template.Must(template.New("").Parse(headerFooterTmplText)).Parse(reportTmplText))
+// formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
+// @llr REQ-TRAQ-SWL-19
+func formatBodyAsHTML(txt string) template.HTML {
+	cmd := exec.Command("pandoc", "--mathjax")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Fatal("Couldn't get input pipe for pandoc: ", err)
+	}
+
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, txt)
+	}()
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatal("Error while running pandoc: ", err)
+	}
+
+	return template.HTML(out)
+}
+
+var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML}).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
 var reportTmplText = `
 {{ define "REQUIREMENT" }}
 	{{if ne .Level -1 }}
 		<h3><a name="{{ .ID }}"></a>{{ .ID }} {{ .Title }}</h3>
 		{{ if .Body }}
-			<p>{{ .Body }}</p>
+			<p>{{formatBodyAsHTML .Body }}</p>
 		{{ end }}
 		{{ if .Attributes }}
 			<ul style="list-style: none; padding: 0; margin: 0;">

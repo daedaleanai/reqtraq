@@ -2,10 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
-	"io"
-	"log"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,28 +20,6 @@ var (
 	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n#{2,6} Attributes:$`)
 	reReqKWD                   = regexp.MustCompile(`(?i)- ([^:]+): `)
 )
-
-// formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
-// @llr REQ-TRAQ-SWL-19
-func formatBodyAsHTML(txt string) template.HTML {
-	cmd := exec.Command("pandoc", "--mathjax")
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		log.Fatal("Couldn't get input pipe for pandoc: ", err)
-	}
-
-	go func() {
-		defer stdin.Close()
-		io.WriteString(stdin, txt)
-	}()
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Fatal("Error while running pandoc: ", err)
-	}
-
-	return template.HTML(out)
-}
 
 // ParseReq finds the first REQ-XXX tag and the reserved words and distills a Req from it.
 //
@@ -144,8 +118,9 @@ func ParseReq(txt string) (*Req, error) {
 		}
 	}
 
-	r.Body = formatBodyAsHTML(bodyAndAttributes[:attributesStart])
-	if strings.TrimSpace(string(r.Body)) == "" {
+	r.Body = bodyAndAttributes[:attributesStart]
+
+	if strings.TrimSpace(r.Body) == "" {
 		return nil, fmt.Errorf("Requirement body must not be empty: %s", r.ID)
 	}
 

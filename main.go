@@ -252,7 +252,7 @@ func main() {
 				continue
 			}
 			body := make([]string, 0)
-			lines := strings.Split(string(r.Body), "\n")
+			lines := strings.Split(r.Body, "\n")
 			for _, line := range lines {
 				if line == "" {
 					continue
