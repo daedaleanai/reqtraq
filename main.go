@@ -243,7 +243,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		failureCount := 0
 		for _, r := range reqs {
 			body := make([]string, 0)
 			lines := strings.Split(r.Body, "\n")
@@ -259,9 +258,6 @@ func main() {
 				fmt.Printf("%s…\n", body[0])
 			}
 			fmt.Println()
-		}
-		if failureCount > 0 {
-			log.Fatalf("Requirements failed to parse: %d", failureCount)
 		}
 	case "reportdown":
 		of, err := os.Create(*fReportPrefix + "down.html")
