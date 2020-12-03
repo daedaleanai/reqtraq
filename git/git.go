@@ -35,7 +35,7 @@ func RepoName() string {
 		// never associated with a working tree.
 		currentDir, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Failed to get current dir: %r", err)
+			log.Fatalf("Failed to get current dir: %v", err)
 		}
 		name = filepath.Base(currentDir)
 	} else {
