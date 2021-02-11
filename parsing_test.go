@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -224,4 +225,57 @@ body
 - Parents: REQ-TEST-SWH-1 and REQ-TEST-SWH-2
 `)
 	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: " and " in "REQ-TEST-SWH-1 and REQ-TEST-SWH-2"`)
+}
+
+func TestParseReqTable(t *testing.T) {
+	reqs, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact | Parents |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 | |
+| REQ-TEST-SYS-2 | Section 2 | Body of requirement 2. | Rationale 2 | Test 2 | Impact 2 | |
+| REQ-TEST-SYS-3 | Section 3 | Body of requirement 3. | Rationale 3 | Test 3 | Impact 3 | REQ-TEST-SYS-1 |
+| REQ-TEST-SYS-4 | Section 4 | Body of requirement 4. | Rationale 4 | Test 4 | Impact 4 | REQ-TEST-SYS-1, REQ-TEST-SYS-2 |`, nil)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 4, len(reqs))
+
+	for i, r := range reqs {
+		assert.Equal(t, fmt.Sprintf("REQ-TEST-SYS-%d", i+1), r.ID)
+		assert.Equal(t, fmt.Sprintf("Section %d", i+1), r.Title)
+		assert.Equal(t, fmt.Sprintf("Body of requirement %d.", i+1), r.Body)
+		assert.Equal(t, fmt.Sprintf("Rationale %d", i+1), r.Attributes["RATIONALE"])
+		assert.Equal(t, fmt.Sprintf("Test %d", i+1), r.Attributes["VERIFICATION"])
+		assert.Equal(t, fmt.Sprintf("Impact %d", i+1), r.Attributes["SAFETY IMPACT"])
+	}
+}
+
+func TestParseReqTable_NoIDCol(t *testing.T) {
+	_, err := parseReqTable(`| Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- |
+| Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+
+	assert.EqualError(t, err, "first column must be \"ID\"")
+}
+
+func TestParseReqTable_MissingCell(t *testing.T) {
+	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 |`, nil)
+
+	assert.EqualError(t, err, "too few cells on row 3 of requirement table")
+}
+
+func TestParseReqTable_BadID(t *testing.T) {
+	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| REQ-TEST-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+
+	assert.EqualError(t, err, "malformed requirement: found only malformed ID: \"REQ-TEST-1\" (doesn't match \"REQ-(\\\\w+)-(\\\\w+)-(\\\\d+)\")")
+}
+
+func TestParseReqTable_MissingID(t *testing.T) {
+	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+|  | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+
+	assert.EqualError(t, err, "malformed requirement: missing ID in first 40 characters: \"\"")
 }

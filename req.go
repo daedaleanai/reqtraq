@@ -37,7 +37,6 @@ func (rs RequirementStatus) String() string { return reqStatusToString[rs] }
 
 var (
 	// project abbreviation, certdoc type number, certdoc type
-	reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
 	reDiffRev = regexp.MustCompile(`Differential Revision:\s(.*)\s`)
 )
 

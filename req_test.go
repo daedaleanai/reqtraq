@@ -210,10 +210,15 @@ func TestReq_Matches_filter(t *testing.T) {
 func TestParsing(t *testing.T) {
 	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
 	rg := &reqGraph{Reqs: make(map[string]*Req)}
-	errors, _ := parseCertdocToGraph(f, rg)
+
+	errors, err := parseCertdocToGraph(f, rg)
+	if err != nil {
+		t.Errorf("parseCertdocToGraph: %v", err)
+	}
 	assert.Empty(t, errors, "Unexpected errors while parsing "+f)
-	var systemReqs [5]Req
-	for i := 0; i < 5; i++ {
+
+	var systemReqs [14]Req
+	for i := 0; i < 14; i++ {
 		reqNo := strconv.Itoa(i + 1)
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
 			Level:    config.SYSTEM,
@@ -225,6 +230,8 @@ func TestParsing(t *testing.T) {
 				"VERIFICATION":  "Test " + reqNo},
 		}
 	}
+
+	assert.Equal(t, len(systemReqs), len(rg.Reqs), "Requirement count mismatch")
 
 	for i, systemReq := range rg.OrdsByPosition() {
 		if systemReqs[i].ID != systemReq.ID || systemReqs[i].Level != systemReq.Level || systemReqs[i].Path != systemReq.Path || systemReqs[i].Position != systemReq.Position {
