@@ -449,7 +449,7 @@ The command must be executed in the repository for which the reports will be gen
 - Safety impact: None
 
 
-##### REQ-TRAQ-SWL-21 Requirement definition detection
+##### REQ-TRAQ-SWL-21 Requirement definition detection (ATX heading)
 
 Reqtraq SHALL discover requirements definitions in certification documents `.md` files by detecting the beginning and end:
   - a requirement starts with an [ATX heading](https://github.github.com/gfm/#atx-headings) which has at the beginning a requirement ID
@@ -462,7 +462,7 @@ Reqtraq SHALL discover requirements definitions in certification documents `.md`
 - Safety impact: None
 
 
-##### REQ-TRAQ-SWL-13 Requirement attributes
+##### REQ-TRAQ-SWL-13 Requirement attributes (ATX heading)
 
 The RMT SHALL read the attributes of each requirement from the attributes section at the end of the requirement definition. The attributes section starts with an [ATX heading](https://github.github.com/gfm/#atx-headings) with the title "Attributes:". Since attributes belong to a requirement, the attribute ATX heading level will be higher than the containing requirement heading level. For example, a requirement defined with an ATX heading level of 3 will have attributes with ATX heading level 4 or higher.
 
@@ -480,6 +480,39 @@ Attributes can be optional or mandatory. Each attribute has a name. Each attribu
   { "name": "Verification", "value": "(Demonstration|Unit Test)", "optional": false },
   { "name": "Safety Impact", "optional": false } ] }
 ```
+
+###### Attributes:
+- Rationale: Attributes help define the importance of and the verification process for each requirement. Missing attributes indicate an incomplete requirement.
+- Parents: REQ-TRAQ-SWH-11
+- Verification: Demonstration
+- Safety impact: None
+
+
+##### REQ-TRAQ-SWL-24 Requirement definition detection (tables)
+
+Reqtraq SHALL discover requirements definitions held in [tables]( https://github.github.com/gfm/#tables-extension-) in certification documents `.md` files by detecting the beginning and end:
+  - a requirement table starts with a header row where the first column has the text "ID"
+  - a requirement table ends when a non-table row is encountered.
+
+###### Attributes:
+- Rationale: Using existing markdown elements is preferable to introducing new syntax
+- Parents: REQ-TRAQ-SWH-1
+- Verification: Unit test
+- Safety impact: None
+
+
+##### REQ-TRAQ-SWL-25 Requirement attributes (tables)
+
+The RMT SHALL read the attributes of each requirement held in a requirement table from each column of the table. The first row of the table contains the attribute name for each column, the first column being "ID" to represent requirement ID. The second row is a delimiter. The third row onward contains the requirement ID and associated attribute text as shown:
+
+> | ID | Title | Body | Attribute1 | Attribute2 |
+> | --- | --- | --- | --- | --- |
+> | ReqID1 | <text> | <text> | <text> | <text> |
+> | ReqID2 | <text> | <text> | <text> | <text> |
+
+
+As with ATX headings, attributes can be optional or mandatory as specified in the `attributes.json` file.
+
 
 ###### Attributes:
 - Rationale: Attributes help define the importance of and the verification process for each requirement. Missing attributes indicate an incomplete requirement.

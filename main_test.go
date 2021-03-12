@@ -16,7 +16,7 @@ func TestPreCommitCreateReqGraphMarkdown(t *testing.T) {
 	expected := `Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.
 Incorrect project abbreviation for requirement REQ-TSET-SYS-5. Expected TEST, got TSET.
 Invalid requirement sequence number for REQ-TEST-SYS-1, is duplicate.
-Invalid requirement sequence number for REQ-TEST-SYS-13: missing requirements in between. Total number of requirements is 10.
+Invalid requirement sequence number for REQ-TEST-SYS-13: missing requirements in between. Expected ID Number 9.
 Requirement number cannot begin with a 0: REQ-TEST-SWL-04. Got 04.
 Requirement REQ-TEST-SWH-6 in file /testdata/TestPreCommitCreateReqGraphMarkdown/TEST-137-SRD.md has no parents.
 Invalid parent of requirement REQ-TEST-SWH-9: REQ-TEST-SYS-3 does not exist.
