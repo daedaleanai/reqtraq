@@ -30,11 +30,11 @@ var (
 	reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
 
 	// For detecting ATX Headings, see http://spec.commonmark.org/0.27/#atx-headings
-	reATXHeading = regexp.MustCompile(`(?m)^ {0,3}(#{1,6})( +(.*)( #* *)?)?$`)
+	reATXHeading = regexp.MustCompile(`^ {0,3}(#{1,6})( +(.*)( #* *)?)?$`)
 
 	// For detecting the first row and delimiter row of a requirement table
-	reTableHeader    = regexp.MustCompile(`(?m)^\| *ID *\|(?:[^\|]*\|)+$`)
-	reTableDelimiter = regexp.MustCompile(`(?m)^\|(?: *-+ *\|)+$`)
+	reTableHeader    = regexp.MustCompile(`^\| *ID *\|(?:[^\|]*\|)+$`)
+	reTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
 
 	// REQ, project number, project abbreviation, req type, req number
 	// For example: REQ-TRAQ-SWH-4
@@ -130,7 +130,7 @@ func parseMarkdown(f string) ([]*Req, error) {
 
 			// Check this heading is at the correct level given it's position in the document
 			if inReq == Heading {
-				// A request is currently being parsed.
+				// A requirement is currently being parsed.
 				if headingHasReqID {
 					// This is a requirement heading.
 					// The level must be the same as the current requirement.
@@ -156,7 +156,7 @@ func parseMarkdown(f string) ([]*Req, error) {
 				}
 			}
 
-			// If we're currently parsing a requirement and it's appropriate close it
+			// If we're currently parsing a requirement, and just read the start of a new requirement (cf rules for ending a requirement), close it
 			if (inReq != None) && (headingHasReqID || level < reqLevel) {
 				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqs)
 				inReq = None
@@ -214,12 +214,12 @@ func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, er
 		}
 		reqs = append(reqs, newReq)
 	} else {
-		var err error
 		// A requirements table
-		reqs, err = parseReqTable(txt, reqs)
+		newReqs, err := parseReqTable(txt, reqs)
 		if err != nil {
 			return reqs, err
 		}
+		reqs = newReqs
 	}
 
 	return reqs, nil
@@ -339,25 +339,32 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 	var attributes []string
 
 	// Split the table into rows and loop through
-	for rowN, rowS := range strings.Split(txt, "\n") {
+	for index, row := range strings.Split(txt, "\n") {
 
 		// The first row contains the attribute names for each column, the first column must be "ID"
-		if rowN == 0 {
-			if reTableHeader.MatchString(rowS) {
-				attributes = splitTableLine(rowS)
+		if index == 0 {
+			if reTableHeader.MatchString(row) {
+				attributes = splitTableLine(row)
 				for i, a := range attributes {
-					attributes[i] = strings.ToUpper(a)
+					k := strings.ToUpper(a)
+
+					if k == "PARENT" {
+						// make our lives easier, accept both, output only PARENTS
+						k = "PARENTS"
+					}
+
+					attributes[i] = k
 				}
 			} else {
-				return reqs, fmt.Errorf("first column must be \"ID\"")
+				return reqs, fmt.Errorf("requirement table must have at least 2 columns, first column head must be \"ID\"")
 			}
 		} else {
-			if reTableDelimiter.MatchString(rowS) {
+			if reTableDelimiter.MatchString(row) {
 				// Ignore the delimiter row
 				continue
 			}
 
-			values := splitTableLine(rowS)
+			values := splitTableLine(row)
 
 			if len(values) == 0 {
 				// End of table
@@ -365,7 +372,7 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 			}
 
 			if len(values) < len(attributes) {
-				return reqs, fmt.Errorf("too few cells on row %d of requirement table", rowN+1)
+				return reqs, fmt.Errorf("too few cells on row %d of requirement table", index+1)
 			}
 
 			r := &Req{Attributes: map[string]string{}}
@@ -383,15 +390,8 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 					r.Title = values[i]
 				} else if k == "BODY" {
 					r.Body = values[i]
-				} else {
-					if k == "PARENT" {
-						// make our lives easier, accept both, output only PARENTS
-						k = "PARENTS"
-					}
-
-					if values[i] != "" {
-						r.Attributes[k] = values[i]
-					}
+				} else if values[i] != "" {
+					r.Attributes[k] = values[i]
 				}
 			}
 

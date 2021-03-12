@@ -208,6 +208,7 @@ func TestReq_Matches_filter(t *testing.T) {
 }
 
 func TestParsing(t *testing.T) {
+	// test a valid requirements document
 	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
 	rg := &reqGraph{Reqs: make(map[string]*Req)}
 
@@ -238,6 +239,44 @@ func TestParsing(t *testing.T) {
 			t.Errorf("Invalid system requirement\nExpected %#v,\n   got %#v", systemReqs[i], systemReq)
 		}
 	}
+
+	// an invalid requirements document containing requirement naming errors
+	f = "testdata/invalid_system_requirement/NAM1-100-ORD.md"
+	rg = &reqGraph{Reqs: make(map[string]*Req)}
+
+	errors, err = parseCertdocToGraph(f, rg)
+	if err != nil {
+		t.Errorf("parseCertdocToGraph: %v", err)
+	}
+	assert.Equal(t, 3, len(errors))
+	assert.Contains(t, errors[0].Error(), "Incorrect project abbreviation for requirement REQ-NAN1-SYS-1. Expected NAM1, got NAN1.")
+	assert.Contains(t, errors[1].Error(), "Incorrect requirement type for requirement REQ-NAM1-SWH-2. Expected SYS, got SWH.")
+	assert.Contains(t, errors[2].Error(), "Requirement number cannot begin with a 0: REQ-NAM1-SYS-03. Got 03.")
+
+	// an invalid requirements document containing sequence errors
+	f = "testdata/invalid_system_requirement/GAP1-100-ORD.md"
+	rg = &reqGraph{Reqs: make(map[string]*Req)}
+
+	errors, err = parseCertdocToGraph(f, rg)
+	if err != nil {
+		t.Errorf("parseCertdocToGraph: %v", err)
+	}
+	assert.Equal(t, 2, len(errors))
+	assert.Contains(t, errors[0].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-3: missing requirements in between. Expected ID Number 2.")
+	assert.Contains(t, errors[1].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-6: missing requirements in between. Expected ID Number 5.")
+
+	// an invalid requirements document containing duplicates
+	f = "testdata/invalid_system_requirement/DUP1-100-ORD.md"
+	rg = &reqGraph{Reqs: make(map[string]*Req)}
+
+	errors, err = parseCertdocToGraph(f, rg)
+	if err != nil {
+		t.Errorf("parseCertdocToGraph: %v", err)
+	}
+	assert.Equal(t, 3, len(errors))
+	assert.Contains(t, errors[0].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-1, is duplicate.")
+	assert.Contains(t, errors[1].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-2, is duplicate.")
+	assert.Contains(t, errors[2].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-3, is duplicate.")
 }
 
 func TestReq_IsDeleted(t *testing.T) {
