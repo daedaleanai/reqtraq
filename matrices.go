@@ -1,3 +1,7 @@
+/*
+Functions which generate trace matrix tables between different levels of requirements and source code.
+*/
+
 package main
 
 import (
@@ -8,6 +12,35 @@ import (
 
 	"github.com/daedaleanai/reqtraq/config"
 )
+
+// GenerateTraceTables generates HTML for inspecting the gaps in the mappings between the two specified node types.
+// @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-15
+func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB string) error {
+	data := struct {
+		From, To         string
+		ItemsAB, ItemsBA []TableRow
+	}{
+		From: nodeTypeA,
+		To:   nodeTypeB,
+	}
+
+	switch nodeTypeA + ":" + nodeTypeB {
+	case "SYS:SWH":
+		data.ItemsAB = rg.createDownstreamMatrix(config.SYSTEM, config.HIGH)
+		data.ItemsBA = rg.createUpstreamMatrix(config.HIGH, config.SYSTEM)
+	case "SWH:SWL":
+		data.ItemsAB = rg.createDownstreamMatrix(config.HIGH, config.LOW)
+		data.ItemsBA = rg.createUpstreamMatrix(config.LOW, config.HIGH)
+	case "SWL:CODE":
+		data.ItemsAB = rg.createSWLCodeMatrix()
+		data.ItemsBA = rg.createCodeSWLMatrix()
+	default:
+		return fmt.Errorf("unknown mapping: %s-%s", nodeTypeA, nodeTypeB)
+	}
+
+	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
+	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
+}
 
 var matrixTmpl = template.Must(template.Must(template.New("").Parse(headerFooterTmplText)).Parse(matrixTmplText))
 
@@ -48,85 +81,50 @@ var matrixTmplText = `
 {{ end }}
 `
 
-// MatrixItem is a cell in a two-columns matrix.
-type MatrixItem struct {
-	// Name represents this item in the matrix.
-	Name string
-	// OrderNumber can be used to order the items in a column ascending.
-	OrderNumber int
-	// req is the represented requirement.
-	req *Req
-	// code is the represented code tag.
-	code *Code
+// TableCell is a cell in a two-columns matrix, it can be a requirement or a code function.
+type TableCell struct {
+	Name        string // Name represents this item in the matrix.
+	OrderNumber int    // OrderNumber can be used to order the items in a column ascending.
+	req         *Req   // req is the represented requirement.
+	code        *Code  // code is the represented code tag.
 }
 
-func (item *MatrixItem) UpdateOrderNumber(info OrderInfo) {
-	if item.req != nil {
-		item.OrderNumber = item.req.IDNumber
-	} else if item.code != nil {
-		item.OrderNumber = info.filesIndex[item.code.Path]*info.fileIndexFactor + item.code.Line
-	} else {
-		item.OrderNumber = 0
-	}
-}
+// TableRow is a pair of TableCell
+type TableRow [2]*TableCell
 
-func NewReqMatrixItem(req *Req) *MatrixItem {
-	item := &MatrixItem{}
-	item.Name = req.ID
-	item.req = req
-	return item
-}
-
-func NewCodeMatrixItem(code *Code) *MatrixItem {
-	item := &MatrixItem{}
+// newCodeTableCell creates a new matrix cell from a code item
+// @llr REQ-TRAQ-SWL-15
+func newCodeTableCell(code *Code) *TableCell {
+	item := &TableCell{}
 	item.Name = code.Path + " " + code.Tag
 	item.code = code
 	return item
 }
 
-// ReportHoles generates HTML for inspecting the gaps in the mappings
-// between the two specified node types.
-func (rg reqGraph) ReportHoles(w io.Writer, nodeTypeA, nodeTypeB string) error {
-	data := struct {
-		From, To         string
-		ItemsAB, ItemsBA [][2]*MatrixItem
-	}{
-		From: nodeTypeA,
-		To:   nodeTypeB,
-	}
-
-	switch nodeTypeA + ":" + nodeTypeB {
-	case "SYS:SWH":
-		data.ItemsAB = rg.createDownstreamMatrix(config.SYSTEM, config.HIGH)
-		data.ItemsBA = rg.createUpstreamMatrix(config.HIGH, config.SYSTEM)
-	case "SWH:SWL":
-		data.ItemsAB = rg.createDownstreamMatrix(config.HIGH, config.LOW)
-		data.ItemsBA = rg.createUpstreamMatrix(config.LOW, config.HIGH)
-	case "SWL:CODE":
-		data.ItemsAB = rg.createSWLCodeMatrix()
-		data.ItemsBA = rg.createCodeSWLMatrix()
-	default:
-		return fmt.Errorf("unknown mapping: %s-%s", nodeTypeA, nodeTypeB)
-	}
-
-	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
-	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
+// newReqTableCell create a new matrix cell from a requirement item
+// @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-15
+func newReqTableCell(req *Req) *TableCell {
+	item := &TableCell{}
+	item.Name = req.ID
+	item.req = req
+	return item
 }
 
-// OrderInfo contains everything needed to set the order number of a MatrixItem.
-type OrderInfo struct {
-	// filesIndex contains the indexes determining the order of the code files.
+// CodeOrderInfo contains everything needed to set the order number of a TableCell containing a code item.
+type CodeOrderInfo struct {
+	// filesIndex maps the code filename to an index of it's order alphabetically
 	filesIndex map[string]int
-	// fileIndexFactor is applied when calculating the order of a procedure:
-	// fileIndex * fileIndexFactor + procedureLineNumber
+	// fileIndexFactor holds the maximum line number of any function in any file
 	fileIndexFactor int
 }
 
-// CodeOrderInfo returns the info needed for sorting MatrixItems.
-func (rg reqGraph) CodeOrderInfo() (info OrderInfo) {
+// codeOrderInfo returns the info needed for sorting TableCells by code.
+// @llr REQ-TRAQ-SWL-44
+func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 	info.filesIndex = make(map[string]int, len(rg.CodeTags))
 	files := make([]string, 0, len(rg.CodeTags))
 	info.fileIndexFactor = 0
+	// build a list of filenames and find the function with the highest line number
 	for file, tags := range rg.CodeTags {
 		files = append(files, file)
 		for _, codeTag := range tags {
@@ -135,17 +133,103 @@ func (rg reqGraph) CodeOrderInfo() (info OrderInfo) {
 			}
 		}
 	}
+	// sort the filenames and store the indexes
 	sort.Strings(files)
-	info.fileIndexFactor++
 	for i, file := range files {
 		info.filesIndex[file] = i
 	}
+	info.fileIndexFactor++
 	return
 }
 
-// reqsOfLevel returns the non-deleted requirements of the specified level,
-// mapped by ID.
-func (rg reqGraph) reqsOfLevel(level config.RequirementLevel) map[string]*Req {
+// createCodeSWLMatrix creates an upstream matrix mapping code procedures to low level requirements.
+// @llr REQ-TRAQ-SWL-15
+func (rg *ReqGraph) createCodeSWLMatrix() []TableRow {
+	items := make([]TableRow, 0)
+	for _, tags := range rg.CodeTags {
+		for _, codeTag := range tags {
+			count := 0
+			for _, parentReq := range codeTag.Parents {
+				row := TableRow{newCodeTableCell(codeTag), newReqTableCell(parentReq)}
+				items = append(items, row)
+				count++
+			}
+			if count == 0 {
+				row := TableRow{newCodeTableCell(codeTag), nil}
+				items = append(items, row)
+			}
+		}
+	}
+	return items
+}
+
+// createDownstreamMatrix returns a Trace Matrix from a set of requirements to a lower level set of requirements.
+// @llr REQ-TRAQ-SWL-14
+func (rg ReqGraph) createDownstreamMatrix(from, to config.RequirementLevel) []TableRow {
+	reqsHigh := rg.reqsOfLevel(from)
+	items := make([]TableRow, 0, len(reqsHigh))
+	for _, r := range reqsHigh {
+		count := 0
+		for _, childReq := range r.Children {
+			if childReq.Level == to {
+				row := TableRow{newReqTableCell(r), newReqTableCell(childReq)}
+				items = append(items, row)
+				count++
+			}
+		}
+		if count == 0 {
+			row := TableRow{newReqTableCell(r), nil}
+			items = append(items, row)
+		}
+	}
+	return items
+}
+
+// createSWLCodeMatrix creates a downstream matrix mapping low level requirements to code procedures.
+// @llr REQ-TRAQ-SWL-15
+func (rg *ReqGraph) createSWLCodeMatrix() []TableRow {
+	reqs := rg.reqsOfLevel(config.LOW)
+	items := make([]TableRow, 0, len(reqs))
+	for _, r := range reqs {
+		count := 0
+		for _, codeTag := range r.Tags {
+			row := TableRow{newReqTableCell(r), newCodeTableCell(codeTag)}
+			items = append(items, row)
+			count++
+		}
+		if count == 0 {
+			row := TableRow{newReqTableCell(r), nil}
+			items = append(items, row)
+		}
+	}
+	return items
+}
+
+// createUpstreamMatrix returns a Trace Matrix from a set of requirements to an upper level set of requirements.
+// @llr REQ-TRAQ-SWL-14
+func (rg ReqGraph) createUpstreamMatrix(from, to config.RequirementLevel) []TableRow {
+	reqsLow := rg.reqsOfLevel(from)
+	items := make([]TableRow, 0, len(reqsLow))
+	for _, r := range reqsLow {
+		count := 0
+		for _, parentReq := range r.Parents {
+			if parentReq.Level == to {
+				row := TableRow{newReqTableCell(r), newReqTableCell(parentReq)}
+				items = append(items, row)
+				count++
+			}
+		}
+		if count == 0 {
+			row := TableRow{newReqTableCell(r), nil}
+			items = append(items, row)
+		}
+	}
+	return items
+}
+
+// reqsOfLevel returns the non-deleted requirements of the specified level, mapped by ID.
+// @llr REQ-TRAQ-SWL-14
+func (rg ReqGraph) reqsOfLevel(level config.RequirementLevel) map[string]*Req {
 	reqs := make(map[string]*Req, 0)
 	for _, r := range rg.Reqs {
 		if r.Level == level && !r.IsDeleted() {
@@ -156,14 +240,24 @@ func (rg reqGraph) reqsOfLevel(level config.RequirementLevel) map[string]*Req {
 }
 
 // sortMatrices prepares the sort info and sorts the specified matrices.
-func (rg reqGraph) sortMatrices(matrices ...[][2]*MatrixItem) {
-	codeOrderInfo := rg.CodeOrderInfo()
+// @llr REQ-TRAQ-SWL-42, REQ-TRAQ-SWL-43, REQ-TRAQ-SWL-44
+func (rg ReqGraph) sortMatrices(matrices ...[]TableRow) {
+	codeOrderInfo := rg.codeOrderInfo()
 	for _, matrix := range matrices {
 		// Update each item's OrderNumber.
 		for _, row := range matrix {
 			for _, item := range row {
 				if item != nil {
-					item.UpdateOrderNumber(codeOrderInfo)
+					// Updated order number
+					if item.req != nil {
+						// requirements sorted by ID number
+						item.OrderNumber = item.req.IDNumber
+					} else if item.code != nil {
+						// code sorted by filename and then line number of function
+						item.OrderNumber = codeOrderInfo.filesIndex[item.code.Path]*codeOrderInfo.fileIndexFactor + item.code.Line
+					} else {
+						item.OrderNumber = 0
+					}
 				}
 			}
 		}
@@ -177,90 +271,4 @@ func (rg reqGraph) sortMatrices(matrices ...[][2]*MatrixItem) {
 			return a1.OrderNumber < b1.OrderNumber
 		})
 	}
-}
-
-// createDownstreamMatrix returns a Trace Matrix from a set of requirements to
-// a lower level set of requirements.
-func (rg reqGraph) createDownstreamMatrix(from, to config.RequirementLevel) [][2]*MatrixItem {
-	reqsHigh := rg.reqsOfLevel(from)
-	items := make([][2]*MatrixItem, 0, len(reqsHigh))
-	for _, r := range reqsHigh {
-		count := 0
-		for _, childReq := range r.Children {
-			if childReq.Level == to {
-				row := [2]*MatrixItem{NewReqMatrixItem(r), NewReqMatrixItem(childReq)}
-				items = append(items, row)
-				count++
-			}
-		}
-		if count == 0 {
-			row := [2]*MatrixItem{NewReqMatrixItem(r), nil}
-			items = append(items, row)
-		}
-	}
-	return items
-}
-
-// createUpstreamMatrix returns a Trace Matrix from a set of requirements to
-// an upper level set of requirements.
-func (rg reqGraph) createUpstreamMatrix(from, to config.RequirementLevel) [][2]*MatrixItem {
-	reqsLow := rg.reqsOfLevel(from)
-	items := make([][2]*MatrixItem, 0, len(reqsLow))
-	for _, r := range reqsLow {
-		count := 0
-		for _, parentReq := range r.Parents {
-			if parentReq.Level == to {
-				row := [2]*MatrixItem{NewReqMatrixItem(r), NewReqMatrixItem(parentReq)}
-				items = append(items, row)
-				count++
-			}
-		}
-		if count == 0 {
-			row := [2]*MatrixItem{NewReqMatrixItem(r), nil}
-			items = append(items, row)
-		}
-	}
-	return items
-}
-
-// createSWLCodeMatrix creates a downstream matrix mapping
-// low level requirements to code procedures.
-func (rg *reqGraph) createSWLCodeMatrix() [][2]*MatrixItem {
-	reqs := rg.reqsOfLevel(config.LOW)
-	items := make([][2]*MatrixItem, 0, len(reqs))
-	for _, r := range reqs {
-		count := 0
-		for _, codeTag := range r.Tags {
-			row := [2]*MatrixItem{NewReqMatrixItem(r), NewCodeMatrixItem(codeTag)}
-			items = append(items, row)
-			count++
-		}
-		if count == 0 {
-			row := [2]*MatrixItem{NewReqMatrixItem(r), nil}
-			items = append(items, row)
-		}
-	}
-	return items
-}
-
-// createCodeSWLMatrix creates an upstream matrix mapping
-// code procedures to low level requirements.
-func (rg *reqGraph) createCodeSWLMatrix() [][2]*MatrixItem {
-
-	items := make([][2]*MatrixItem, 0)
-	for _, tags := range rg.CodeTags {
-		for _, codeTag := range tags {
-			count := 0
-			for _, parentReq := range codeTag.Parents {
-				row := [2]*MatrixItem{NewCodeMatrixItem(codeTag), NewReqMatrixItem(parentReq)}
-				items = append(items, row)
-				count++
-			}
-			if count == 0 {
-				row := [2]*MatrixItem{NewCodeMatrixItem(codeTag), nil}
-				items = append(items, row)
-			}
-		}
-	}
-	return items
 }

@@ -1,3 +1,6 @@
+/*
+   Functions for creating and servicing a web interface.
+*/
 package main
 
 import (
@@ -18,8 +21,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// @llr REQ-TRAQ-SWL-16
-func serve(addr string) error {
+// Serve starts the web server listening on the supplied address:port
+// @llr REQ-TRAQ-SWL-37
+func Serve(addr string) error {
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}
@@ -31,7 +35,8 @@ var errorTemplate = template.Must(template.New("error").Parse(
 	`<html>OOPS!
 <pre>{{.Error}}</pre>`))
 
-// @llr REQ-TRAQ-SWL-16
+// handler responds to requests on the web server
+// @llr REQ-TRAQ-SWL-37
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Print(r.Method, r.URL)
 	var err error
@@ -163,17 +168,20 @@ type indexData struct {
 	Commits    []string
 }
 
-// @llr REQ-TRAQ-SWL-16
+// get provides the page information for a given request
+// @llr REQ-TRAQ-SWL-37
 func get(w http.ResponseWriter, r *http.Request) error {
 	repoName := git.RepoName()
 	reqPath := r.URL.Path
+
+	// root page
 	if reqPath == "/" {
-		conf, err := parseConf(*fReportConfPath)
+		schema, err := ParseSchema(*fSchemaPath)
 		if err != nil {
 			return errors.Wrap(err, "Failed to parse config")
 		}
-		attributes := make([]string, 0, len(conf.Attributes)+1)
-		for _, a := range conf.Attributes {
+		attributes := make([]string, 0, len(schema.Attributes)+1)
+		for _, a := range schema.Attributes {
 			attributes = append(attributes, a["name"])
 		}
 		commits, err := git.AllCommits()
@@ -183,6 +191,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		return indexTemplate.Execute(w, indexData{repoName, attributes, commits})
 	}
 
+	// code files linked to from reports
 	if strings.HasPrefix(reqPath, "/code/") {
 		lexer := lexers.Match(reqPath)
 		if lexer == nil {
@@ -212,11 +221,11 @@ func get(w http.ResponseWriter, r *http.Request) error {
 
 	switch {
 	case reqPath == "/report":
-		filter, err := createFilter(r)
+		filter, err := createFilterFromHttpRequest(r)
 		if err != nil {
 			return fmt.Errorf("Failed to create filter: %v", err)
 		}
-		var prg *reqGraph
+		var prg *ReqGraph
 		since := r.FormValue("since_commit")
 		if since != "" {
 			sinceCommit := strings.Split(since, " ")[0]
@@ -247,12 +256,14 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	case reqPath == "/matrix":
 		from := r.FormValue("from")
 		to := r.FormValue("to")
-		return rg.ReportHoles(w, from, to)
+		return rg.GenerateTraceTables(w, from, to)
 	}
 	return nil
 }
 
-func createFilter(r *http.Request) (*ReqFilter, error) {
+// createFilterFromHttpRequest generates an appropriate report filter based on the web page form values
+// @llr REQ-TRAQ-SWL-37
+func createFilterFromHttpRequest(r *http.Request) (*ReqFilter, error) {
 	filter := &ReqFilter{}
 	filter.AttributeRegexp = make(map[string]*regexp.Regexp, 0)
 	var err error

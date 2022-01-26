@@ -1,14 +1,134 @@
+/*
+Functions for generating HTML reports showing trace data.
+*/
+
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"os/exec"
+	"sort"
+
+	"github.com/daedaleanai/reqtraq/config"
 )
+
+type reportData struct {
+	Reqs   ReqGraph
+	Filter *ReqFilter
+	Once   Oncer
+	Diffs  map[string][]string
+}
+
+// ReportDown generates a HTML report of top down trace information.
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-39
+func (rg ReqGraph) ReportDown(w io.Writer) error {
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{rg, nil, Oncer{}, nil})
+}
+
+// ReportUp generates a HTML report of bottom up trace information.
+// @llr REQ-TRAQ-SWL-13, REQ-TRAQ-SWL-39
+func (rg ReqGraph) ReportUp(w io.Writer) error {
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{rg, nil, Oncer{}, nil})
+}
+
+// ReportIssues generates a HTML report showing attribute and trace errors.
+// @llr REQ-TRAQ-SWL-30, REQ-TRAQ-SWL-39
+func (rg ReqGraph) ReportIssues(w io.Writer) error {
+	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{rg, nil, Oncer{}, nil})
+}
+
+// ReportDownFiltered generates a HTML report of top down trace information, which has been filtered by the supplied parameters.
+// @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-39
+func (rg ReqGraph) ReportDownFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs})
+}
+
+// ReportUpFiltered generates a HTML report of bottom up trace information, which has been filtered by the supplied parameters.
+// @llr REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-39
+func (rg ReqGraph) ReportUpFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs})
+}
+
+// ReportIssuesFiltered generates a HTML report showing attribute and trace errors, which has been filtered by the supplied parameters.
+// @llr REQ-TRAQ-SWL-31, REQ-TRAQ-SWL-39
+func (rg ReqGraph) ReportIssuesFiltered(w io.Writer, filter *ReqFilter, diffs map[string][]string) error {
+	// TODO apply filter in ISSUESFILT template
+	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{rg, filter, Oncer{}, diffs})
+}
+
+// OrdsByPosition returns the SYSTEM requirements which don't have any parent, ordered by position.
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-20
+func (rg ReqGraph) OrdsByPosition() []*Req {
+	var r []*Req
+	for _, v := range rg.Reqs {
+		if v.Level == config.SYSTEM && len(v.ParentIds) == 0 {
+			r = append(r, v)
+		}
+	}
+	sort.Sort(byPosition(r))
+	return r
+}
+
+// Matches returns true if the requirement matches the filter AND its ID is in the diffs map, if any.
+// @llr REQ-TRAQ-SWL-19
+func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
+	if filter != nil {
+		if filter.IDRegexp != nil {
+			if !filter.IDRegexp.MatchString(r.ID) {
+				return false
+			}
+		}
+		if filter.TitleRegexp != nil {
+			if !filter.TitleRegexp.MatchString(r.Title) {
+				return false
+			}
+		}
+		if filter.BodyRegexp != nil {
+			if !filter.BodyRegexp.MatchString(r.Body) {
+				return false
+			}
+		}
+		if filter.AnyAttributeRegexp != nil {
+			var matches bool
+			// Any of the existing attributes must match.
+			for _, value := range r.Attributes {
+				if filter.AnyAttributeRegexp.MatchString(value) {
+					matches = true
+					break
+				}
+			}
+			if !matches {
+				return false
+			}
+		}
+		// Each of the filtered attributes must match.
+		for a, e := range filter.AttributeRegexp {
+			if !e.MatchString(r.Attributes[a]) {
+				return false
+			}
+		}
+	}
+	if diffs != nil {
+		_, ok := diffs[r.ID]
+		return ok
+	}
+	return true
+}
+
+// URL create a URL path to a code function by concatinating the source code path and line number of the function comment
+// @llr REQ-TRAQ-SWL-38
+func (code *Code) URL() string {
+	return fmt.Sprintf("/code/%s#L%d", code.Path, code.Line-len(code.Comment))
+}
 
 type Oncer map[string]bool
 
+// Once maintains a map of requirements that have already been seen, if a requirement is seen multiple times
+// subsequent occurrences are replaced with links to the first occurrence
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
 func (o Oncer) Once(r *Req) *Req {
 	ok := o[r.ID]
 	o[r.ID] = true
@@ -75,7 +195,7 @@ var headerFooterTmplText = `
 `
 
 // formatBodyAsHTML converts a string containing markdown to HTML using pandoc.
-// @llr REQ-TRAQ-SWL-19
+// @llr REQ-TRAQ-SWL-41
 func formatBodyAsHTML(txt string) template.HTML {
 	cmd := exec.Command("pandoc", "--mathjax")
 	stdin, err := cmd.StdinPipe()
@@ -254,7 +374,6 @@ var reportTmplText = `
 	{{template "HEADER"}}
 	<h1>Issues</h1>
 	
-	<h3>Basic</h3>
 	<ul>
 	{{ range .Reqs.Errors }}
 		<li>
@@ -262,28 +381,6 @@ var reportTmplText = `
 		</li>
 	{{ else }}
 		<li class="text-success">No basic errors found.</li>
-	{{ end }}
-	</ul>
-
-	<h3>Invalid Attributes</h3>
-	<ul>
-	{{ range .AttributesErrors }}
-		<li>
-			{{ . }}
-		</li>
-	{{ else }}
-		<li class="text-success">No attributes errors found.</li>
-	{{ end }}
-	</ul>
-
-	<h3>Invalid References</h3>
-	<ul>
-	{{ range .ReferencesErrors }}
-	  <li>
-			{{ . }}
-		</li>
-	{{ else }}
-		<li class="text-success">No references errors found.</li>
 	{{ end }}
 	</ul>
 	{{ template "FOOTER" }}
@@ -350,25 +447,8 @@ var reportTmplText = `
 	<h1>Issues</h1>
 
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
-	<h3>Basic</h3>
 	<ul>
 	{{ range .Reqs.Errors }}
-		<li>
-			{{ . }}
-		</li>
-	{{ end }}
-	</ul>
-	<h3>Invalid Attributes</h3>
-	<ul>
-	{{ range .AttributesErrors }}
-		<li>
-			{{ . }}
-		</li>
-	{{ end }}
-	</ul>
-	<h3>Invalid References</h3>
-	<ul>
-	{{ range .ReferencesErrors }}
 		<li>
 			{{ . }}
 		</li>
@@ -377,63 +457,3 @@ var reportTmplText = `
 	{{ template "FOOTER" }}
 {{ end }}
 `
-
-type reportData struct {
-	Reqs             reqGraph
-	Filter           *ReqFilter
-	Once             Oncer
-	Diffs            map[string][]string
-	AttributesErrors []error
-	ReferencesErrors []error
-}
-
-func (rg reqGraph) ReportDown(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{rg, nil, Oncer{}, nil, nil, nil})
-}
-
-func (rg reqGraph) ReportUp(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{rg, nil, Oncer{}, nil, nil, nil})
-}
-
-func (rg reqGraph) ReportIssues(w io.Writer) error {
-	conf, err := parseConf(*fReportConfPath)
-	if err != nil {
-		return err
-	}
-	attributesErrors, err := rg.CheckAttributes(conf, nil, nil)
-	if err != nil {
-		return err
-	}
-	referencesErrors, err := rg.checkReqReferences(*fCertdocPath)
-	if err != nil {
-		return err
-	}
-	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{rg, nil, Oncer{}, nil, attributesErrors, referencesErrors})
-}
-
-// @llr REQ-TRAQ-SWL-6
-func (rg reqGraph) ReportDownFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs, nil, nil})
-}
-
-// @llr REQ-TRAQ-SWL-7
-func (rg reqGraph) ReportUpFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs, nil, nil})
-}
-
-func (rg reqGraph) ReportIssuesFiltered(w io.Writer, filter *ReqFilter, diffs map[string][]string) error {
-	conf, err := parseConf(*fReportConfPath)
-	if err != nil {
-		return err
-	}
-	attributesErrors, err := rg.CheckAttributes(conf, filter, diffs)
-	if err != nil {
-		return err
-	}
-	// TODO(ab): Allow filtering references errors.
-	referencesErrors, err := rg.checkReqReferences(*fCertdocPath)
-	if err != nil {
-		return err
-	}
-	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{rg, filter, Oncer{}, diffs, attributesErrors, referencesErrors})
-}

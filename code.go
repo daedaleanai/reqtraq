@@ -1,3 +1,7 @@
+/*
+Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated descriptions. The external program Universal Ctags is used to scan for functions.
+*/
+
 package main
 
 import (
@@ -16,6 +20,32 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their comment descriptions, discovered
+// @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
+func (rg *ReqGraph) ParseCode(codePath string) error {
+
+	var err error
+
+	// Find the code files.
+	rg.CodeFiles, err = findCodeFiles(codePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to find code files")
+	}
+
+	// Discover the code procedures.
+	rg.CodeTags, err = tagCode(rg.CodeFiles)
+	if err != nil {
+		return errors.Wrap(err, "failed to tag code")
+	}
+
+	// Annotate the code procedures with the associated comment.
+	if err := parseComments(rg.CodeFiles, rg.CodeTags); err != nil {
+		return errors.Wrap(err, "failed walking code")
+	}
+
+	return nil
+}
+
 // SourceCodeFileExtensions are listed by language.
 // To see the available languages, run: ctags --list-languages
 var SourceCodeFileExtensions = map[string][]string{
@@ -26,16 +56,8 @@ var SourceCodeFileExtensions = map[string][]string{
 
 const InstallUniversalCtags = "Make sure to install Universal ctags (NOT Exuberant ctags) as described in https://github.com/universal-ctags/ctags#the-latest-build-and-package"
 
-// findCtags returns the location of the Universal Ctags executable.
-func findCtags() string {
-	ctags, ok := os.LookupEnv("REQTRAQ_CTAGS")
-	if !ok {
-		ctags = "ctags"
-	}
-	return ctags
-}
-
 // checkCtagsAvailable returns an error when Universal Ctags cannot be found.
+// @llr REQ-TRAQ-SWL-8
 func checkCtagsAvailable() error {
 	out, err := linepipes.All(linepipes.Run(findCtags(), "--version"))
 	if err != nil {
@@ -47,44 +69,81 @@ func checkCtagsAvailable() error {
 	return nil
 }
 
-// parseTags returns the tags found by ctags.
-func parseTags(lines chan string) ([]*Code, error) {
-	res := make([]*Code, 0)
-	for line := range lines {
-		parts := strings.Split(line, "\t")
-		if len(parts) < 4 {
-			// Most probably some lines with metadata info about
-			// the ctags generator.
-			continue
+// findCodeFiles returns the paths to the discovered code files in codePath relative to current git repository path.
+// @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-7
+func findCodeFiles(codePath string) ([]string, error) {
+	repoPath := git.RepoPath()
+	files := make([]string, 0)
+	absoluteCodePath := filepath.Join(repoPath, codePath)
+	err := filepath.Walk(absoluteCodePath, func(filePath string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			if !isSourceCodeDir(filePath) {
+				return filepath.SkipDir
+			}
+		} else {
+			if !isSourceCodeFile(info.Name()) {
+				return nil
+			}
+			p, err := relativePathToRepo(filePath, repoPath)
+			if err != nil {
+				return err
+			}
+			files = append(files, p)
 		}
-		tag := parts[0]
-		p := parts[1]
-		if !IsSourceCodeFile(p) {
-			continue
-		}
-		relativePath, err := relativePathToRepo(p, git.RepoPath())
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to parse path on line: %v", parts))
-		}
-		if !strings.HasPrefix(parts[3], "line:") {
-			return nil, fmt.Errorf("line number unknown prefix: %v", parts)
-		}
-		line, err := strconv.Atoi(parts[3][5:])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse line number: %v", parts)
-		}
-		res = append(res, &Code{Path: relativePath, Tag: tag, Line: line})
-	}
-	return res, nil
+		return nil
+	})
+	return files, err
 }
 
-// parseFileComments detects comments in the specified source code file and
-// associates them with the tags detected in the same file.
-// Returns a hash for the file
-func parseFileComments(absolutePath string, tags []*Code) (string, error) {
+// findCtags returns the location of the Universal Ctags executable.
+// @llr REQ-TRAQ-SWL-8
+func findCtags() string {
+	ctags, ok := os.LookupEnv("REQTRAQ_CTAGS")
+	if !ok {
+		ctags = "ctags"
+	}
+	return ctags
+}
+
+// isSourceCodeDir returns true if the provided path name should be scanned for source code files
+// @llr REQ-TRAQ-SWL-7
+func isSourceCodeDir(dirPath string) bool {
+	return path.Base(dirPath) != "testdata"
+}
+
+// isSourceCodeFile returns true if the provided file name has the extension of a supported source code type
+// @llr REQ-TRAQ-SWL-6
+func isSourceCodeFile(name string) bool {
+	ext := strings.ToLower(path.Ext(name))
+	for _, extensions := range SourceCodeFileExtensions {
+		for _, e := range extensions {
+			if e == ext {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// parseComments updates the specified tags with the comments discovered in the CodeFiles.
+// @llr REQ-TRAQ-SWL-9
+func parseComments(codeFiles []string, codeTags map[string][]*Code) error {
+	repoPath := git.RepoPath()
+	for _, filePath := range codeFiles {
+		absoluteFilePath := path.Join(repoPath, filePath)
+		if err := parseFileComments(absoluteFilePath, codeTags[filePath]); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed comments discovery for %s", absoluteFilePath))
+		}
+	}
+	return nil
+}
+
+// parseFileComments detects comments in the specified source code file and associates them with the tags detected in the same file.
+// @llr REQ-TRAQ-SWL-9
+func parseFileComments(absolutePath string, tags []*Code) error {
 	f, err := os.Open(absolutePath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	h := sha1.New()
 	// git compatible hash
@@ -115,7 +174,7 @@ func parseFileComments(absolutePath string, tags []*Code) (string, error) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return "", errors.Wrap(err, "failed to read source code file")
+		return errors.Wrap(err, "failed to read source code file")
 	}
 
 	// Associate the detected comments with the tags.
@@ -125,11 +184,62 @@ func parseFileComments(absolutePath string, tags []*Code) (string, error) {
 		}
 	}
 
-	return string(h.Sum(nil)), nil
+	return nil
 }
 
-// tagCode runs ctags over the specified code files and parses the generated
-// tags file.
+// parseTags takes the raw output from Universal Ctags and parses into Code structs.
+// @llr REQ-TRAQ-SWL-8
+func parseTags(lines chan string) ([]*Code, error) {
+	res := make([]*Code, 0)
+	for line := range lines {
+		parts := strings.Split(line, "\t")
+		if len(parts) < 4 {
+			// Most probably some lines with metadata info about
+			// the ctags generator.
+			continue
+		}
+		tag := parts[0]
+		p := parts[1]
+		if !isSourceCodeFile(p) {
+			continue
+		}
+		relativePath, err := relativePathToRepo(p, git.RepoPath())
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("failed to parse path on line: %v", parts))
+		}
+		if !strings.HasPrefix(parts[3], "line:") {
+			return nil, fmt.Errorf("line number unknown prefix: %v", parts)
+		}
+		line, err := strconv.Atoi(parts[3][5:])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse line number: %v", parts)
+		}
+		res = append(res, &Code{Path: relativePath, Tag: tag, Line: line})
+	}
+	return res, nil
+}
+
+// relativePathToRepo returns filePath relative to repoPath by
+// removing the path to the repository from filePath
+// @llr REQ-TRAQ-SWL-6
+func relativePathToRepo(filePath, repoPath string) (string, error) {
+	if filePath[:1] != "/" {
+		// Already a relative path.
+		return filePath, nil
+	}
+	fields := strings.SplitN(filePath, repoPath, 2)
+	if len(fields) < 2 {
+		return "", fmt.Errorf("malformed code file path: %s not in %s", filePath, repoPath)
+	}
+	res := fields[1]
+	if res[:1] == "/" {
+		res = res[1:]
+	}
+	return res, nil
+}
+
+// tagCode runs ctags over the specified code files and parses the generated tags file.
+// @llr REQ-TRAQ-SWL-8
 func tagCode(codeFiles []string) (map[string][]*Code, error) {
 	repoPath := git.RepoPath()
 	r, w := io.Pipe()
@@ -182,58 +292,4 @@ func tagCode(codeFiles []string) (map[string][]*Code, error) {
 		tagsByFile[tag.Path] = append(tagsByFile[tag.Path], tag)
 	}
 	return tagsByFile, nil
-}
-
-func IsSourceCodeDir(dirPath string) bool {
-	return path.Base(dirPath) != "testdata"
-}
-
-func IsSourceCodeFile(name string) bool {
-	ext := strings.ToLower(path.Ext(name))
-	for _, extensions := range SourceCodeFileExtensions {
-		for _, e := range extensions {
-			if e == ext {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// findCodeFiles returns the paths to the discovered code files in codePath
-// relative to the specified repoPath. The output is deterministic.
-func findCodeFiles(repoPath, codePath string) ([]string, error) {
-	files := make([]string, 0)
-	absoluteCodePath := filepath.Join(repoPath, codePath)
-	err := filepath.Walk(absoluteCodePath, func(filePath string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			if !IsSourceCodeDir(filePath) {
-				return filepath.SkipDir
-			}
-		} else {
-			if !IsSourceCodeFile(info.Name()) {
-				return nil
-			}
-			p, err := relativePathToRepo(filePath, repoPath)
-			if err != nil {
-				return err
-			}
-			files = append(files, p)
-		}
-		return nil
-	})
-	return files, err
-}
-
-// parseComments updates the specified tags with the comments discovered
-// in the CodeFiles.
-func (rg *reqGraph) parseComments() error {
-	repoPath := git.RepoPath()
-	for _, filePath := range rg.CodeFiles {
-		absoluteFilePath := path.Join(repoPath, filePath)
-		if _, err := parseFileComments(absoluteFilePath, rg.CodeTags[filePath]); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed comments discovery for %s", absoluteFilePath))
-		}
-	}
-	return nil
 }

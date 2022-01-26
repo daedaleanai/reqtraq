@@ -180,7 +180,7 @@ func TestParseReq_InvalidType(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-WILLNEVEREXIST-1 title
 body
 `)
-	assert.EqualError(t, err, `Invalid request type: "WILLNEVEREXIST"`)
+	assert.EqualError(t, err, `malformed requirement: Invalid type: "WILLNEVEREXIST"`)
 }
 
 func TestParseReq_Empty(t *testing.T) {

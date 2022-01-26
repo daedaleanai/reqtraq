@@ -11,50 +11,50 @@ import (
 )
 
 func TestReqGraph_AddReq(t *testing.T) {
-	rg := reqGraph{Reqs: make(map[string]*Req)}
+	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
-	req := &Req{ID: "REQ-TRAQ-SWH-1"}
-	req2 := &Req{ID: "REQ-TRAQ-SWL-1", ParentIds: []string{"REQ-TRAQ-SWH-1"}}
+	req := &Req{ID: "REQ-TEST-SWH-1"}
+	req2 := &Req{ID: "REQ-TEST-SWL-1", ParentIds: []string{"REQ-TEST-SWH-1"}}
 
-	rg.AddReq(req, "./TRAQ-0-SRD.md")
-	rg.AddReq(req2, "./TRAQ-1-SDD.md")
+	rg.AddReq(req, "./TEST-0-SRD.md")
+	rg.AddReq(req2, "./TEST-1-SDD.md")
 
 	// if this becomes more complex we can move it into a table of tescases.
 	if expectedReq := (&Req{
-		ID:   "REQ-TRAQ-SWH-1",
-		Path: "./TRAQ-0-SRD.md",
-	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TRAQ-SWH-1"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TRAQ-SWH-1"])
+		ID:   "REQ-TEST-SWH-1",
+		Path: "./TEST-0-SRD.md",
+	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TEST-SWH-1"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TEST-SWH-1"])
 	}
 
 	if expectedReq := (&Req{
-		ID:        "REQ-TRAQ-SWL-1",
-		Path:      "./TRAQ-1-SDD.md",
-		ParentIds: []string{"REQ-TRAQ-SWH-1"},
-	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TRAQ-SWL-1"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TRAQ-SWL-1"])
+		ID:        "REQ-TEST-SWL-1",
+		Path:      "./TEST-1-SDD.md",
+		ParentIds: []string{"REQ-TEST-SWH-1"},
+	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TEST-SWL-1"]) {
+		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TEST-SWL-1"])
 	}
 }
 
 func TestReqGraph_AddReq_someMore(t *testing.T) {
-	rg := reqGraph{Reqs: make(map[string]*Req)}
+	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
 	for _, v := range []*Req{
-		{ID: "REQ-TRAQ-SWH-1", Position: 1},
-		{ID: "REQ-TRAQ-SWH-2", Position: 2},
-		{ID: "REQ-TRAQ-SWH-3", Position: 3},
+		{ID: "REQ-TEST-SWH-1", Position: 1},
+		{ID: "REQ-TEST-SWH-2", Position: 2},
+		{ID: "REQ-TEST-SWH-3", Position: 3},
 	} {
-		if err := rg.AddReq(v, "./TRAQ-0-SRD.md"); err != nil {
+		if err := rg.AddReq(v, "./TEST-0-SRD.md"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
 
 	for _, v := range []*Req{
-		{ID: "REQ-TRAQ-SWL-1", ParentIds: []string{"REQ-TRAQ-SWH-1"}, Position: 1},
-		{ID: "REQ-TRAQ-SWL-2", ParentIds: []string{"REQ-TRAQ-SWH-1"}, Position: 2},
-		{ID: "REQ-TRAQ-SWL-3", ParentIds: []string{"REQ-TRAQ-SWH-3"}, Position: 3},
+		{ID: "REQ-TEST-SWL-1", ParentIds: []string{"REQ-TEST-SWH-1"}, Position: 1},
+		{ID: "REQ-TEST-SWL-2", ParentIds: []string{"REQ-TEST-SWH-1"}, Position: 2},
+		{ID: "REQ-TEST-SWL-3", ParentIds: []string{"REQ-TEST-SWH-3"}, Position: 3},
 	} {
-		if err := rg.AddReq(v, "./TRAQ-1-SDD.md"); err != nil {
+		if err := rg.AddReq(v, "./TEST-1-SDD.md"); err != nil {
 			t.Errorf("addreq: %v", err)
 		}
 	}
@@ -63,11 +63,11 @@ func TestReqGraph_AddReq_someMore(t *testing.T) {
 		id     string
 		expect Req
 	}{
-		{"REQ-TRAQ-SWH-1", Req{ID: "REQ-TRAQ-SWH-1", Path: "./TRAQ-0-SRD.md", Position: 1}},
-		{"REQ-TRAQ-SWL-1", Req{
-			ID:        "REQ-TRAQ-SWL-1",
-			Path:      "./TRAQ-1-SDD.md",
-			ParentIds: []string{"REQ-TRAQ-SWH-1"},
+		{"REQ-TEST-SWH-1", Req{ID: "REQ-TEST-SWH-1", Path: "./TEST-0-SRD.md", Position: 1}},
+		{"REQ-TEST-SWL-1", Req{
+			ID:        "REQ-TEST-SWL-1",
+			Path:      "./TEST-1-SDD.md",
+			ParentIds: []string{"REQ-TEST-SWH-1"},
 			Position:  1,
 		}},
 	} {
@@ -78,31 +78,17 @@ func TestReqGraph_AddReq_someMore(t *testing.T) {
 }
 
 func TestReqGraph_OrdsByPosition(t *testing.T) {
-	rg := reqGraph{Reqs: make(map[string]*Req)}
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-2", Level: config.SYSTEM, Position: 1}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SYS-1", Level: config.SYSTEM, Position: 2}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TRAQ-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TRAQ-SYS-1"}}, "./TRAQ-0-SRD.md"))
-	assert.Empty(t, rg.Resolve())
+	rg := ReqGraph{Reqs: make(map[string]*Req)}
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1}, "./TEST-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2}, "./TEST-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}}, "./TEST-0-SRD.md"))
+	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}}, "./TEST-0-SRD.md"))
+	assert.Empty(t, rg.resolve())
 
 	reqs := rg.OrdsByPosition()
 	assert.Len(t, reqs, 2)
-	assert.Equal(t, "REQ-TRAQ-SYS-2", reqs[0].ID)
-	assert.Equal(t, "REQ-TRAQ-SYS-1", reqs[1].ID)
-}
-
-func TestReq_ReqType(t *testing.T) {
-	tests := []struct {
-		req     Req
-		reqType string
-	}{
-		{Req{ID: "REQ-TRAQ-SWL-1"}, "SWL"},
-		{Req{ID: "Garbage"}, ""},
-	}
-
-	for _, test := range tests {
-		assert.Equal(t, test.reqType, test.req.ReqType())
-	}
+	assert.Equal(t, "REQ-TEST-SYS-2", reqs[0].ID)
+	assert.Equal(t, "REQ-TEST-SYS-1", reqs[1].ID)
 }
 
 func TestReq_Significant(t *testing.T) {
@@ -113,7 +99,7 @@ func TestReq_Significant(t *testing.T) {
 		{ReqFilter{}, true},
 		{ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{}}, true},
 
-		{ReqFilter{IDRegexp: regexp.MustCompile("REQ-TRAQ-SWH-*")}, false},
+		{ReqFilter{IDRegexp: regexp.MustCompile("REQ-TEST-SWH-*")}, false},
 		{ReqFilter{TitleRegexp: regexp.MustCompile("thrust")}, false},
 		{ReqFilter{BodyRegexp: regexp.MustCompile("thrust")}, false},
 		{ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Demo*")}, false},
@@ -129,94 +115,16 @@ func TestReq_Significant(t *testing.T) {
 	}
 }
 
-func TestReq_Matches_filter(t *testing.T) {
-	tests := []struct {
-		req     Req
-		filter  ReqFilter
-		diffs   map[string][]string
-		matches bool
-	}{
-		{Req{ID: "REQ-TRAQ-SWH-1", Body: "thrust control"},
-			ReqFilter{IDRegexp: regexp.MustCompile("REQ-TRAQ-SWH-*")},
-			nil,
-			true},
-		{Req{ID: "REQ-TRAQ-SWH-1", Title: "The control unit will calculate thrust.", Body: "It will also do much more."},
-			ReqFilter{TitleRegexp: regexp.MustCompile("thrust")},
-			nil,
-			true},
-		{Req{ID: "REQ-TRAQ-SWH-1", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."},
-			ReqFilter{TitleRegexp: regexp.MustCompile("thrust")},
-			nil,
-			false},
-		{Req{ID: "REQ-TRAQ-SWH-1", Body: "thrust control"},
-			ReqFilter{BodyRegexp: regexp.MustCompile("thrust")},
-			nil,
-			true},
-		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
-			ReqFilter{IDRegexp: regexp.MustCompile("REQ-*"), BodyRegexp: regexp.MustCompile("thrust")},
-			nil,
-			true},
-		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
-			ReqFilter{IDRegexp: regexp.MustCompile("REQ-DDLN-*"), BodyRegexp: regexp.MustCompile("thrust")},
-			nil,
-			false},
-
-		// filter attributes
-		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
-			ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Demo*")},
-			nil,
-			true},
-		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
-			ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Test*")},
-			nil,
-			false},
-		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
-			ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}},
-			nil,
-			true},
-		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Color": "Brown"}},
-			ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}},
-			nil,
-			false},
-		{Req{ID: "REQ-TRAQ-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
-			ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Test*")}},
-			nil,
-			false},
-
-		// diffs
-		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
-			ReqFilter{},
-			map[string][]string{"REQ-TRAQ-SWL-1": make([]string, 0)},
-			false},
-		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
-			ReqFilter{},
-			map[string][]string{"REQ-TRAQ-SWL-14": make([]string, 0)},
-			true},
-		{Req{ID: "REQ-TRAQ-SWL-14", Body: "thrust control"},
-			ReqFilter{IDRegexp: regexp.MustCompile("X")},
-			map[string][]string{"REQ-TRAQ-SWL-14": make([]string, 0)},
-			false},
-	}
-
-	for _, test := range tests {
-		if test.matches {
-			assert.True(t, test.req.Matches(&test.filter, test.diffs), "expected requirement to match: %v filter=%v diffs=%v", test.req, test.filter, test.diffs)
-		} else {
-			assert.False(t, test.req.Matches(&test.filter, test.diffs), "expected requirement to not match: %v filter=%v diffs=%v", test.req, test.filter, test.diffs)
-		}
-	}
-}
-
 func TestParsing(t *testing.T) {
 	// test a valid requirements document
 	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
-	rg := &reqGraph{Reqs: make(map[string]*Req)}
+	rg := &ReqGraph{Reqs: make(map[string]*Req)}
 
-	errors, err := parseCertdocToGraph(f, rg)
+	err := rg.addCertdocToGraph(f)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
-	assert.Empty(t, errors, "Unexpected errors while parsing "+f)
+	assert.Empty(t, rg.Errors, "Unexpected errors while parsing "+f)
 
 	var systemReqs [14]Req
 	for i := 0; i < 14; i++ {
@@ -242,41 +150,41 @@ func TestParsing(t *testing.T) {
 
 	// an invalid requirements document containing requirement naming errors
 	f = "testdata/invalid_system_requirement/NAM1-100-ORD.md"
-	rg = &reqGraph{Reqs: make(map[string]*Req)}
+	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	errors, err = parseCertdocToGraph(f, rg)
+	err = rg.addCertdocToGraph(f)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
-	assert.Equal(t, 3, len(errors))
-	assert.Contains(t, errors[0].Error(), "Incorrect project abbreviation for requirement REQ-NAN1-SYS-1. Expected NAM1, got NAN1.")
-	assert.Contains(t, errors[1].Error(), "Incorrect requirement type for requirement REQ-NAM1-SWH-2. Expected SYS, got SWH.")
-	assert.Contains(t, errors[2].Error(), "Requirement number cannot begin with a 0: REQ-NAM1-SYS-03. Got 03.")
+	assert.Equal(t, 3, len(rg.Errors))
+	assert.Contains(t, rg.Errors[0].Error(), "Incorrect project abbreviation for requirement REQ-NAN1-SYS-1. Expected NAM1, got NAN1.")
+	assert.Contains(t, rg.Errors[1].Error(), "Incorrect requirement type for requirement REQ-NAM1-SWH-2. Expected SYS, got SWH.")
+	assert.Contains(t, rg.Errors[2].Error(), "Requirement number cannot begin with a 0: REQ-NAM1-SYS-03. Got 03.")
 
 	// an invalid requirements document containing sequence errors
 	f = "testdata/invalid_system_requirement/GAP1-100-ORD.md"
-	rg = &reqGraph{Reqs: make(map[string]*Req)}
+	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	errors, err = parseCertdocToGraph(f, rg)
+	err = rg.addCertdocToGraph(f)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
-	assert.Equal(t, 2, len(errors))
-	assert.Contains(t, errors[0].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-3: missing requirements in between. Expected ID Number 2.")
-	assert.Contains(t, errors[1].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-6: missing requirements in between. Expected ID Number 5.")
+	assert.Equal(t, 2, len(rg.Errors))
+	assert.Contains(t, rg.Errors[0].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-3: missing requirements in between. Expected ID Number 2.")
+	assert.Contains(t, rg.Errors[1].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-6: missing requirements in between. Expected ID Number 5.")
 
 	// an invalid requirements document containing duplicates
 	f = "testdata/invalid_system_requirement/DUP1-100-ORD.md"
-	rg = &reqGraph{Reqs: make(map[string]*Req)}
+	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	errors, err = parseCertdocToGraph(f, rg)
+	err = rg.addCertdocToGraph(f)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
-	assert.Equal(t, 3, len(errors))
-	assert.Contains(t, errors[0].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-1, is duplicate.")
-	assert.Contains(t, errors[1].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-2, is duplicate.")
-	assert.Contains(t, errors[2].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-3, is duplicate.")
+	assert.Equal(t, 3, len(rg.Errors))
+	assert.Contains(t, rg.Errors[0].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-1, is duplicate.")
+	assert.Contains(t, rg.Errors[1].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-2, is duplicate.")
+	assert.Contains(t, rg.Errors[2].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-3, is duplicate.")
 }
 
 func TestReq_IsDeleted(t *testing.T) {

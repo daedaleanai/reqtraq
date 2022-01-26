@@ -22,7 +22,7 @@ Reqtraq has two main use-cases:
 
 ## How to install Reqtraq
 ### Dependencies
-  * [go 1.8+](https://golang.org/doc/install)
+  * [go 1.17+](https://golang.org/doc/install)
   * [pandoc](https://pandoc.org/installing.html)
   * [universal-ctags](https://github.com/universal-ctags/ctags/blob/master/README.md#the-latest-build-and-package) *Note there is also the unmaintained exuberant-ctags which should be avoided.*
 
@@ -40,14 +40,14 @@ Reqtraq uses the Git history to figure out the Git commits associated with a req
 ### Usage examples
 #### Getting the next available requirement ID
 ```
-$ reqtraq nextid certdocs/TRAQ-138-SDD.md
-REQ-TRAQ-SWL-21
+$ reqtraq nextid certdocs/TEST-138-SDD.md
+REQ-TEST-SWL-21
 ```
 
 #### Parse and List requirements
 ```
-$ reqtraq list certdocs/TRAQ-100-ORD.md
-Requirement REQ-TRAQ-SYS-1  Bidirectional tracing.
+$ reqtraq list certdocs/TEST-100-ORD.md
+Requirement REQ-TEST-SYS-1  Bidirectional tracing.
 ...
 ```
 
@@ -60,7 +60,7 @@ $ reqtraq reportdown
 ```
 Filtering:
 ```
-$ reqtraq reportdown --id_filter=".*TRAQ-SYS.*"
+$ reqtraq reportdown --id_filter=".*TEST-SYS.*"
 2017/06/06 22:51:23 Creating ./req-down.html (this may take a while)...
 2017/06/06 22:51:41 Creating ./req-down-filtered.html (this may take a while)...
 ```
