@@ -36,8 +36,6 @@ var reqStatusToString = map[RequirementStatus]string{
 func (rs RequirementStatus) String() string { return reqStatusToString[rs] }
 
 var (
-	// project abbreviation, certdoc type number, certdoc type
-	reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
 	reDiffRev = regexp.MustCompile(`Differential Revision:\s(.*)\s`)
 )
 
@@ -437,6 +435,12 @@ func (a byPosition) Len() int           { return len(a) }
 func (a byPosition) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byPosition) Less(i, j int) bool { return a[i].Position < a[j].Position }
 
+type byIDNumber []*Req
+
+func (a byIDNumber) Len() int           { return len(a) }
+func (a byIDNumber) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
+
 type byFilenameTag []*Code
 
 func (a byFilenameTag) Len() int      { return len(a) }
@@ -457,10 +461,16 @@ func parseCertdocToGraph(fileName string, graph *reqGraph) ([]error, error) {
 		return nil, fmt.Errorf("error parsing %s: %v", fileName, err)
 	}
 
-	isReqPresent := make([]bool, len(reqs))
+	// sort the requirements so we can check the sequence
+	sort.Sort(byIDNumber(reqs))
+
+	isReqPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
+	NextId := 1
+
 	var errs []error
 	for i, r := range reqs {
-		errs2 := lintReq(fileName, len(reqs), isReqPresent, r)
+		errs2 := lintReq(fileName, NextId, isReqPresent, r)
+		NextId = r.IDNumber + 1
 		if len(errs2) != 0 {
 			errs = append(errs, errs2...)
 			continue
@@ -474,7 +484,7 @@ func parseCertdocToGraph(fileName string, graph *reqGraph) ([]error, error) {
 // lintReq is called for each requirement while building the req graph
 // @llr REQ-TRAQ-SWL-3
 // @llr REQ-TRAQ-SWL-5
-func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
+func lintReq(fileName string, expectedIDNumber int, isReqPresent []bool, r *Req) []error {
 	// extract file name without extension
 	fNameWithExt := path.Base(fileName)
 	extension := filepath.Ext(fNameWithExt)
@@ -505,18 +515,17 @@ func lintReq(fileName string, nReqs int, isReqPresent []bool, r *Req) []error {
 	if err2 != nil {
 		errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]))
 	} else {
-		// check requirement sequence number
-		if currentID > nReqs {
-			errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Total number of requirements is %d.", r.ID, nReqs))
+		if currentID < 1 {
+			errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID))
 		} else {
-			if currentID < 1 {
-				errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID))
+			if isReqPresent[currentID-1] {
+				errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID))
 			} else {
-				if isReqPresent[currentID-1] {
-					errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID))
+				if currentID != expectedIDNumber {
+					errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber))
 				}
-				isReqPresent[currentID-1] = true
 			}
+			isReqPresent[currentID-1] = true
 		}
 	}
 

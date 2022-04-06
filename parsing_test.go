@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -12,6 +13,8 @@ import (
 // TestParseMarkdown checks that parseMarkdown finds the requirements blocks
 // correctly.
 func TestParseMarkdown(t *testing.T) {
+
+	// Heading style requirements
 	checkParse(t, `
 # Title
 #### REQ-TEST-SYS-5 My First Requirement
@@ -57,6 +60,56 @@ Some more content
 # Title
 # REQ-TEST-SYS-5`,
 		"requirement heading on line 3 at same level as previous heading on line 2 (1):")
+
+	// Table style requirements
+	checkParse(t, `
+| ID | Title | Body |
+| REQ-TEST-SYS-5 | My First Requirement | Heading part of a req |
+| REQ-TEST-SYS-6 | Content mentioning REQ-TEST-SYS-1 | REQ-TEST-SYS-2 |
+| REQ-TEST-SYS-7 | My Last Requirement | Some more content |
+`,
+		"",
+		&Req{ID: "REQ-TEST-SYS-5",
+			IDNumber:   5,
+			Title:      "My First Requirement",
+			Body:       "Heading part of a req",
+			Attributes: map[string]string{}},
+		&Req{ID: "REQ-TEST-SYS-6",
+			IDNumber:   6,
+			Title:      "Content mentioning REQ-TEST-SYS-1",
+			Body:       "REQ-TEST-SYS-2",
+			Attributes: map[string]string{}},
+		&Req{ID: "REQ-TEST-SYS-7",
+			IDNumber:   7,
+			Title:      "My Last Requirement",
+			Body:       "Some more content",
+			Attributes: map[string]string{}})
+
+	// Mixed style requirements
+	checkParse(t, `
+# Title
+#### REQ-TEST-SYS-5 My First Requirement
+##### Heading part of a req
+| ID | Title | Body |
+| REQ-TEST-SYS-6 | Content mentioning REQ-TEST-SYS-1 | REQ-TEST-SYS-2 |
+| REQ-TEST-SYS-7 | My Last Requirement | Some more content |
+`,
+		"",
+		&Req{ID: "REQ-TEST-SYS-5",
+			IDNumber:   5,
+			Title:      "My First Requirement",
+			Body:       "##### Heading part of a req",
+			Attributes: map[string]string{}},
+		&Req{ID: "REQ-TEST-SYS-6",
+			IDNumber:   6,
+			Title:      "Content mentioning REQ-TEST-SYS-1",
+			Body:       "REQ-TEST-SYS-2",
+			Attributes: map[string]string{}},
+		&Req{ID: "REQ-TEST-SYS-7",
+			IDNumber:   7,
+			Title:      "My Last Requirement",
+			Body:       "Some more content",
+			Attributes: map[string]string{}})
 }
 
 func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Req) {
@@ -224,4 +277,65 @@ body
 - Parents: REQ-TEST-SWH-1 and REQ-TEST-SWH-2
 `)
 	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: " and " in "REQ-TEST-SWH-1 and REQ-TEST-SWH-2"`)
+}
+
+func TestParseReqTable(t *testing.T) {
+	reqs, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact | Parents |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 | |
+| REQ-TEST-SYS-2 | Section 2 | Body of requirement 2. | Rationale 2 | Test 2 | Impact 2 | |
+| REQ-TEST-SYS-3 | Section 3 | Body of requirement 3. | Rationale 3 | Test 3 | Impact 3 | REQ-TEST-SYS-1 |
+| REQ-TEST-SYS-4 | Section 4 | Body of requirement 4. | Rationale 4 | Test 4 | Impact 4 | REQ-TEST-SYS-1, REQ-TEST-SYS-2 |`, nil)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 4, len(reqs))
+
+	for i, r := range reqs {
+		assert.Equal(t, fmt.Sprintf("REQ-TEST-SYS-%d", i+1), r.ID)
+		assert.Equal(t, fmt.Sprintf("Section %d", i+1), r.Title)
+		assert.Equal(t, fmt.Sprintf("Body of requirement %d.", i+1), r.Body)
+		assert.Equal(t, fmt.Sprintf("Rationale %d", i+1), r.Attributes["RATIONALE"])
+		assert.Equal(t, fmt.Sprintf("Test %d", i+1), r.Attributes["VERIFICATION"])
+		assert.Equal(t, fmt.Sprintf("Impact %d", i+1), r.Attributes["SAFETY IMPACT"])
+	}
+}
+
+func TestParseReqTable_NoIDCol(t *testing.T) {
+	_, err := parseReqTable(`| Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- |
+| Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+
+	assert.EqualError(t, err, "requirement table must have at least 2 columns, first column head must be \"ID\"")
+}
+
+func TestParseReqTable_OneCol(t *testing.T) {
+	_, err := parseReqTable(`| ID |
+| ----- |
+| REQ-TEST-SYS-1 |`, nil)
+
+	assert.EqualError(t, err, "requirement table must have at least 2 columns, first column head must be \"ID\"")
+}
+
+func TestParseReqTable_MissingCell(t *testing.T) {
+	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 |`, nil)
+
+	assert.EqualError(t, err, "too few cells on row 3 of requirement table")
+}
+
+func TestParseReqTable_BadID(t *testing.T) {
+	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+| REQ-TEST-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+
+	assert.EqualError(t, err, "malformed requirement: found only malformed ID: \"REQ-TEST-1\" (doesn't match \"REQ-(\\\\w+)-(\\\\w+)-(\\\\d+)\")")
+}
+
+func TestParseReqTable_MissingID(t *testing.T) {
+	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
+| ----- | ----- | ----- | ----- | ----- | ----- |
+|  | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+
+	assert.EqualError(t, err, "malformed requirement: missing ID in first 40 characters: \"\"")
 }
