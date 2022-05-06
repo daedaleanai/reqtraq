@@ -44,7 +44,7 @@ var (
 
 	// For detecting attributes sections and attributes
 	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n#{2,6} Attributes:$`)
-	reReqKWD                   = regexp.MustCompile(`(?i)- ([^:]+): `)
+	reReqKWD                   = regexp.MustCompile(`(?mU)^- (.+):`)
 )
 
 // ReqType defines what type of requirement we are parsing. None, a heading based requirement or a table of

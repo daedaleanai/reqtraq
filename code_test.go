@@ -99,7 +99,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW}
 	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH}
 	errs := SortErrs(rg.resolve())
-	assert.Equal(t, 4, len(errs))
+	assert.Equal(t, 2, len(errs))
 	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getNumberOfSegments: REQ-TEST-SWH-11 must be a Low-Level Requirement.", errs[0])
 	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getSegment: REQ-TEST-SWL-12 does not exist.", errs[1])
 }

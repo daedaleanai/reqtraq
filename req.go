@@ -152,15 +152,18 @@ func (rg *ReqGraph) resolve() []error {
 
 	// Walk the requirements, resolving links and looking for errors
 	for _, req := range rg.Reqs {
-		// Check for requirements with no parents
-		if len(req.ParentIds) == 0 && !(req.Level == config.SYSTEM || req.IsDeleted()) {
-			errs = append(errs, errors.New("Requirement "+req.ID+" in file "+req.Path+" has no parents."))
+		if req.IsDeleted() {
+			continue
 		}
+
+		// Validate attributes
+		errs = append(errs, req.checkAttributes(rg.Schema)...)
+
 		// Validate parent links of requirements
 		for _, parentID := range req.ParentIds {
 			parent := rg.Reqs[parentID]
 			if parent != nil {
-				if parent.IsDeleted() && !req.IsDeleted() {
+				if parent.IsDeleted() {
 					errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" is deleted."))
 				}
 				parent.Children = append(parent.Children, req)
@@ -180,8 +183,8 @@ func (rg *ReqGraph) resolve() []error {
 				errs = append(errs, fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID))
 			}
 		}
-		// Validate attributes
-		errs = append(errs, req.checkAttributes(rg.Schema)...)
+
+		// TODO check for references to missing or deleted requirements in attribute text
 	}
 
 	// Walk the code tags, resolving links and looking for errors
@@ -296,35 +299,50 @@ func (r *Req) IsDeleted() bool {
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-29
 func (r *Req) checkAttributes(as Schema) []error {
 	var errs []error
-	if r.IsDeleted() {
-		return errs
-	}
-	// Iterate the attribute specs.
-	for _, a := range as.Attributes {
-		for k, v := range a {
-			switch k {
-			case "name":
-				if _, ok := r.Attributes[strings.ToUpper(v)]; !ok {
-					if !(r.Level == config.SYSTEM && strings.ToUpper(v) == "PARENTS") {
-						errs = append(errs, fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, v))
-					}
+	var anyAttributes []string
+	anyCount := 0
+
+	// Iterate the attribute rules
+	for name, rules := range as.Attributes {
+		for _, rule := range rules {
+
+			if !rule.Filter.MatchString(r.ID) {
+				continue
+			}
+
+			if rule.Any {
+				anyAttributes = append(anyAttributes, name)
+			}
+
+			reqValue, reqValuePresent := r.Attributes[strings.ToUpper(name)]
+			reqValuePresent = reqValuePresent && reqValue != ""
+
+			if !reqValuePresent && rule.Required {
+				errs = append(errs, fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, name))
+			} else if reqValuePresent {
+				if rule.Any {
+					anyCount++
 				}
-			case "value":
-				aName := strings.ToUpper(a["name"])
-				if _, ok := r.Attributes[aName]; ok {
-					// attribute exists so needs to be valid
-					expr, err := regexp.Compile(v) // TODO(dh) move out so only computed once for each value
-					if err != nil {
-						log.Fatal(err)
-					}
-					if !expr.MatchString(r.Attributes[aName]) {
-						errs = append(errs, fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'. Expected %s.", r.ID, r.Attributes[aName], aName, v))
-					}
-					// TODO check for references to missing or deleted requirements in attribute text
+
+				if !rule.Value.MatchString(reqValue) {
+					errs = append(errs, fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name))
 				}
 			}
 		}
 	}
+
+	if len(anyAttributes) > 0 && anyCount == 0 {
+		sort.Strings(anyAttributes)
+		errs = append(errs, fmt.Errorf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")))
+	}
+
+	// Iterate the requirement attributes to check for unknown ones
+	for name := range r.Attributes {
+		if _, present := as.Attributes[strings.ToUpper(name)]; !present {
+			errs = append(errs, fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name))
+		}
+	}
+
 	return errs
 }
 
@@ -410,22 +428,94 @@ type RequirementStatus int
 // String returns string of RequirementStatus
 // func (rs RequirementStatus) String() string { return reqStatusToString[rs] }
 
+type AttributeRule struct {
+	Filter   *regexp.Regexp // holds a regex which matches which requirement IDs this rule applies to
+	Required bool           // indicates if this attribute is mandatory
+	Any      bool           // indicates if this attribute, or another with this flag set, is mandatory
+	Value    *regexp.Regexp // regex which matches valid values for the attribute
+}
+
 // Schema holds the information held in the schema file defining the rules that the requirement graph must follow.
 type Schema struct {
-	Attributes []map[string]string
+	Attributes map[string]map[string]AttributeRule
 }
 
 // ParseSchema loads and returns the requirements schema from the specified file
 // @llr REQ-TRAQ-SWL-29
 func ParseSchema(schemaPath string) (Schema, error) {
 	var schema Schema
+	schemaJson := struct {
+		Attributes []map[string]string
+	}{}
+
 	b, err := ioutil.ReadFile(schemaPath)
 	if err != nil {
-		return schema, fmt.Errorf("Attributes specification file missing: %s", schemaPath)
+		return schema, fmt.Errorf("Schema file missing: %s", schemaPath)
 	}
-	if err := json.Unmarshal(b, &schema); err != nil {
-		return schema, fmt.Errorf("Error while parsing attributes: %s", err)
+	if err := json.Unmarshal(b, &schemaJson); err != nil {
+		return schema, fmt.Errorf("Error while parsing schema: %s", err)
 	}
+
+	schema.Attributes = make(map[string]map[string]AttributeRule)
+
+	for _, a := range schemaJson.Attributes {
+		name, namePresent := a["name"]
+		filter, filterPresent := a["filter"]
+		required, requiredPresent := a["required"]
+		value, valuePresent := a["value"]
+
+		if !namePresent {
+			return schema, fmt.Errorf("Schema %s contains attributes rule with no name", schemaPath)
+		}
+		name = strings.ToUpper(name)
+		if _, present := schema.Attributes[name]; !present {
+			schema.Attributes[name] = make(map[string]AttributeRule)
+		}
+
+		var newRule AttributeRule
+
+		if !filterPresent {
+			filter = ".*"
+		}
+
+		if _, present := schema.Attributes[name][filter]; present {
+			return schema, fmt.Errorf("Schema %s contains duplicate attribute name/filter: %s/%s", schemaPath, name, filter)
+		}
+
+		newRule.Filter, err = regexp.Compile(filter)
+		if err != nil {
+			return schema, fmt.Errorf("Schema %s contains invalid regex: %s", schemaPath, filter)
+		}
+
+		newRule.Required = true
+		newRule.Any = false
+		if requiredPresent {
+			switch required {
+			case "false":
+				newRule.Required = false
+				newRule.Any = false
+			case "any":
+				newRule.Required = false
+				newRule.Any = true
+			case "true":
+				// default
+			default:
+				return schema, fmt.Errorf("Schema %s contains invalid require flag: %s", schemaPath, required)
+			}
+		}
+
+		if valuePresent {
+			newRule.Value, err = regexp.Compile(value)
+			if err != nil {
+				return schema, fmt.Errorf("Schema %s contains invalid regex: %s", schemaPath, value)
+			}
+		} else {
+			newRule.Value, _ = regexp.Compile(".*")
+		}
+
+		schema.Attributes[name][filter] = newRule
+	}
+
 	return schema, nil
 }
 

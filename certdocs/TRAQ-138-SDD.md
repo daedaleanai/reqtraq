@@ -663,7 +663,11 @@ Reqtraq SHALL generate a list of all changelists that touched the definition or 
 
 #### REQ-TRAQ-SWL-29 Load schema
 
-Reqtraq SHALL load a schema file 'attributes.json' which describes the valid range of requirement attributes and use it to validate requirements against.
+Reqtraq SHALL load a schema file 'attributes.json' which describes the valid range of requirement attributes and use it to validate requirements against. The schema allows the following settings to be specified:
+- name: the name of attribute expected
+- filter: which requirements the attribute applies to, as a regexp
+- required: if the attribute is required, or one of a set of attributes is required
+- value: the value expected for the attribute, as a regexp
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-13

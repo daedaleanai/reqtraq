@@ -51,9 +51,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWL-2", IDNumber: 2, Level: config.LOW, ParentIds: []string{"REQ-TEST-SWH-1", "REQ-TEST-SWH-2"}}, "./TEST-0-SRD.md"))
 
 	errs := SortErrs(rg.resolve())
-	assert.Equal(t, 2, len(errs))
-	assert.Equal(t, "Requirement REQ-TEST-SWH-1 in file ./TEST-0-SRD.md has no parents.", errs[0])
-	assert.Equal(t, "Requirement REQ-TEST-SWL-3 in file ./TEST-0-SRD.md has no parents.", errs[1])
+	assert.Equal(t, 0, len(errs))
 
 	assert.Equal(t,
 		[]string{

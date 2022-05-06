@@ -10,7 +10,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-1.
+- Parents: REQ-TEST-SYS-1
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -20,7 +20,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-2.
+- Parents: REQ-TEST-SYS-2
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -30,7 +30,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-2.
+- Parents: REQ-TEST-SYS-2
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -41,6 +41,6 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-1.
+- Parents: REQ-TEST-SYS-1
 - Verification: Demonstration.
 - Safety impact: None.
