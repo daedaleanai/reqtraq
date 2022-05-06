@@ -29,6 +29,7 @@ const (
 
 // Map from requirement type to requirement level.
 var ReqTypeToReqLevel = map[string]RequirementLevel{
+	"CST": SYSTEM,
 	"SYS": SYSTEM,
 	"SWH": HIGH,
 	"HWH": HIGH,
@@ -38,6 +39,7 @@ var ReqTypeToReqLevel = map[string]RequirementLevel{
 
 // Map from document type to requirement type.
 var DocTypeToReqType = map[string]string{
+	"CST": "CST",
 	"ORD": "SYS",
 	"SRD": "SWH",
 	"HRD": "HWH",
@@ -47,6 +49,7 @@ var DocTypeToReqType = map[string]string{
 
 // Map from requirement type to document type.
 var ReqTypeToDocType = map[string]string{
+	"CST": "CST",
 	"SYS": "ORD",
 	"SWH": "SRD",
 	"SWL": "SDD",
@@ -98,6 +101,8 @@ var DocTypeToDocId = map[string]string{
 	"ECM":     "116",
 	"EPA":     "117",
 	"CSCR":    "118",
+	"CST":     "120",
+	"DATA":    "121",
 	"PSAC":    "134",
 	"TQP":     "135",
 	"SVP":     "136",

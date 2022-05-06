@@ -78,6 +78,9 @@ func CreateReqGraph(certdocsPath, codePath, schemaPath string) (*ReqGraph, error
 
 	// Load the schema, so we can use it to validate attributes
 	rg.Schema, err = ParseSchema(schemaPath)
+	if err != nil {
+		return rg, err
+	}
 
 	// Call resolve to check links between requirements and code
 	rg.Errors = append(rg.Errors, rg.resolve()...)
@@ -105,18 +108,30 @@ func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
 	if err != nil {
 		return fmt.Errorf("error parsing %s: %v", fileName, err)
 	}
+	if len(reqs) == 0 {
+		return nil
+	}
 
 	// sort the requirements so we can check the sequence
 	sort.Sort(byIDNumber(reqs))
 
 	isReqPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
-	NextId := 1
+	isAsmPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
+	NextReqId := 1
+	NextAsmId := 1
 
 	for i, r := range reqs {
-		errs2 := r.checkID(fileName, NextId, isReqPresent)
-		NextId = r.IDNumber + 1
-		if len(errs2) != 0 {
-			rg.Errors = append(rg.Errors, errs2...)
+
+		var newErrs []error
+		if r.Prefix == "REQ" {
+			newErrs = r.checkID(fileName, NextReqId, isReqPresent)
+			NextReqId = r.IDNumber + 1
+		} else if r.Prefix == "ASM" {
+			newErrs = r.checkID(fileName, NextAsmId, isAsmPresent)
+			NextAsmId = r.IDNumber + 1
+		}
+		if len(newErrs) != 0 {
+			rg.Errors = append(rg.Errors, newErrs...)
 			continue
 		}
 		r.Position = i
@@ -215,9 +230,10 @@ func (rg *ReqGraph) resolve() []error {
 
 // Req represents a requirement node in the graph of requirements.
 type Req struct {
-	ID       string
-	IDNumber int
-	Level    config.RequirementLevel
+	ID       string                  // e.g. REQ-TEST-SWL-1
+	Prefix   string                  // e.g. REQ
+	IDNumber int                     // e.g. 1
+	Level    config.RequirementLevel // e.g. LOW
 	// Path identifies the file this was found in relative to repo root.
 	Path      string
 	ParentIds []string
@@ -327,10 +343,7 @@ func (r *Req) checkID(fileName string, expectedIDNumber int, isReqPresent []bool
 
 	var errs []error
 	reqIDComps := strings.Split(r.ID, "-") // results in an array such as [REQ PROJECT REQTYPE 1234]
-	// check requirement name
-	if reqIDComps[0] != "REQ" {
-		errs = append(errs, fmt.Errorf("Incorrect requirement name %s. Every requirement needs to start with REQ, got %s.", r.ID, reqIDComps[0]))
-	}
+	// check requirement name, no need to check prefix because it would not have been parsed otherwise
 	if reqIDComps[1] != fNameComps[0] {
 		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, fNameComps[0], reqIDComps[1]))
 	}
