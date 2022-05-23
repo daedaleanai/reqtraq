@@ -57,8 +57,6 @@ command is one of:
 	reportup 	creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements
 	web		starts a local web server to facilitate interaction with reqtraq
 
-
-
 Invoking reqtraq without arguments prints a short help message.
 Run
 	reqtraq help <command>
@@ -67,14 +65,12 @@ for more information on a specific command`
 const listUsage = `Parses and lists all requirements found in certification documents. Usage:
 	reqtraq list <input_md_filename>
 Parameters:
-	<input_md_filename>	Markdown file to be parsed
-`
+	<input_md_filename>	Markdown file to be parsed`
 
 const nextidUsage = `Generates the next requirement id for the given document. Usage:
 	reqtraq nextid <input_md_filename>
 Parameters:
-	<input_md_filename>	Markdown file to generate the next requirement id for
-`
+	<input_md_filename>	Markdown file to generate the next requirement id for`
 
 const precommitUsage = `Runs the pre-commit checks for the requirement documents in the current repository. Usage:
 	reqtraq precommit --certdoc_path=<path>
@@ -82,8 +78,7 @@ Parameters:
 	--certdoc_path: location of certification documents within the current repository
 
 If the binary exits with a 0 exitcode, the requirement documents are correct. A non-zero exit code signals one or more
-problems, which are printed to stderr.
-`
+problems, which are printed to stderr.`
 
 const prepushUsage = `Runs the pre-push checks for the requirement documents in the current repository. Usage:
 	reqtraq prepush --certdoc_path=<path>
@@ -91,8 +86,7 @@ Parameters:
 	--certdoc_path: location of certification documents within the current repository
 
 If the binary exits with a 0 exitcode, the pre-push ran successfully. A non-zero exit code signals one or more
-problems, which are printed to stderr.
-`
+problems, which are printed to stderr.`
 
 const reportUsage = `
 	reportdown 	creates an HTML traceability report from system requirements down to code
@@ -110,15 +104,13 @@ Parameters:
 	--attributes: path to json with requirement attribute specification.
 	--since: the Git commit SHA-1 representing the start of the range.
 	--at: the commit representing the end of the range.
-	--certdoc_path: location of certification documents within the current repository
-`
+	--certdoc_path: location of certification documents within the current repository`
 
 const webUsage = `Starts a local web server to facilitate interaction with reqtraq. Usage:
 	reqtraq web --addr="hostport" --certdoc_path=<path>
 Parameters:
 	--addr: the ip:port where to serve.
-	--certdoc_path: location of certification documents within the current repository.
-`
+	--certdoc_path: location of certification documents within the current repository.`
 
 type JsonConf struct {
 	Attributes []map[string]string
