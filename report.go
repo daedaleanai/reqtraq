@@ -5,7 +5,6 @@ Functions for generating HTML reports showing trace data.
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -118,12 +117,6 @@ func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
 	return true
 }
 
-// URL create a URL path to a code function by concatinating the source code path and line number of the function comment
-// @llr REQ-TRAQ-SWL-38
-func (code *Code) URL() string {
-	return fmt.Sprintf("/code/%s#L%d", code.Path, code.Line-len(code.Comment))
-}
-
 type Oncer map[string]bool
 
 // Once maintains a map of requirements that have already been seen, if a requirement is seen multiple times
@@ -232,7 +225,6 @@ var reportTmplText = `
 			{{ end }}
 			</ul>
 		{{ end }}
-		{{ template "STATUSFIELD" . }}
 	{{ else }}
 		<h3><a href="#{{ .ID }}">{{ .ID }} {{ .Title }}</a></h3>
  	{{end}}
@@ -257,18 +249,6 @@ var reportTmplText = `
 		</p>
 	{{ end }}
 {{ end }}
-
-{{ define "STATUSFIELD" }}
-	<p>Status:
-		{{ if eq .Status 0 }}
-			<span class="label label-default">{{ .Status }}</span>
-		{{ else if eq .Status 1 }}
-			<span class="label label-primary">{{ .Status }}</span>
-		{{ else }}
-			<span class="label label-success">{{ .Status }}</span>
-		{{ end }}
-{{ end }}
-
 
 {{define "TOPDOWN"}}
 	{{template "HEADER"}}
@@ -315,8 +295,7 @@ var reportTmplText = `
 	<h1>Bottom Up Tracing</h1>
 	
 	<ul style="list-style: none; padding: 0; margin: 0;">
-		{{ range .Reqs.CodeFiles }}
-		{{ with index $.Reqs.CodeTags . }}
+		{{ range .Reqs.CodeTags }}
 		{{ range . }}
 			<li>
 				<h3><a href="{{ .URL }}" target="_blank">{{ .Path }}:{{ .Tag }}</a></h3>
@@ -361,7 +340,6 @@ var reportTmplText = `
 					{{ end }}
 				</ul>
 			</li>
-		{{ end }}
 		{{ end }}
 		{{ else }}
 			<li class="text-danger">Empty graph</li>
@@ -417,8 +395,7 @@ var reportTmplText = `
 	
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
-		{{ range .Reqs.CodeFiles }}
-		{{ with index $.Reqs.CodeTags . }}
+		{{ range .Reqs.CodeTags }}
 		{{ range . }}
 			{{ range .Parents }}
 				{{ if .Matches $.Filter $.Diffs }}
@@ -435,7 +412,6 @@ var reportTmplText = `
 						{{ end }}
 				{{ end }}
 			{{ end }}
-		{{ end }}
 		{{ end }}
 		{{ end }}
 	</ul>

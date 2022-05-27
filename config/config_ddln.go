@@ -1,5 +1,6 @@
 // Daedalean-specific configuration file, defining a bunch of constants that are company-specific. Create your own and
 // mark it with your build tag, then remove the !ddln tag below.
+//go:build ddln || !ddln
 // +build ddln !ddln
 
 package config
@@ -14,6 +15,7 @@ const (
 )
 
 // Document types:
+// CST - Customer Requirement Document
 // ORD - Overall (aka System) Requirement Document
 // SRD - Software Requirements Data
 // SDD - Software Design Description
@@ -21,6 +23,7 @@ const (
 // HDD - Hardware Design Description
 
 // Requirement types:
+// CST - Customer requirements (defined in CST documents)
 // SYS - System/overall requirements (defined in ORD documents)
 // SWH - Sofware high-level requirements (defined in SRD documents)
 // SWL - Software low-level requirements (defined in SDD documents)

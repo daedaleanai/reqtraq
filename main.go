@@ -22,16 +22,16 @@ import (
 )
 
 var (
-	fReportPrefix            = flag.String("pfx", "./req-", "path and filename prefix for reports.")
-	fReportTitleFilterString = flag.String("title_filter", "", "regular expression to filter by requirement title.")
-	fReportIdFilterString    = flag.String("id_filter", "", "regular expression to filter by requirement id.")
-	fReportBodyFilterString  = flag.String("body_filter", "", "regular expression to filter by requirement body.")
+	fReportPrefix            = flag.String("pfx", "./req-", "Path and filename prefix for reports.")
+	fReportTitleFilterString = flag.String("title_filter", "", "Regular expression to filter by requirement title.")
+	fReportIdFilterString    = flag.String("id_filter", "", "Regular expression to filter by requirement id.")
+	fReportBodyFilterString  = flag.String("body_filter", "", "Regular expression to filter by requirement body.")
 	fAddr                    = flag.String("addr", ":8080", "The ip:port where to serve.")
 	fSince                   = flag.String("since", "", "The commit representing the start of the range.")
 	fAt                      = flag.String("at", "", "The commit representing the end of the range.")
 	fCertdocPath             = flag.String("certdoc_path", "certdocs", "Location of certification documents within the *root* of the current repository.")
 	fCodePath                = flag.String("code_path", "", "Location of code files within the current repository")
-	fSchemaPath              = flag.String("schema_path", git.RepoPath()+"/certdocs/attributes.json", "path to json with requirement schema.")
+	fSchemaPath              = flag.String("schema_path", git.RepoPath()+"/certdocs/attributes.json", "Path to json with requirement schema.")
 	fStrict                  = flag.Bool("strict", false, "Exit with error if any validation checks fail.")
 	fVerbose                 = flag.Bool("v", false, "Enable verbose logs.")
 )
@@ -66,15 +66,13 @@ for more information on a specific command`
 
 const listUsage = `Parses and lists all requirements found in certification documents. Usage:
 	reqtraq list <input_md_filename>
-Options:
-	<input_md_filename>	Markdown file to be parsed
-`
+Argument:
+	<input_md_filename>	Markdown file to be parsed`
 
 const nextidUsage = `Generates the next requirement id for the given document. Usage:
 	reqtraq nextid <input_md_filename>
-Options:
-	<input_md_filename>	Markdown file to generate the next requirement id for
-`
+Argument:
+	<input_md_filename>	Markdown file to generate the next requirement id for`
 
 const reportUsage = `
 	reportdown 	creates an HTML traceability report from system requirements down to code
@@ -93,8 +91,7 @@ Options:
 	--at: the commit representing the end of the range.
 	--certdoc_path: location of certification documents within the current repository
 	--code_path: location of source code within the current repository. Default: .
-	--schema_path: location of the schema json file. Default: certdocs/attributes.json
-`
+	--schema_path: location of the schema json file. Default: certdocs/attributes.json`
 
 const validateUsage = `Runs the validation checks for the requirement documents in the current repository. Usage:
 	reqtraq validate [--at=<commit>] [--strict] [--certdoc_path=<path>] [--code_path=<path>] [--schema_path=<path_to_attributes_json>]
@@ -103,84 +100,69 @@ Options:
 	--strict: if any of the validation checks fail the command will exit with a non-zero code.
 	--certdoc_path: location of certification documents within the current repository. Default: certdocs
 	--code_path: location of source code within the current repository. Default: .
-	--schema_path: location of the schema json file. Default: certdocs/attributes.json
-`
+	--schema_path: location of the schema json file. Default: certdocs/attributes.json`
 
 const webUsage = `Starts a local web server to facilitate interaction with reqtraq. Usage:
 	reqtraq web [--addr=<hostport>]
 Options:
-	--addr: the ip:port where to serve. Default: localhost:8080.
-`
+	--addr: the ip:port where to serve. Default: localhost:8080.`
 
 // @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-34, REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
 func main() {
+	flag.Usage = func() {
+		fmt.Println(usage)
+	}
 	flag.Parse()
+
 	command := flag.Arg(0)
 	if command == "" {
 		command = "help"
 	}
 
 	// check to see if the command has a second parameter, e.g. list <filename>
-	f := ""
+	filename := ""
 	remainingArgs := flag.Args()
 	if len(remainingArgs) > 1 {
 		if !strings.HasPrefix(remainingArgs[1], "-") {
-			f = remainingArgs[1]
+			filename = remainingArgs[1]
 		}
 		// See maybe there are more flags after the `action`.
 		os.Args = append(os.Args[:1], remainingArgs[1:]...)
 		flag.Parse()
 	}
 
-	if command == "help" {
-		showHelp()
-		os.Exit(0)
-	}
-
 	// assign global Verbose variable after arguments have been parsed
 	linepipes.Verbose = *fVerbose
 
+	var err error
+
 	switch command {
 	case "nextid":
-		err := nextId(f)
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = nextId(filename)
 	case "list":
-		err := list(f)
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = list(filename)
 	case "reportdown":
-		err := reportDown()
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = reportDown()
 	case "reportup":
-		err := reportUp()
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = reportUp()
 	case "reportissues":
-		err := reportIssues()
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = reportIssues()
 	case "web":
-		err := Serve(*fAddr)
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = Serve(*fAddr)
 	case "validate":
-		err := validate()
-		if err != nil {
-			log.Fatal(err)
-		}
+		err = validate()
+	case "help":
+		showHelp()
+		os.Exit(0)
 	default:
 		fmt.Printf(`Invalid command "%s"`, command)
 		fmt.Println("")
 		fmt.Println(usage)
 		os.Exit(1)
+	}
+
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
