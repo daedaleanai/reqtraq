@@ -20,30 +20,54 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their comment descriptions, discovered
-// @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
-func (rg *ReqGraph) ParseCode(codePath string) error {
+// Code represents a code node in the graph of requirements.
+type Code struct {
+	// Path is the code file this was found in relative to repo root.
+	Path string
+	// Tag is the name of the function.
+	Tag string
+	// Line number where the function starts.
+	Line int
+	// The comment above the function.
+	Comment []string
+	// FileHash is the sha1 of the contents.
+	FileHash  string
+	ParentIds []string
+	Parents   []*Req
+}
 
+// ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their comment descriptions, discovered. The return value is a map from each discovered source code file to a slice of Code structs representing the functions found within.
+// @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
+func ParseCode(codePath string) (map[string][]*Code, error) {
+
+	var codeFiles []string
+	var codeTags map[string][]*Code
 	var err error
 
 	// Find the code files.
-	rg.CodeFiles, err = findCodeFiles(codePath)
+	codeFiles, err = findCodeFiles(codePath)
 	if err != nil {
-		return errors.Wrap(err, "failed to find code files")
+		return codeTags, errors.Wrap(err, "failed to find code files")
 	}
 
 	// Discover the code procedures.
-	rg.CodeTags, err = tagCode(rg.CodeFiles)
+	codeTags, err = tagCode(codeFiles)
 	if err != nil {
-		return errors.Wrap(err, "failed to tag code")
+		return codeTags, errors.Wrap(err, "failed to tag code")
 	}
 
 	// Annotate the code procedures with the associated comment.
-	if err := parseComments(rg.CodeFiles, rg.CodeTags); err != nil {
-		return errors.Wrap(err, "failed walking code")
+	if err := parseComments(codeFiles, codeTags); err != nil {
+		return codeTags, errors.Wrap(err, "failed walking code")
 	}
 
-	return nil
+	return codeTags, nil
+}
+
+// URL create a URL path to a code function by concatinating the source code path and line number of the function comment.
+// @llr REQ-TRAQ-SWL-38
+func (code *Code) URL() string {
+	return fmt.Sprintf("/code/%s#L%d", code.Path, code.Line-len(code.Comment))
 }
 
 // SourceCodeFileExtensions are listed by language.

@@ -75,7 +75,8 @@ func TestFileCodeFiles(t *testing.T) {
 
 func TestReqGraph_ParseCode(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req, 0)}
-	err := rg.ParseCode("testdata/cproject1")
+	var err error
+	rg.CodeTags, err = ParseCode("testdata/cproject1")
 	if !assert.NoError(t, err) {
 		return
 	}

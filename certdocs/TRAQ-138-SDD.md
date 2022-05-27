@@ -33,7 +33,11 @@ This document defines the software architecture and low-level requirements for t
 
 #### Description of Terms
 
-N/A
+ATX Heading
+  : Headings defined within markdown documents are defined ATX-style, meaning text is prefixed with one to six pound signs (hash symbols, #). The level of heading is determined according to how many pound signs were used. See [ATX heading](https://github.github.com/gfm/#atx-headings) for more information.
+
+Markdown
+  : The markup language used to format text documents (such as this one). Specifically [GitHub Flavored Markdown](https://github.github.com/gfm) is used.
 
 ## Reqtraq Software Overview
 
@@ -72,7 +76,7 @@ Functions which deal with source code files. Source code is discovered within a 
 
 #### REQ-TRAQ-SWL-6 Scan for source code
 
-Reqtraq SHALL scan all folders within a given path, relative to the git repository root, searching for supported source code files.
+Reqtraq SHALL scan all folders within a given path, relative to the git repository root, searching for supported source code files (those with an extension: c, h, cc, hh or go).
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-2
@@ -92,7 +96,7 @@ Reqtraq SHALL skip any folder named "testdata" when searching for source code.
 
 #### REQ-TRAQ-SWL-8 Ctags
 
-Reqtraq SHALL use the Universal Ctags application to parse supported source code files for function names, and store them.
+Reqtraq SHALL use the Universal Ctags application to parse supported source code files (those with an extension: c, h, cc, hh or go) for function names, and store them.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-2
@@ -107,6 +111,16 @@ Reqtraq SHALL scan source code containing functions for comments preceding the f
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-2
 - Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-38 Source code links
+
+Reqtraq SHALL include links to source code within the reports.
+
+##### Attributes:
+- Parents:
+- Rationale: Allows quick navigation from requirements to code.
 - Verification: Test
 - Safety Impact: None
 
@@ -165,7 +179,7 @@ Reqtraq SHALL wrap git commands needed with go functions.
 
 ### linepipes/run.go
 
-Wrapper functions the golang command interface.
+Wrapper functions for the golang command interface.
 
 #### REQ-TRAQ-SWL-48 Wrap command interface
 
@@ -320,7 +334,8 @@ Attributes can be optional or mandatory. Each attribute has a name. Each attribu
 ```
 { "attributes": [
   { "name": "Parent", "optional": false }, 
-  { "name": "Verification", "value": "(Demonstration|Unit Test)", "optional": false },
+  { "name": "Verification", "value": "(Demonstration|Unit Test)",
+    "optional": false },
   { "name": "Safety Impact", "optional": false } ] }
 ```
 
@@ -397,7 +412,7 @@ Reqtraq SHALL parse requirements text found in a table row into a requirements d
 
 Functions for generating HTML reports showing trace data.
 
-Requirements bodies can include code that is delimited with the triple-backtick delimiter (\```), which results in rendered HTML as follows:
+Requirements bodies can include code that is delimited with the triple-backtick delimiter (\`\`\`), which results in rendered HTML as follows:
 ```
 int main(int argc, char** argv) {
         FlyAirplane();
@@ -405,9 +420,10 @@ int main(int argc, char** argv) {
 ```
 
 Requirements bodies can include math (both inline and display) that is delimited with the single dollar sign (\$) for inline, and the double dollar
-sign (\$$) for display. They will be rendered in HTML reports using MathJax and look as follows:
-    * Inline math: $x=y$
-    * Display math:
+sign (\$\$) for display. They will be rendered in HTML reports using MathJax and look as follows:
+
+* Inline math: $x=y$
+* Display math:
 $$
 \frac{d}{dx}\left( \int_{0}^{x} f(u)\,du\right)=f(x).
 $$
@@ -531,7 +547,7 @@ Reqtraq SHALL allow the user to filter the bottom up report by ID, title, body, 
 
 Reqtraq SHALL allow the user to create a report showing issues with:
 - Attributes - the attributes of each requirement are checked against the schema defined in the attributes.json
-- References - parent attributes are checked to ensure they are pointing to valid requirements (they exist and are not deleted**
+- References - parent attributes are checked to ensure they are pointing to valid requirements (they exist and are not deleted)
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-14
@@ -572,16 +588,6 @@ Reqtraq SHALL allow filtering by matching a regular expression against:
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-38 Source code links
-
-Reqtraq SHALL include links to source code within the reports.
-
-##### Attributes:
-- Parents:
-- Rationale: Allows quick navigation from requirements to code.
-- Verification: Test
-- Safety Impact: None
-
 ### req.go
 
 Functions related to the handling of requirements and code tags.
@@ -589,8 +595,6 @@ Functions related to the handling of requirements and code tags.
 The following types and associated methods are implemented:
 - ReqGraph - The complete information about a set of requirements and associated code tags.
 - Req - A requirement node in the graph of requirements.
-- Code - A code node in the graph of requirements.
-- RequirementStatus - The status of a requirement based on items traced to it.
 - Schema - The information held in the schema file defining the rules that the requirement graph must follow.
 - byPosition, byIDNumber and ByFilenameTag - Provides sort functions to order requirements or code.
 - ReqFilter - The different parameters used to filter the requirements set.
