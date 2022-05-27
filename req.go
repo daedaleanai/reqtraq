@@ -4,8 +4,6 @@
    The following types and associated methods are implemented:
      ReqGraph - The complete information about a set of requirements and associated code tags.
      Req - A requirement node in the graph of requirements.
-     Code - A code node in the graph of requirements.
-     RequirementStatus - The status of a requirements based on items traced to it.
      Schema - The information held in the schema file defining the rules that the requirement graph must follow.
      byPosition, byIDNumber and ByFilenameTag - Provides sort functions to order requirements or code,
      ReqFilter - The different parameters used to filter the requirements set.
@@ -39,9 +37,6 @@ type ReqGraph struct {
 	// CodeTags contains the source code functions per file.
 	// The keys are paths relative to the git repo path.
 	CodeTags map[string][]*Code
-	// CodeFiles are the paths to the discovered code files,
-	// relative to the git repo path.
-	CodeFiles []string
 	// Errors which have been found while analyzing the graph.
 	// This is extended in multiple places.
 	Errors []error
@@ -54,7 +49,7 @@ type ReqGraph struct {
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
 func CreateReqGraph(certdocsPath, codePath, schemaPath string) (*ReqGraph, error) {
-	rg := &ReqGraph{make(map[string]*Req, 0), nil, make([]string, 0), make([]error, 0), Schema{}}
+	rg := &ReqGraph{make(map[string]*Req, 0), nil, make([]error, 0), Schema{}}
 
 	// Walk through the documents.
 	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
@@ -72,7 +67,8 @@ func CreateReqGraph(certdocsPath, codePath, schemaPath string) (*ReqGraph, error
 	}
 
 	// Find and parse the code files.
-	if err := rg.ParseCode(codePath); err != nil {
+	rg.CodeTags, err = ParseCode(codePath)
+	if err != nil {
 		return rg, err
 	}
 
@@ -117,18 +113,17 @@ func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
 
 	isReqPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
 	isAsmPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
-	NextReqId := 1
-	NextAsmId := 1
+	nextReqId := 1
+	nextAsmId := 1
 
 	for i, r := range reqs {
-
 		var newErrs []error
 		if r.Prefix == "REQ" {
-			newErrs = r.checkID(fileName, NextReqId, isReqPresent)
-			NextReqId = r.IDNumber + 1
+			newErrs = r.checkID(fileName, nextReqId, isReqPresent)
+			nextReqId = r.IDNumber + 1
 		} else if r.Prefix == "ASM" {
-			newErrs = r.checkID(fileName, NextAsmId, isAsmPresent)
-			NextAsmId = r.IDNumber + 1
+			newErrs = r.checkID(fileName, nextAsmId, isAsmPresent)
+			nextAsmId = r.IDNumber + 1
 		}
 		if len(newErrs) != 0 {
 			rg.Errors = append(rg.Errors, newErrs...)
@@ -248,7 +243,6 @@ type Req struct {
 	// Attributes of the requirement by uppercase name.
 	Attributes map[string]string
 	Position   int
-	Status     RequirementStatus // TODO
 }
 
 // Changelists generates a list of Phabicator revisions that have affected a requirement
@@ -374,41 +368,6 @@ func (r *Req) checkID(fileName string, expectedIDNumber int, isReqPresent []bool
 
 	return errs
 }
-
-// Code represents a code node in the graph of requirements.
-type Code struct {
-	// Path is the code file this was found in relative to repo root.
-	Path string
-	// Tag is the name of the function.
-	Tag string
-	// Line number where the function starts.
-	Line int
-	// The comment above the function.
-	Comment []string
-	// FileHash is the sha1 of the contents.
-	FileHash  string
-	ParentIds []string
-	Parents   []*Req
-}
-
-// RequirementStatus holds the status of a requirement based on items traced to it.
-// TODO: not currently used
-type RequirementStatus int
-
-// const (
-// 	NOT_STARTED RequirementStatus = iota // req does not have any children, unless code level
-// 	STARTED                              // req does have children but incomplete
-// 	COMPLETED                            // graph complete
-// )
-
-// var reqStatusToString = map[RequirementStatus]string{
-// 	NOT_STARTED: "NOT STARTED",
-// 	STARTED:     "STARTED",
-// 	COMPLETED:   "COMPLETED",
-// }
-
-// String returns string of RequirementStatus
-// func (rs RequirementStatus) String() string { return reqStatusToString[rs] }
 
 // Schema holds the information held in the schema file defining the rules that the requirement graph must follow.
 type Schema struct {

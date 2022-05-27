@@ -1,16 +1,17 @@
 {
-	"attributes": [{
-			"name": "Parents"
-		},
-		{
-			"name": "Rationale"
-		},
-    {
-			"name": "Verification",
-			"value": "(Demonstration|Unit [Tt]est|[Tt]est)"
-		},
-		{
-			"name": "Safety Impact"
-		}
-	]
+    "attributes": [
+        {
+            "name": "Parents"
+        },
+        {
+            "name": "Rationale"
+        },
+        {
+            "name": "Verification",
+            "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
+        },
+        {
+            "name": "Safety Impact"
+        }
+    ]
 }

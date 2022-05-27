@@ -1,5 +1,5 @@
 /*
-Wrapper functions the golang command interface.
+Wrapper functions for the golang command interface.
 */
 
 package linepipes
