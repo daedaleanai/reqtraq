@@ -24,7 +24,8 @@
         },
         {
             "name": "Safety Impact",
-            "filter": "^REQ"
+            "filter": "^REQ",
+            "value": "(None|True)"
         }
     ]
 }
