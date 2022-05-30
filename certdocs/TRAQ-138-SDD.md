@@ -72,7 +72,7 @@ ReqGraph source code is arranged as follows:
 
 ### code.go
 
-Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated descriptions. The external program Universal Ctags is used to scan for functions.
+Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated requirement IDs. The external program Universal Ctags is used to scan for functions.
 
 #### REQ-TRAQ-SWL-6 Scan for source code
 
@@ -104,9 +104,9 @@ Reqtraq SHALL use the Universal Ctags application to parse supported source code
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-9 Comments
+#### REQ-TRAQ-SWL-9 Requirement IDs
 
-Reqtraq SHALL scan source code containing functions for comments preceding the functions, and store them.
+Reqtraq SHALL scan source code containing functions for comments which contain requirement IDs preceding the functions, and store them.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-2
