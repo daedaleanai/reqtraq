@@ -126,13 +126,19 @@ func TestParsing(t *testing.T) {
 	}
 	assert.Empty(t, rg.Errors, "Unexpected errors while parsing "+f)
 
-	var systemReqs [14]Req
-	for i := 0; i < 14; i++ {
+	var systemReqs [15]Req
+	for i := 0; i < 15; i++ {
 		reqNo := strconv.Itoa(i + 1)
+		reqPos := i
+		if i > 0 {
+			// Assumptions are not returned in the OrdsByPosition list
+			reqPos = i + 1
+		}
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
+			Prefix:   "REQ",
 			Level:    config.SYSTEM,
 			Path:     f,
-			Position: i,
+			Position: reqPos,
 			Attributes: map[string]string{
 				"SAFETY IMPACT": "Impact " + reqNo,
 				"RATIONALE":     "Rationale " + reqNo,

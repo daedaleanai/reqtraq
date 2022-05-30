@@ -13,7 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/config"
@@ -275,8 +274,9 @@ func list(filename string) error {
 // @llr REQ-TRAQ-SWL-34
 func nextId(filename string) error {
 	var (
-		reqs      []*Req
-		nextReqID string
+		reqs          []*Req
+		greatestReqID int = 0
+		greatestAsmID int = 0
 	)
 
 	if filename == "" {
@@ -288,44 +288,25 @@ func nextId(filename string) error {
 		return err
 	}
 
-	if len(reqs) > 0 {
-		var (
-			lastReq    *Req
-			greatestID int = 0
-		)
-		// infer next req ID from existing req IDs
-		for _, r := range reqs {
-			parts := ReReqID.FindStringSubmatch(r.ID)
-			if parts == nil {
-				return fmt.Errorf("Requirement ID invalid: %s", r.ID)
-			}
-			sequenceNumber := parts[len(parts)-1]
-			currentID, err := strconv.Atoi(sequenceNumber)
-			if err != nil {
-				return fmt.Errorf("Requirement sequence part \"%s\" (%s) not a number:  %s", r.ID, sequenceNumber, err)
-			}
-			if currentID > greatestID {
-				greatestID = currentID
-				lastReq = r
-			}
+	// ParseCertdoc validated the filename format, so no need to validate again
+	filenameParts := reCertdoc.FindStringSubmatch(strings.TrimSuffix(path.Base(filename), ".md"))
+
+	// count existing REQ and ASM IDs
+	for _, r := range reqs {
+		if r.Prefix == "REQ" && r.IDNumber > greatestReqID {
+			greatestReqID = r.IDNumber
+		} else if r.Prefix == "ASM" && r.IDNumber > greatestAsmID {
+			greatestAsmID = r.IDNumber
 		}
-		ii := ReReqID.FindStringSubmatchIndex(lastReq.ID)
-		nextReqID = fmt.Sprintf("%s%d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
-	} else {
-		// infer next (=first) req ID from file name
-		fNameWithExt := path.Base(filename)
-		extension := filepath.Ext(fNameWithExt)
-		fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
-		fNameComps := strings.Split(fName, "-")
-		docType := fNameComps[len(fNameComps)-1]
-		reqType, correctFileType := config.DocTypeToReqType[docType]
-		if !correctFileType {
-			return fmt.Errorf("Document name does not comply with naming convention.")
-		}
-		nextReqID = "REQ-" + fNameComps[0] + "-" + fNameComps[1] + "-" + reqType + "-001"
 	}
 
-	fmt.Println(nextReqID)
+	fmt.Printf("REQ-%s-%s-%d\n", filenameParts[1], config.DocTypeToReqType[filenameParts[3]], greatestReqID+1)
+
+	// don't bother reporting assumptions if none are defined yet
+	if greatestAsmID > 0 {
+		fmt.Printf("ASM-%s-%s-%d\n", filenameParts[1], config.DocTypeToReqType[filenameParts[3]], greatestAsmID+1)
+	}
+
 	return nil
 }
 

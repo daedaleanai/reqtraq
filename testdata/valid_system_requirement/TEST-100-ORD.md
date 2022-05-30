@@ -8,7 +8,7 @@ This file is used as a test input for the reqtraq tool
 
 Body of requirement 1.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 1
 - Verification: Test 1
 - Safety impact: Impact 1
@@ -17,16 +17,23 @@ Body of requirement 1.
 
 Body of requirement 2.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 2
 - Verification: Test 2
 - Safety impact: Impact 2
+
+### ASM-TEST-SYS-1 Assumption 1
+
+Body of assumption 1.
+
+#### Attributes:
+- Parents: REQ-TEST-SYS-2
 
 ### REQ-TEST-SYS-3 Deleted
 
 Body of requirement 4.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 4
 - Verification: Test 4
 - Safety impact: Impact 4
@@ -35,7 +42,7 @@ Body of requirement 4.
 
 Body of requirement 3.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 3
 - Verification: Test 3
 - Safety impact: Impact 3
@@ -45,7 +52,7 @@ Body of requirement 3.
 
 Body of requirement 5.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 5
 - Verification: Test 5
 - Safety impact: Impact 5
@@ -67,7 +74,7 @@ Body of requirement 5.
 
 Body of requirement 10.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 10
 - Verification: Test 10
 - Safety impact: Impact 10
@@ -76,7 +83,7 @@ Body of requirement 10.
 
 Body of requirement 11.
 
-###### Attributes:
+#### Attributes:
 - Rationale: Rationale 11
 - Verification: Test 11
 - Safety impact: Impact 11

@@ -38,9 +38,9 @@ var (
 
 	// REQ, project number, project abbreviation, req type, req number
 	// For example: REQ-PROJ-SWH-4
-	reReqIdStr = `REQ-(\w+)-(\w+)-(\d+)`
+	reReqIdStr = `(REQ|ASM)-(\w+)-(\w+)-(\d+)`
 	ReReqID    = regexp.MustCompile(reReqIdStr)
-	reReqIDBad = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
+	reReqIDBad = regexp.MustCompile(`(?i)(REQ|ASM)-((\d+)|((\w+)-(\d+)))`)
 
 	// For detecting attributes sections and attributes
 	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n#{2,6} Attributes:$`)
@@ -178,6 +178,9 @@ func parseMarkdown(f string) ([]*Req, error) {
 			// If we're currently parsing a requirement close it
 			if inReq != None {
 				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqs)
+				if err != nil {
+					return nil, err
+				}
 			}
 			// Start a new requirement table
 			inReq = Table
@@ -196,6 +199,9 @@ func parseMarkdown(f string) ([]*Req, error) {
 	if inReq != None {
 		// Close the current requirement, we're at the end.
 		reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqs)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return reqs, nil
@@ -247,13 +253,14 @@ func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, er
 // @llr REQ-TRAQ-SWL-3
 func parseReq(txt string) (*Req, error) {
 
-	ID, IDNumber, Level, err := extractIDNumAndLevel(txt)
+	ID, Prefix, IDNumber, Level, err := extractIDParts(txt)
 	if err != nil {
 		return nil, err
 	}
 
 	r := &Req{
 		ID:         ID,
+		Prefix:     Prefix,
 		IDNumber:   IDNumber,
 		Level:      Level,
 		Attributes: map[string]string{},
@@ -376,11 +383,12 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 			// For each attribute in the first row, read in the associated value on this row
 			for i, k := range attributes {
 				if k == "ID" {
-					ID, IDNumber, Level, err := extractIDNumAndLevel(values[i])
+					ID, Prefix, IDNumber, Level, err := extractIDParts(values[i])
 					if err != nil {
 						return reqs, err
 					}
 					r.ID = ID
+					r.Prefix = Prefix
 					r.IDNumber = IDNumber
 					r.Level = Level
 				} else if k == "TITLE" {
@@ -425,9 +433,9 @@ func splitTableLine(line string) []string {
 	return parts
 }
 
-// extractIDNumAndLevel parses a requirement identifier string and returns the ID string, sequence number and level
+// extractIDParts parses a requirement identifier string and returns the ID string, prefix, sequence number and level
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
-func extractIDNumAndLevel(reqStr string) (string, int, config.RequirementLevel, error) {
+func extractIDParts(reqStr string) (string, string, int, config.RequirementLevel, error) {
 	head := reqStr
 	if len(head) > 40 {
 		head = head[:40]
@@ -435,27 +443,27 @@ func extractIDNumAndLevel(reqStr string) (string, int, config.RequirementLevel, 
 	defid := ReReqID.FindStringSubmatchIndex(reqStr)
 	if len(defid) == 0 {
 		if reReqIDBad.MatchString(reqStr) {
-			return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
+			return "", "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
 		}
-		return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
+		return "", "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
 	}
 
 	if defid[0] > 0 {
-		return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
+		return "", "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
 	}
 
-	level, ok := config.ReqTypeToReqLevel[reqStr[defid[4]:defid[5]]]
+	level, ok := config.ReqTypeToReqLevel[reqStr[defid[6]:defid[7]]]
 	if !ok {
-		return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: Invalid type: %q", reqStr[defid[4]:defid[5]])
+		return "", "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: Invalid type: %q", reqStr[defid[6]:defid[7]])
 	}
-	IDNumber, err := strconv.Atoi(reqStr[defid[6]:defid[7]])
+	IDNumber, err := strconv.Atoi(reqStr[defid[8]:defid[9]])
 	if err != nil {
-		return "", 0, config.SYSTEM, err
+		return "", "", 0, config.SYSTEM, err
 	}
-	return reqStr[defid[0]:defid[1]], IDNumber, level, nil
+	return reqStr[defid[0]:defid[1]], reqStr[defid[2]:defid[3]], IDNumber, level, nil
 }
 
-// parseParents validates the Parents attribute of a requirement
+// parseParents splits the Parents attribute of a requirement into a slice of requirement identifiers and assigns to ParentIds
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
 func parseParents(r *Req) error {
 	// PARENTS must be punctuation/space separated list of parseable req-ids.

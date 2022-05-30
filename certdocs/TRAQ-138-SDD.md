@@ -679,7 +679,7 @@ Reqtraq SHALL load a schema file 'attributes.json' which describes the valid ran
 
 Reqtraq SHALL check that the requirements defined in each document have a correct id, composed of four parts separated by `-`:
 
-1. `REQ`
+1. `REQ` or `ASM`
 2. the project/system abbrev, identical to the first part of the document name where the requirement is defined, e.g. "TRAQ" for "TRAQ-100-ORD.md"
 3. the requirement type:
     - `SYS` for system/overall requirements (defined in ORD documents)

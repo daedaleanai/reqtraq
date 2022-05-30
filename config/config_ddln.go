@@ -15,6 +15,7 @@ const (
 )
 
 // Document types:
+// CST - Customer Requirement Document
 // ORD - Overall (aka System) Requirement Document
 // SRD - Software Requirements Data
 // SDD - Software Design Description
@@ -22,6 +23,7 @@ const (
 // HDD - Hardware Design Description
 
 // Requirement types:
+// CST - Customer requirements (defined in CST documents)
 // SYS - System/overall requirements (defined in ORD documents)
 // SWH - Sofware high-level requirements (defined in SRD documents)
 // SWL - Software low-level requirements (defined in SDD documents)
@@ -30,6 +32,7 @@ const (
 
 // Map from requirement type to requirement level.
 var ReqTypeToReqLevel = map[string]RequirementLevel{
+	"CST": SYSTEM,
 	"SYS": SYSTEM,
 	"SWH": HIGH,
 	"HWH": HIGH,
@@ -39,6 +42,7 @@ var ReqTypeToReqLevel = map[string]RequirementLevel{
 
 // Map from document type to requirement type.
 var DocTypeToReqType = map[string]string{
+	"CST": "CST",
 	"ORD": "SYS",
 	"SRD": "SWH",
 	"HRD": "HWH",
@@ -48,6 +52,7 @@ var DocTypeToReqType = map[string]string{
 
 // Map from requirement type to document type.
 var ReqTypeToDocType = map[string]string{
+	"CST": "CST",
 	"SYS": "ORD",
 	"SWH": "SRD",
 	"SWL": "SDD",
@@ -99,6 +104,8 @@ var DocTypeToDocId = map[string]string{
 	"ECM":     "116",
 	"EPA":     "117",
 	"CSCR":    "118",
+	"CST":     "120",
+	"DATA":    "121",
 	"PSAC":    "134",
 	"TQP":     "135",
 	"SVP":     "136",

@@ -25,22 +25,33 @@ REQ-TEST-SYS-2
 ### Title2
 #### REQ-TEST-SYS-7 My Last Requirement
 Some more content
+#### ASM-TEST-SYS-1 An assumption, not a requirement
+Assumption body
 `,
 		"",
 		&Req{ID: "REQ-TEST-SYS-5",
+			Prefix:     "REQ",
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "##### Heading part of a req",
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-6",
+			Prefix:     "REQ",
 			IDNumber:   6,
 			Title:      "Content mentioning REQ-TEST-SYS-1",
 			Body:       "REQ-TEST-SYS-2",
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-7",
+			Prefix:     "REQ",
 			IDNumber:   7,
 			Title:      "My Last Requirement",
 			Body:       "Some more content",
+			Attributes: map[string]string{}},
+		&Req{ID: "ASM-TEST-SYS-1",
+			Prefix:     "ASM",
+			IDNumber:   1,
+			Title:      "An assumption, not a requirement",
+			Body:       "Assumption body",
 			Attributes: map[string]string{}})
 
 	checkParse(t, `# REQ-TEST-SYS-5 REQ-TEST-SYS-6`, `malformed requirement title: too many IDs on line 1:`)
@@ -67,22 +78,32 @@ Some more content
 | REQ-TEST-SYS-5 | My First Requirement | Heading part of a req |
 | REQ-TEST-SYS-6 | Content mentioning REQ-TEST-SYS-1 | REQ-TEST-SYS-2 |
 | REQ-TEST-SYS-7 | My Last Requirement | Some more content |
+| ASM-TEST-SYS-1 | An assumption, not a requirement | Assumption body |
 `,
 		"",
 		&Req{ID: "REQ-TEST-SYS-5",
+			Prefix:     "REQ",
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "Heading part of a req",
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-6",
+			Prefix:     "REQ",
 			IDNumber:   6,
 			Title:      "Content mentioning REQ-TEST-SYS-1",
 			Body:       "REQ-TEST-SYS-2",
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-7",
+			Prefix:     "REQ",
 			IDNumber:   7,
 			Title:      "My Last Requirement",
 			Body:       "Some more content",
+			Attributes: map[string]string{}},
+		&Req{ID: "ASM-TEST-SYS-1",
+			Prefix:     "ASM",
+			IDNumber:   1,
+			Title:      "An assumption, not a requirement",
+			Body:       "Assumption body",
 			Attributes: map[string]string{}})
 
 	// Mixed style requirements
@@ -96,16 +117,19 @@ Some more content
 `,
 		"",
 		&Req{ID: "REQ-TEST-SYS-5",
+			Prefix:     "REQ",
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "##### Heading part of a req",
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-6",
+			Prefix:     "REQ",
 			IDNumber:   6,
 			Title:      "Content mentioning REQ-TEST-SYS-1",
 			Body:       "REQ-TEST-SYS-2",
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-7",
+			Prefix:     "REQ",
 			IDNumber:   7,
 			Title:      "My Last Requirement",
 			Body:       "Some more content",
@@ -329,7 +353,7 @@ func TestParseReqTable_BadID(t *testing.T) {
 | ----- | ----- | ----- | ----- | ----- | ----- |
 | REQ-TEST-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
 
-	assert.EqualError(t, err, "malformed requirement: found only malformed ID: \"REQ-TEST-1\" (doesn't match \"REQ-(\\\\w+)-(\\\\w+)-(\\\\d+)\")")
+	assert.EqualError(t, err, "malformed requirement: found only malformed ID: \"REQ-TEST-1\" (doesn't match \"(REQ|ASM)-(\\\\w+)-(\\\\w+)-(\\\\d+)\")")
 }
 
 func TestParseReqTable_MissingID(t *testing.T) {
