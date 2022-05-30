@@ -47,7 +47,7 @@ Reqtraq SHALL allow "requirement to implementation" and "requirement to verifica
 ##### Attributes:
 - Rationale: The status of implementation and verification against the requirements must be demonstrated for certification. Easy access to information during development is vital to prevent problems being missed.
 - Verification: Test
-- Safety impact: None
+- Safety Impact: None
 
 #### REQ-TRAQ-SYS-2 Change History
 
@@ -56,7 +56,7 @@ Reqtraq SHALL allow the change history of requirements to be recorded, reviewed 
 ##### Attributes:
 - Rationale: Easy access to the evolution of requirements allows for the cause of the introduction of faults to be identified.
 - Verification: Test
-- Safety impact: None
+- Safety Impact: None
 
 #### REQ-TRAQ-SYS-3 Unique Identifiers
 
@@ -65,7 +65,7 @@ Reqtraq SHALL ensure that requirement identifiers are consistent and are not rep
 ##### Attributes:
 - Rationale: Strict enforcement of identifiers helps prevent traceability issues.
 - Verification: Test
-- Safety impact: None
+- Safety Impact: None
 
 
 #### REQ-TRAQ-SYS-4 Configurable
@@ -75,4 +75,4 @@ Reqtraq SHALL allow rules on the format and relationship of requirement document
 ##### Attributes:
 - Rationale: The exact layout of requirements depends on the project structure, the layout should be defined and enforced.
 - Verification: Test
-- Safety impact: None
+- Safety Impact: None

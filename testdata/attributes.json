@@ -2,15 +2,15 @@
     "attributes": [
         {
             "name": "Parents",
-            "filter": "^REQ-TRAQ-SWH",
+            "filter": "^REQ-TEST-SWH",
             "required": "any",
-            "value": "^(?:REQ-TRAQ-SYS-\\d+(?:,|, )?)*$"
+            "value": "^(?:REQ-TEST-SYS-\\d+(?:,|, )?)*$"
         },
         {
             "name": "Parents",
-            "filter": "^REQ-TRAQ-SWL",
+            "filter": "^REQ-TEST-SWL",
             "required": "any",
-            "value": "^(?:REQ-TRAQ-SWH-\\d+(?:,|, )?)*$"
+            "value": "^(?:REQ-TEST-SYS-\\d+(?:,|, )?)*$"
         },
         {
             "name": "Rationale",
@@ -24,8 +24,7 @@
         },
         {
             "name": "Safety Impact",
-            "filter": "^REQ",
-            "value": "(None|True)"
+            "filter": "^REQ"
         }
     ]
 }

@@ -10,7 +10,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-1.
+- Parents: REQ-TEST-SYS-1
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -20,7 +20,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-2.
+- Parents: REQ-TEST-SYS-2
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -30,7 +30,7 @@ This is just a test. This text does not mean anything. See REQ-TEST-SYS-22.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-3.
+- Parents: REQ-TEST-SYS-3
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -40,7 +40,7 @@ This is just a test. This text does not mean anything. See REQ-TEST-SYS-2.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-3.
+- Parents: REQ-TEST-SYS-3
 - Verification: Demonstration.
 - Safety impact: None.
 
@@ -60,7 +60,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-3.
+- Parents: REQ-TEST-SYS-3
 - Safety impact: None.
 
 ### REQ-TEST-SWH-7 [NOT OK] Missing attribute safety impact
@@ -69,7 +69,7 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-3.
+- Parents: REQ-TEST-SYS-3
 - Verification: Demonstration.
 
 ### REQ-TEST-SWH-8 [NOT OK] Wrong value of attribute verification
@@ -78,6 +78,6 @@ This is just a test. This text does not mean anything.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
-- Parents: REQ-TEST-SYS-3.
+- Parents: REQ-TEST-SYS-3
 - Verification: gibberish.
 - Safety impact: None.

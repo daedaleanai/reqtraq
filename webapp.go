@@ -181,8 +181,8 @@ func get(w http.ResponseWriter, r *http.Request) error {
 			return errors.Wrap(err, "Failed to parse config")
 		}
 		attributes := make([]string, 0, len(schema.Attributes)+1)
-		for _, a := range schema.Attributes {
-			attributes = append(attributes, a["name"])
+		for n := range schema.Attributes {
+			attributes = append(attributes, n)
 		}
 		commits, err := git.AllCommits()
 		if err != nil {

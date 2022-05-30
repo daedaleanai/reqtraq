@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/daedaleanai/reqtraq/git"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +30,7 @@ func RunValidate(t *testing.T, certdocpath, codepath, schemapath string) (string
 }
 
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
-	actual, err := RunValidate(t, "testdata/TestValidateCreateReqGraphMarkdown", "testdata/TestValidateCreateReqGraphMarkdown", git.RepoPath()+"/certdocs/attributes.json")
+	actual, err := RunValidate(t, "testdata/TestValidateCreateReqGraphMarkdown", "testdata/TestValidateCreateReqGraphMarkdown", "testdata/attributes.json")
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.
@@ -39,11 +38,9 @@ Incorrect project abbreviation for requirement REQ-TSET-SYS-5. Expected TEST, go
 Invalid requirement sequence number for REQ-TEST-SYS-1, is duplicate.
 Invalid requirement sequence number for REQ-TEST-SYS-13: missing requirements in between. Expected ID Number 9.
 Requirement number cannot begin with a 0: REQ-TEST-SWL-04. Got 04.
-Requirement REQ-TEST-SWH-6 in file /testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md has no parents.
 Invalid parent of requirement REQ-TEST-SWH-9: REQ-TEST-SYS-3 does not exist.
 Invalid parent of requirement REQ-TEST-SWH-10: REQ-TEST-SYS-3 does not exist.
 Invalid parent of requirement REQ-TEST-SWH-11: REQ-TEST-SYS-3 does not exist.
-Requirement REQ-TEST-SWH-7 in file /testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md has no parents.
 Invalid parent of requirement REQ-TEST-SWH-8: REQ-TEST-SYS-3 does not exist.
 Invalid parent of requirement REQ-TEST-SWL-2: REQ-TEST-SYS-2 is deleted.
 Invalid parent of requirement REQ-TEST-SWH-2: REQ-TEST-SYS-2 is deleted.
@@ -51,26 +48,27 @@ Invalid parent of requirement REQ-TEST-SWH-4: REQ-TEST-SYS-22 does not exist.
 Invalid parent of requirement REQ-TEST-SWH-5: REQ-TEST-SYS-3 does not exist.
 Invalid reference to deleted requirement REQ-TEST-SYS-2 in body of REQ-TEST-SWH-11.
 Invalid reference to non existent requirement REQ-TEST-SYS-22 in body of REQ-TEST-SWH-5.
-Requirement 'REQ-TEST-SWH-7' is missing attribute 'Parents'.
-Requirement 'REQ-TEST-SWH-9' is missing attribute 'Safety Impact'.
-Requirement 'REQ-TEST-SWH-6' is missing attribute 'Parents'.
-Requirement 'REQ-TEST-SWH-8' is missing attribute 'Verification'.
-Requirement 'REQ-TEST-SWH-10' has invalid value 'None.' in attribute 'VERIFICATION'. Expected (Demonstration|Unit [Tt]est|[Tt]est).
-Requirement 'REQ-TEST-SWH-10' is missing attribute 'Safety Impact'.
+Requirement 'REQ-TEST-SWH-7' is missing at least one of the attributes 'PARENTS,RATIONALE'.
+Requirement 'REQ-TEST-SWH-9' is missing attribute 'SAFETY IMPACT'.
+Requirement 'REQ-TEST-SWH-6' is missing at least one of the attributes 'PARENTS,RATIONALE'.
+Requirement 'REQ-TEST-SWH-8' is missing attribute 'VERIFICATION'.
+Requirement 'REQ-TEST-SWH-10' has invalid value 'None.' in attribute 'VERIFICATION'.
+Requirement 'REQ-TEST-SWH-10' is missing attribute 'SAFETY IMPACT'.
+Requirement 'REQ-TEST-SWH-14' has unknown attribute 'RANDOM'.
 WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)
 }
 
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
-	actual, err := RunValidate(t, "testdata/TestValidateCheckReqReferencesMarkdown", "testdata/TestValidateCheckReqReferencesMarkdown", git.RepoPath()+"/certdocs/attributes.json")
+	actual, err := RunValidate(t, "testdata/TestValidateCheckReqReferencesMarkdown", "testdata/TestValidateCheckReqReferencesMarkdown", "testdata/attributes.json")
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Invalid reference to non existent requirement REQ-TEST-SYS-22 in body of REQ-TEST-SWH-3.
 Invalid reference to deleted requirement REQ-TEST-SYS-2 in body of REQ-TEST-SWH-4.
-Requirement 'REQ-TEST-SWH-6' is missing attribute 'Verification'.
-Requirement 'REQ-TEST-SWH-8' has invalid value 'gibberish.' in attribute 'VERIFICATION'. Expected (Demonstration|Unit [Tt]est|[Tt]est).
-Requirement 'REQ-TEST-SWH-7' is missing attribute 'Safety Impact'.
+Requirement 'REQ-TEST-SWH-6' is missing attribute 'VERIFICATION'.
+Requirement 'REQ-TEST-SWH-8' has invalid value 'gibberish.' in attribute 'VERIFICATION'.
+Requirement 'REQ-TEST-SWH-7' is missing attribute 'SAFETY IMPACT'.
 WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)
