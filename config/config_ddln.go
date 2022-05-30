@@ -1,3 +1,4 @@
+// TODO(ja): Remove this, since this information should be obtained from the config file
 // Daedalean-specific configuration file, defining a bunch of constants that are company-specific. Create your own and
 // mark it with your build tag, then remove the !ddln tag below.
 //go:build ddln || !ddln

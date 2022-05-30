@@ -11,13 +11,12 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/config"
-	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/pkg/errors"
 )
 
@@ -29,9 +28,8 @@ var (
 	fAddr                    = flag.String("addr", ":8080", "The ip:port where to serve.")
 	fSince                   = flag.String("since", "", "The commit representing the start of the range.")
 	fAt                      = flag.String("at", "", "The commit representing the end of the range.")
-	fCertdocPath             = flag.String("certdoc_path", "certdocs", "Location of certification documents within the *root* of the current repository.")
-	fCodePath                = flag.String("code_path", "", "Location of code files within the current repository")
-	fSchemaPath              = flag.String("schema_path", git.RepoPath()+"/certdocs/attributes.json", "Path to json with requirement schema.")
+	// TODO(ja): Remove schemaPath  and use schema from the reqtraq configuration files.
+	fSchemaPath              = flag.String("schema_path", repos.BaseRepoPath()+"/certdocs/attributes.json", "path to json with requirement schema.")
 	fStrict                  = flag.Bool("strict", false, "Exit with error if any validation checks fail.")
 	fVerbose                 = flag.Bool("v", false, "Enable verbose logs.")
 )
@@ -57,8 +55,6 @@ command is one of:
 	validate	validates the requirement documents in the current repository
 	web		starts a local web server to facilitate interaction with reqtraq
 
-
-
 Invoking reqtraq without arguments prints a short help message.
 Run
 	reqtraq help <command>
@@ -81,7 +77,7 @@ const reportUsage = `
 Usage:
 	reqtraq report<type> [--pfx=<reportfile-prefix>] [--title_filter=<regexp>] [--id_filter=<regexp>]
 		[--body_filter=<regexp>] [--since=<start_commid>] [--at=<end_commit>]
-		[--certdoc_path=<path>] [--code_path=<path>] [--schema_path=<path_to_attributes_json>]
+		[--schema_path=<path_to_attributes_json>]
 Options:
 	--pfx: path and filename prefix for reports.
 	--title_filter: regular expression to filter by requirement title.
@@ -89,17 +85,13 @@ Options:
 	--body_filter: regular expression to filter by requirement body.
 	--since: the Git commit SHA-1 representing the start of the range.
 	--at: the commit representing the end of the range.
-	--certdoc_path: location of certification documents within the current repository
-	--code_path: location of source code within the current repository. Default: .
 	--schema_path: location of the schema json file. Default: certdocs/attributes.json`
 
 const validateUsage = `Runs the validation checks for the requirement documents in the current repository. Usage:
-	reqtraq validate [--at=<commit>] [--strict] [--certdoc_path=<path>] [--code_path=<path>] [--schema_path=<path_to_attributes_json>]
+	reqtraq validate [--at=<commit>] [--strict] [--schema_path=<path_to_attributes_json>]
 Options:
 	--at: validate this commit rather than the current working copy.
 	--strict: if any of the validation checks fail the command will exit with a non-zero code.
-	--certdoc_path: location of certification documents within the current repository. Default: certdocs
-	--code_path: location of source code within the current repository. Default: .
 	--schema_path: location of the schema json file. Default: certdocs/attributes.json`
 
 const webUsage = `Starts a local web server to facilitate interaction with reqtraq. Usage:
@@ -107,11 +99,16 @@ const webUsage = `Starts a local web server to facilitate interaction with reqtr
 Options:
 	--addr: the ip:port where to serve. Default: localhost:8080.`
 
+var reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
+
 // @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-34, REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
 func main() {
 	flag.Usage = func() {
 		fmt.Println(usage)
 	}
+
+	defer repos.CleanupTemporaryDirectories()
+
 	flag.Parse()
 
 	command := flag.Arg(0)
@@ -134,23 +131,26 @@ func main() {
 	// assign global Verbose variable after arguments have been parsed
 	linepipes.Verbose = *fVerbose
 
-	var err error
+	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
+	if err != nil {
+		log.Fatal("Error parsing `reqtraq_config.json` file in current repo:", err)
+	}
 
 	switch command {
 	case "nextid":
-		err = nextId(filename)
+		err = nextId(filename, &reqtraqConfig)
 	case "list":
-		err = list(filename)
+		err = list(filename, &reqtraqConfig)
 	case "reportdown":
-		err = reportDown()
+		err = reportDown(&reqtraqConfig)
 	case "reportup":
-		err = reportUp()
+		err = reportUp(&reqtraqConfig)
 	case "reportissues":
-		err = reportIssues()
+		err = reportIssues(&reqtraqConfig)
 	case "web":
-		err = Serve(*fAddr)
+		err = Serve(*fAddr, &reqtraqConfig)
 	case "validate":
-		err = validate()
+		err = validate(&reqtraqConfig)
 	case "help":
 		showHelp()
 		os.Exit(0)
@@ -170,42 +170,40 @@ func main() {
 // is empty. In case the commit is specified, a temporary clone of the repository is created and the path to it is
 // returned.
 // @llr REQ-TRAQ-SWL-17
-func buildGraph(commit string) (*ReqGraph, string, error) {
-	if commit == "" {
-		rg, err := CreateReqGraph(*fCertdocPath, *fCodePath, *fSchemaPath)
-		return rg, "", errors.Wrap(err, "Failed to create graph in current dir")
+func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
+	if commit != "" {
+		err := repos.OverrideRepository(repos.RemotePath(repos.BaseRepoPath()), commit)
+		if err != nil {
+			return nil, err
+		}
+
+		// Also override reqtraq configuration... as they are different repos
+		overridenConfig, err := config.ParseConfigForOverridenRepo(repos.BaseRepoPath())
+		if err != nil {
+			return nil, err
+		}
+
+		// Create the req graph with the new repository
+		rg, err := CreateReqGraph(&overridenConfig, *fSchemaPath)
+		if err != nil {
+			return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
+		}
+		return rg, nil
 	}
 
-	cwd, err := os.Getwd()
+	// TODO(ja): Remove schema path, as it is covered now by the reqtraq_config.json file
+
+	// Create the req graph with the new repository
+	rg, err := CreateReqGraph(reqtraqConfig, *fSchemaPath)
 	if err != nil {
-		return nil, "", err
+		return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
 	}
-	dir, err := git.Clone()
-	if err != nil {
-		return nil, dir, err
-	}
-	if err = git.Checkout(commit); err != nil {
-		return nil, dir, err
-	}
-	rg, err := CreateReqGraph(*fCertdocPath, *fCodePath, *fSchemaPath)
-	if err != nil {
-		return rg, dir, errors.Wrap(err, fmt.Sprintf("Failed to create graph in %s", dir))
-	}
-	if err := os.Chdir(cwd); err != nil {
-		return rg, dir, err
-	}
-	return rg, dir, nil
+	return rg, nil
 }
 
 // checkCmdLinePaths validates the command line arguments for alternative paths or files to make sure they exist
 // @llr REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
 func checkCmdLinePaths() error {
-	if _, err := os.Stat(filepath.Join(git.RepoPath(), *fCertdocPath)); os.IsNotExist(err) {
-		return err
-	}
-	if _, err := os.Stat(filepath.Join(git.RepoPath(), *fCodePath)); os.IsNotExist(err) {
-		return err
-	}
 	if _, err := os.Stat(*fSchemaPath); os.IsNotExist(err) {
 		return err
 	}
@@ -242,12 +240,17 @@ func createFilterFromCmdLine() (ReqFilter, error) {
 
 // list parses a single markdown document and lists the requirements to stdout in a short format
 // @llr REQ-TRAQ-SWL-33
-func list(filename string) error {
+func list(filename string, reqtraqConfig *config.Config) error {
 	if filename == "" {
 		return errors.New("Missing file name")
 	}
 
-	reqs, err := ParseCertdoc(filename)
+	var repoName repos.RepoName
+	var certdocConfig *config.Document
+	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); string(repoName) != "" {
+		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
+	}
+	reqs, err := ParseMarkdown(repoName, certdocConfig)
 	if err != nil {
 		return err
 	}
@@ -272,7 +275,7 @@ func list(filename string) error {
 
 // nextId parses a single markdown document for requirements and returns the next available ID
 // @llr REQ-TRAQ-SWL-34
-func nextId(filename string) error {
+func nextId(filename string, reqtraqConfig *config.Config) error {
 	var (
 		reqs          []*Req
 		greatestReqID int = 0
@@ -280,10 +283,16 @@ func nextId(filename string) error {
 	)
 
 	if filename == "" {
-		return errors.New("Missing file name")
+		return errors.New("No filename was given. Call reqtraq with a certdoc path from the root of the repository")
 	}
 
-	reqs, err := ParseCertdoc(filename)
+	var repoName repos.RepoName
+	var certdocConfig *config.Document
+	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); string(repoName) == "" {
+		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
+	}
+
+	reqs, err := ParseMarkdown(repoName, certdocConfig)
 	if err != nil {
 		return err
 	}
@@ -313,27 +322,23 @@ func nextId(filename string) error {
 // reportDown creates a requirements graph (and if necessary for comparison a previous graph) and
 // generates a top-down html report, showing the implementation for each top-level requirement
 // @llr REQ-TRAQ-SWL-35
-func reportDown() error {
+func reportDown(reqtraqConfig *config.Config) error {
 	err := checkCmdLinePaths()
 	if err != nil {
 		return err
 	}
 
-	var dir string
-	rg, dir, err := buildGraph(*fAt)
+	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
 
 	var prg *ReqGraph
 	if *fSince != "" {
-		var dir string
-		prg, dir, err = buildGraph(*fSince)
+		prg, err = buildGraph(*fSince, reqtraqConfig)
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(dir)
 	}
 
 	diffs := rg.ChangedSince(prg)
@@ -371,27 +376,23 @@ func reportDown() error {
 // reportIssues creates a requirements graph (and if necessary for comparison a previous graph) and
 // generates an issues html report, showing any validation problems
 // @llr REQ-TRAQ-SWL-36
-func reportIssues() error {
+func reportIssues(reqtraqConfig *config.Config) error {
 	err := checkCmdLinePaths()
 	if err != nil {
 		return err
 	}
 
-	var dir string
-	rg, dir, err := buildGraph(*fAt)
+	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
 
 	var prg *ReqGraph
 	if *fSince != "" {
-		var dir string
-		prg, dir, err = buildGraph(*fSince)
+		prg, err = buildGraph(*fSince, reqtraqConfig)
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(dir)
 	}
 
 	diffs := rg.ChangedSince(prg)
@@ -427,27 +428,23 @@ func reportIssues() error {
 // reportUp creates a requirements graph (and if necessary for comparison a previous graph) and
 // generates a bottom-up html report, showing the top-level requirement for each implemented function
 // @llr REQ-TRAQ-SWL-35
-func reportUp() error {
+func reportUp(reqtraqConfig *config.Config) error {
 	err := checkCmdLinePaths()
 	if err != nil {
 		return err
 	}
 
-	var dir string
-	rg, dir, err := buildGraph(*fAt)
+	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
 
 	var prg *ReqGraph
 	if *fSince != "" {
-		var dir string
-		prg, dir, err = buildGraph(*fSince)
+		prg, err = buildGraph(*fSince, reqtraqConfig)
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(dir)
 	}
 
 	diffs := rg.ChangedSince(prg)
@@ -509,14 +506,13 @@ func showHelp() {
 
 // validate builds the requirement graph, gathering any errors and prints them out. If the strict flag is set return an error.
 // @llr REQ-TRAQ-SWL-36
-func validate() error {
+func validate(reqtraqConfig *config.Config) error {
 	err := checkCmdLinePaths()
 	if err != nil {
 		return err
 	}
 
-	rg, dir, err := buildGraph(*fAt)
-	os.RemoveAll(dir)
+	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}

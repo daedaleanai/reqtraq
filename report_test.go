@@ -5,11 +5,15 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReports(t *testing.T) {
-	rg, err := CreateReqGraph(*fCertdocPath, *fCodePath, *fSchemaPath)
+	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
+
+	rg, err := CreateReqGraph(&reqtraqConfig, *fSchemaPath)
 	if err != nil {
 		t.Fatal(err)
 	}

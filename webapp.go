@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -17,13 +16,14 @@ import (
 	"github.com/alecthomas/chroma/formatters/html"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
-	"github.com/daedaleanai/reqtraq/git"
+	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/pkg/errors"
 )
 
 // Serve starts the web server listening on the supplied address:port
 // @llr REQ-TRAQ-SWL-37
-func Serve(addr string) error {
+func Serve(addr string, reqtraqConfig *config.Config) error {
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}
@@ -171,8 +171,13 @@ type indexData struct {
 // get provides the page information for a given request
 // @llr REQ-TRAQ-SWL-37
 func get(w http.ResponseWriter, r *http.Request) error {
-	repoName := git.RepoName()
+	repoName := repos.BaseRepoName()
 	reqPath := r.URL.Path
+
+	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
+	if err != nil {
+		log.Fatal("Error parsing `reqtraq_config.json` file in current repo:", err)
+	}
 
 	// root page
 	if reqPath == "/" {
@@ -184,11 +189,11 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		for n := range schema.Attributes {
 			attributes = append(attributes, n)
 		}
-		commits, err := git.AllCommits()
+		commits, err := repos.AllCommits(repoName)
 		if err != nil {
 			return err
 		}
-		return indexTemplate.Execute(w, indexData{repoName, attributes, commits})
+		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits})
 	}
 
 	// code files linked to from reports
@@ -197,7 +202,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if lexer == nil {
 			return errors.New("unknown file type")
 		}
-		filePath := path.Join(git.RepoPath(), reqPath[6:])
+		filePath := path.Join(repos.BaseRepoPath(), reqPath[6:])
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to read file")
@@ -213,11 +218,10 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	if at != "" {
 		atCommit = strings.Split(at, " ")[0]
 	}
-	rg, dir, err := buildGraph(atCommit)
+	rg, err := buildGraph(atCommit, &reqtraqConfig)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
 
 	switch {
 	case reqPath == "/report":
@@ -229,11 +233,10 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		since := r.FormValue("since_commit")
 		if since != "" {
 			sinceCommit := strings.Split(since, " ")[0]
-			prg, dir, err = buildGraph(sinceCommit)
+			prg, err = buildGraph(sinceCommit, &reqtraqConfig)
 			if err != nil {
 				return err
 			}
-			defer os.RemoveAll(dir)
 		}
 		diffs := rg.ChangedSince(prg)
 		switch r.FormValue("report-type") {

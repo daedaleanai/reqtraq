@@ -1,11 +1,11 @@
 /*
 Functions for parsing requirements out of markdown documents.
 
-The entry point is ParseCertdoc which in turns calls other functions as follows:
-- ParseCertdoc: Checks filename is valid then calls:
+The entry point is ParseMarkdown which in turns calls other functions as follows:
 - parseMarkdown: Scans file one line at a time looking for requirements that either formatted within ATX headings
                  or held in tables. For each ATX requirement or table calls:
 - parseMarkdownFragment: Depending on the type of requirement calls one of the following functions.
+
 - parseReq: Parses ATX heading requirements into the Req structure and returns it.
 - parseReqTable: Parses a requirements table and reads each row into a Req structure, returned in a slice.
 */
@@ -16,19 +16,16 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/repos"
 )
 
 var (
-	// The valid certification document filename format
-	reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
-
 	// For detecting ATX Headings, see http://spec.commonmark.org/0.27/#atx-headings
 	reATXHeading = regexp.MustCompile(`^ {0,3}(#{1,6})( +(.*)( #* *)?)?$`)
 
@@ -57,42 +54,9 @@ const (
 	Table
 )
 
-// ParseCertdoc checks the f filename is a valid certdoc name then parses raw requirements out of it.
-// @llr REQ-TRAQ-SWL-24
-func ParseCertdoc(filename string) ([]*Req, error) {
-	ext := path.Ext(filename)
-	if strings.ToLower(ext) != ".md" {
-		return nil, fmt.Errorf("Invalid extension: '%s'. Only '.md' is supported", strings.ToLower(ext))
-	}
-
-	basename := strings.TrimSuffix(path.Base(filename), ext)
-	// check if the structure of the filename is correct
-	parts := reCertdoc.FindStringSubmatch(basename)
-	if parts == nil {
-		return nil, fmt.Errorf("Invalid file name: '%s'. Certification doc file name must match %v",
-			basename, reCertdoc)
-	}
-
-	// check the document type code
-	docType := parts[3]
-	correctNumber, ok := config.DocTypeToDocId[docType]
-	if !ok {
-		return nil, fmt.Errorf("Invalid document type: '%s'. Must be one of %v",
-			docType, config.DocTypeToDocId)
-	}
-
-	// check the document type number
-	docNumber := parts[2]
-	if correctNumber != docNumber {
-		return nil, fmt.Errorf("Document number for type '%s' must be '%s', and not '%s'",
-			docType, correctNumber, docNumber)
-	}
-	return parseMarkdown(filename)
-}
-
 // parseMarkdown parses a certification document and returns the found requirements.
 // @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-4
-func parseMarkdown(f string) ([]*Req, error) {
+func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]*Req, error) {
 	var (
 		reqs []*Req
 
@@ -105,7 +69,12 @@ func parseMarkdown(f string) ([]*Req, error) {
 		inReq  ReqType      // The type of fragment being read.
 	)
 
-	r, err := os.Open(f)
+	documentPath, err := repos.PathInRepo(repoName, documentConfig.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := os.Open(documentPath)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +171,11 @@ func parseMarkdown(f string) ([]*Req, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	for reqIdx := range reqs {
+		reqs[reqIdx].RepoName = repoName
+		reqs[reqIdx].Document = documentConfig
 	}
 
 	return reqs, nil

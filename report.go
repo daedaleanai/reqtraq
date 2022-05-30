@@ -253,7 +253,7 @@ var reportTmplText = `
 {{define "TOPDOWN"}}
 	{{template "HEADER"}}
 	<h1>Top Down Tracing</h1>
-	
+
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.OrdsByPosition }}
 			<li>
@@ -293,7 +293,7 @@ var reportTmplText = `
 {{define "BOTTOMUP"}}
 	{{template "HEADER"}}
 	<h1>Bottom Up Tracing</h1>
-	
+
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
@@ -351,7 +351,7 @@ var reportTmplText = `
 {{ define "ISSUES" }}
 	{{template "HEADER"}}
 	<h1>Issues</h1>
-	
+
 	<ul>
 	{{ range .Reqs.Errors }}
 		<li>
@@ -367,7 +367,7 @@ var reportTmplText = `
 {{ define "TOPDOWNFILT"}}
 	{{template "HEADER"}}
 	<h1>Top Down Tracing</h1>
-	
+
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.OrdsByPosition }}
@@ -392,7 +392,7 @@ var reportTmplText = `
 {{ define "BOTTOMUPFILT" }}
 	{{template "HEADER" }}
 	<h1>Bottom Up Tracing</h1>
-	
+
 	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}

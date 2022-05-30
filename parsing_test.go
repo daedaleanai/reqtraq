@@ -6,7 +6,10 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"path/filepath"
 
+	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -144,12 +147,23 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 	if err != nil {
 		t.Fatal(err)
 	}
-	reqs, err := parseMarkdown(f.Name())
+
+	repoName := repos.RegisterCurrentRepository(filepath.Dir(f.Name()))
+
+	doc := config.Document {
+		Path: filepath.Base(f.Name()),
+	}
+
+	reqs, err := ParseMarkdown(repoName, &doc)
 	if expectedError == "" {
 		if err != nil {
 			t.Errorf("content: `%s`\nshould not generate error: %v", content, err)
 		} else {
 			for i, _ := range reqs {
+				// Set the document and repo name in the expected requirement
+				expectedReqs[i].Document = &doc
+				expectedReqs[i].RepoName = repoName
+
 				if !reflect.DeepEqual(reqs[i], expectedReqs[i]) {
 					t.Errorf("content: `%s`\nparsed into: %#v\ninstead of: %#v",
 						content, reqs[i], expectedReqs[i])

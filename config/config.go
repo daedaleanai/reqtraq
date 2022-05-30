@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"regexp"
 
 	"github.com/daedaleanai/reqtraq/repos"
@@ -82,7 +83,7 @@ type Config struct {
 
 func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	// Read parent config and parse that
-	configPath := fmt.Sprintf("%s/reqtraq_config.json", repoPath)
+	configPath := filepath.Join(string(repoPath), "reqtraq_config.json")
 
 	data, err := ioutil.ReadFile(configPath)
 	if err != nil {
@@ -262,6 +263,17 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 	return nil
 }
 
+func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document){
+	for repoName := range config.Repos {
+		for docIdx := range config.Repos[repoName].Documents {
+			if config.Repos[repoName].Documents[docIdx].Path == path {
+				return repoName, &config.Repos[repoName].Documents[docIdx]
+			}
+		}
+	}
+	return "", nil
+}
+
 // Top level function to parse the configuration file from the given path in the current repository
 func ParseConfig(currentRepoPath string) (Config, error) {
 	jsonConfig, err := readJsonConfigFromRepo(repos.RepoPath(currentRepoPath))
@@ -274,6 +286,35 @@ func ParseConfig(currentRepoPath string) (Config, error) {
 
 	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
 	// Find the top level config, then start parsing them
+	topLevelRepoName, topLevelConfig, err := findTopLevelConfig(repoName, jsonConfig)
+	if err != nil {
+		return Config{}, err
+	}
+
+	config := Config{
+		CommonAttributes: make(map [string]Attribute),
+		Repos: make(map [repos.RepoName]RepoConfig),
+	}
+	err = config.parseConfigFile(topLevelRepoName, topLevelConfig)
+	if err != nil {
+		return Config{}, err
+	}
+
+	return config, nil
+}
+
+// Top level function to parse the configuration file from the given path in the current repository
+func ParseConfigForOverridenRepo(currentRepoPath string) (Config, error) {
+	repoName := repos.GetRepoNameFromRemotePath(repos.RemotePath(currentRepoPath))
+	repoPath, err := repos.GetRepoPathByName(repoName)
+	if err != nil {
+		return Config{}, err
+	}
+	jsonConfig, err := readJsonConfigFromRepo(repoPath)
+	if err != nil {
+		return Config{}, err
+	}
+
 	topLevelRepoName, topLevelConfig, err := findTopLevelConfig(repoName, jsonConfig)
 	if err != nil {
 		return Config{}, err

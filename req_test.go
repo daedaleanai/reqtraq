@@ -1,12 +1,14 @@
 package main
 
 import (
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
 	"testing"
 
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,15 +118,19 @@ func TestReq_Significant(t *testing.T) {
 }
 
 func TestParsing(t *testing.T) {
+	repoName := repos.RegisterCurrentRepository(filepath.Join(repos.BaseRepoPath(), "testdata"))
+	document := config.Document {
+		Path: "valid_system_requirement/TEST-100-ORD.md",
+	}
+
 	// test a valid requirements document
-	f := "testdata/valid_system_requirement/TEST-100-ORD.md"
 	rg := &ReqGraph{Reqs: make(map[string]*Req)}
 
-	err := rg.addCertdocToGraph(f)
+	err := rg.addCertdocToGraph(repoName, &document)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
-	assert.Empty(t, rg.Errors, "Unexpected errors while parsing "+f)
+	assert.Empty(t, rg.Errors, "Unexpected errors while parsing "+document.Path)
 
 	var systemReqs [15]Req
 	for i := 0; i < 15; i++ {
@@ -137,7 +143,7 @@ func TestParsing(t *testing.T) {
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
 			Prefix:   "REQ",
 			Level:    config.SYSTEM,
-			Path:     f,
+			Path:     document.Path,
 			Position: reqPos,
 			Attributes: map[string]string{
 				"SAFETY IMPACT": "Impact " + reqNo,
@@ -154,11 +160,14 @@ func TestParsing(t *testing.T) {
 		}
 	}
 
+	document = config.Document {
+		Path: "invalid_system_requirement/NAM1-100-ORD.md",
+	}
+
 	// an invalid requirements document containing requirement naming errors
-	f = "testdata/invalid_system_requirement/NAM1-100-ORD.md"
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	err = rg.addCertdocToGraph(f)
+	err = rg.addCertdocToGraph(repoName, &document)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
@@ -168,10 +177,13 @@ func TestParsing(t *testing.T) {
 	assert.Contains(t, rg.Errors[2].Error(), "Requirement number cannot begin with a 0: REQ-NAM1-SYS-03. Got 03.")
 
 	// an invalid requirements document containing sequence errors
-	f = "testdata/invalid_system_requirement/GAP1-100-ORD.md"
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	err = rg.addCertdocToGraph(f)
+	document = config.Document {
+		Path: "invalid_system_requirement/GAP1-100-ORD.md",
+	}
+
+	err = rg.addCertdocToGraph(repoName, &document)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
@@ -180,10 +192,13 @@ func TestParsing(t *testing.T) {
 	assert.Contains(t, rg.Errors[1].Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-6: missing requirements in between. Expected ID Number 5.")
 
 	// an invalid requirements document containing duplicates
-	f = "testdata/invalid_system_requirement/DUP1-100-ORD.md"
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	err = rg.addCertdocToGraph(f)
+	document = config.Document {
+		Path: "invalid_system_requirement/DUP1-100-ORD.md",
+	}
+
+	err = rg.addCertdocToGraph(repoName, &document)
 	if err != nil {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}

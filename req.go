@@ -15,8 +15,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -25,10 +23,14 @@ import (
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/config"
-	"github.com/daedaleanai/reqtraq/git"
-	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/pkg/errors"
 )
+
+type CodeFile struct {
+	RepoName repos.RepoName
+	Path     string
+}
 
 // ReqGraph holds the complete information about a set of requirements and associated code tags.
 type ReqGraph struct {
@@ -42,37 +44,35 @@ type ReqGraph struct {
 	Errors []error
 	// Schema holds information about what a valid ReqGraph looks like e.g. valid attributes
 	Schema Schema
+	// Holds configuration of reqtraq for all associated repositories
+	ReqtraqConfig *config.Config
 }
 
 // CreateReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
 // errors found while walking the requirements, code, or resolving the graph.
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
-func CreateReqGraph(certdocsPath, codePath, schemaPath string) (*ReqGraph, error) {
-	rg := &ReqGraph{make(map[string]*Req, 0), nil, make([]error, 0), Schema{}}
+func CreateReqGraph(reqtraqConfig *config.Config, schemaPath string) (*ReqGraph, error) {
+	rg := &ReqGraph{make(map[string]*Req, 0), nil, make([]error, 0), Schema{}, reqtraqConfig}
 
-	// Walk through the documents.
-	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
-		func(fileName string, info os.FileInfo, err error) error {
-			if strings.ToLower(path.Ext(fileName)) == ".md" {
-				err = rg.addCertdocToGraph(fileName)
-				if err != nil {
-					return err
-				}
+	// For each repository, we walk through the documents and parse them
+	for repoName := range reqtraqConfig.Repos {
+		for docIdx := range reqtraqConfig.Repos[repoName].Documents {
+			doc := &reqtraqConfig.Repos[repoName].Documents[docIdx]
+			if err := rg.addCertdocToGraph(repoName, doc); err != nil {
+				return rg, errors.Wrap(err, "Failed parsing certdocs")
 			}
-			return nil
-		})
-	if err != nil {
-		return rg, errors.Wrap(err, "failed walking certdocs")
-	}
 
-	// Find and parse the code files.
-	rg.CodeTags, err = ParseCode(codePath)
-	if err != nil {
-		return rg, err
+			if codeTags, err := ParseCode(repoName, &doc.Implementation); err != nil {
+				return rg, errors.Wrap(err, "Failed parsing implementation")
+			} else {
+				rg.CodeTags = codeTags
+			}
+		}
 	}
 
 	// Load the schema, so we can use it to validate attributes
+	var err error
 	rg.Schema, err = ParseSchema(schemaPath)
 	if err != nil {
 		return rg, err
@@ -87,22 +87,23 @@ func CreateReqGraph(certdocsPath, codePath, schemaPath string) (*ReqGraph, error
 // AddReq appends the requirements list with a new requirement, after confirming that it's not already present
 // @llr REQ-TRAQ-SWL-28
 func (rg *ReqGraph) AddReq(req *Req, path string) error {
-	if v := rg.Reqs[req.ID]; v != nil {
-		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
-	}
-	req.Path = strings.TrimPrefix(path, git.RepoPath())
+       if v := rg.Reqs[req.ID]; v != nil {
+               return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
+       }
+       req.Path = strings.TrimPrefix(path, repos.BaseRepoPath())
 
-	rg.Reqs[req.ID] = req
-	return nil
+       rg.Reqs[req.ID] = req
+       return nil
 }
 
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
 // found to the regGraph
 // @llr REQ-TRAQ-SWL-27
-func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
-	reqs, err := ParseCertdoc(fileName)
-	if err != nil {
-		return fmt.Errorf("error parsing %s: %v", fileName, err)
+func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *config.Document) error {
+	var reqs []*Req
+	var err error
+	if reqs, err = ParseMarkdown(repoName, documentConfig); err != nil {
+		return fmt.Errorf("Error parsing `%s` in repo `%s`: %v", documentConfig.Path, repoName, err)
 	}
 	if len(reqs) == 0 {
 		return nil
@@ -119,10 +120,10 @@ func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
 	for i, r := range reqs {
 		var newErrs []error
 		if r.Prefix == "REQ" {
-			newErrs = r.checkID(fileName, nextReqId, isReqPresent)
+			newErrs = r.checkID(documentConfig.Path, nextReqId, isReqPresent)
 			nextReqId = r.IDNumber + 1
 		} else if r.Prefix == "ASM" {
-			newErrs = r.checkID(fileName, nextAsmId, isAsmPresent)
+			newErrs = r.checkID(documentConfig.Path, nextAsmId, isAsmPresent)
 			nextAsmId = r.IDNumber + 1
 		}
 		if len(newErrs) != 0 {
@@ -130,7 +131,9 @@ func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
 			continue
 		}
 		r.Position = i
-		rg.AddReq(r, fileName)
+		r.Repo = repoName
+		r.Path = documentConfig.Path
+		rg.Reqs[r.ID] = r
 	}
 	return nil
 }
@@ -224,6 +227,7 @@ type Req struct {
 	IDNumber int                     // e.g. 1
 	Level    config.RequirementLevel // e.g. LOW
 	// Path identifies the file this was found in relative to repo root.
+	Repo      repos.RepoName
 	Path      string
 	ParentIds []string
 	// Parents holds the parent requirements.
@@ -237,40 +241,17 @@ type Req struct {
 	// Attributes of the requirement by uppercase name.
 	Attributes map[string]string
 	Position   int
+	// Link back to the document where the requirement is defined and the name of the repository
+	Document   *config.Document
+	RepoName   repos.RepoName
 }
 
 // Changelists generates a list of Phabicator revisions that have affected a requirement
-// TODO: except it doesn't really, it actually returns a list of revisions which have
-//   affected the file(s) that this requirement is referenced in, whether the associated
-//   function is affected or not. which is basically useless.
 // @llr REQ-TRAQ-SWL-22
 func (r *Req) Changelists() map[string]string {
-	var reDiffRev = regexp.MustCompile(`Differential Revision:\s(.*)\s`)
-
+	// TODO(ja): Actually make this return useful information. For now return an empty list
+	// To make this work for multiple repositories we need to actually run this against every repo
 	m := map[string]string{}
-	if r.Level == config.LOW {
-		for _, c := range r.Tags {
-			// TODO: this should go through the git package
-			res, err := linepipes.All(linepipes.Run("git", "log", c.Path))
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			matches := reDiffRev.FindAllStringSubmatch(res, -1)
-			if len(matches) < 1 {
-				log.Printf("Could not extract differential revision for file: %s", c.Path)
-				log.Println("Newly added?")
-			}
-
-			for _, match := range matches {
-				if len(match) != 2 {
-					log.Fatal("Count not extract changelist substring for filepath: ", c.Path)
-				}
-				fields := strings.Split(match[1], "/")
-				m[fields[len(fields)-1]] = match[1]
-			}
-		}
-	}
 	return m
 }
 
@@ -331,7 +312,7 @@ func (r *Req) checkAttributes(as Schema) []error {
 	return errs
 }
 
-// checkID validates each part of the requirement ID
+// checkID verifies that the requirement is not duplicated
 // @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26
 func (r *Req) checkID(fileName string, expectedIDNumber int, isReqPresent []bool) []error {
 	// extract file name without extension
