@@ -1,0 +1,27 @@
+{
+    "parentRepository": "projectA",
+    "documents": [
+        {
+            "path": "TEST-138-SDD.md",
+            "requirements": "REQ-TEST-SWL-(\\d+)",
+            "attributes": [
+                {
+                    "name": "Parents",
+                    "required": "any",
+                    "value": "REQ-TEST-SWH-(\\d+)"
+                }
+            ],
+            "implementation": {
+                "code": {
+                    "paths": ["code"],
+                    "matchingPattern": ".*\\.(cc|hh)$",
+                    "ignoredPatterns": [".*\\_ignored.(cc|hh)$"]
+                },
+                "tests": {
+                    "paths": ["test"],
+                    "matchingPattern": ".*\\_test.(cc|hh)$"
+                }
+            }
+        }
+    ]
+}
