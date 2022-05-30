@@ -1,0 +1,37 @@
+{
+    "commonAttributes": [
+        {
+            "name": "Rationale",
+            "required": "any"
+        },
+        {
+            "name": "Verification",
+            "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
+        }
+    ],
+    "documents": [
+        {
+            "path": "certdocs/TRAQ-100-ORD.md",
+            "requirements": "REQ-TRAQ-SYS-(\\d+)"
+        },
+        {
+            "path": "certdocs/TRAQ-137-SRD.md",
+            "requirements": "REQ-TRAQ-SWH-(\\d+)"
+        },
+        {
+            "path": "certdocs/TRAQ-138-SRD.md",
+            "requirements": "REQ-TRAQ-SWL-(\\d+)",
+            "implementation": {
+                "code": {
+                    "paths": ["."],
+                    "matchingPattern": ".*\\.go$",
+                    "ignoredPatterns": [".*\\_test.go$"]
+                },
+                "tests": {
+                    "paths": ["."],
+                    "matchingPattern": ".*\\_test.go$"
+                }
+            }
+        }
+    ]
+}

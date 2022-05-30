@@ -1,0 +1,32 @@
+{
+    "childrenRepositories": [
+        "projectB"
+    ],
+    "commonAttributes": [
+        {
+            "name": "Rationale",
+            "required": "any"
+        },
+        {
+            "name": "Verification",
+            "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
+        }
+    ],
+    "documents": [
+        {
+            "path": "TEST-100-ORD.md",
+            "requirements": "REQ-TEST-SYS-(\\d+)"
+        },
+        {
+            "path": "TEST-137-SRD.md",
+            "requirements": "REQ-TEST-SWH-(\\d+)",
+            "attributes": [
+                {
+                    "name": "Parents",
+                    "required": "any",
+                    "value": "REQ-TEST-SYS-(\\d+)"
+                }
+            ]
+        }
+    ]
+}
