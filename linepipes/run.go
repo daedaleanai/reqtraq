@@ -1,3 +1,7 @@
+/*
+Wrapper functions for the golang command interface.
+*/
+
 package linepipes
 
 import (
@@ -15,10 +19,12 @@ import (
 // global flag controlling debug output
 var Verbose = false
 
+// @llr REQ-TRAQ-SWL-48
 func Run(prog string, args ...string) (lines chan string, errs chan error) {
 	return RunWithInput(prog, os.Stdin, args...)
 }
 
+// @llr REQ-TRAQ-SWL-48
 func RunWithInput(prog string, input io.Reader, args ...string) (lines chan string, errs chan error) {
 	lines = make(chan string)
 	errs = make(chan error, 1)
@@ -60,26 +66,7 @@ func RunWithInput(prog string, input io.Reader, args ...string) (lines chan stri
 	return lines, errs
 }
 
-func writeLine(file *os.File, line string) error {
-	if _, err := file.WriteString(line); err != nil {
-		return err
-	}
-	if _, err := file.Write([]byte{'\n'}); err != nil {
-		return err
-	}
-	return nil
-}
-
-func Out(lines <-chan string, errors <-chan error) error {
-	if err := Redirect(lines, os.Stdout); err != nil {
-		return err
-	}
-	if err, _ := <-errors; err != nil {
-		return err
-	}
-	return nil
-}
-
+// @llr REQ-TRAQ-SWL-48
 func Single(lines <-chan string, errors <-chan error) (string, error) {
 	var s string
 	var count int
@@ -96,28 +83,7 @@ func Single(lines <-chan string, errors <-chan error) (string, error) {
 	return s, nil
 }
 
-func Last(lines <-chan string, errors <-chan error) (string, error) {
-	var s string
-	for v := range lines {
-		if v != "" {
-			s = v
-		}
-	}
-	if err, _ := <-errors; err != nil {
-		return s, err
-	}
-	return s, nil
-}
-
-func Redirect(lines <-chan string, file *os.File) error {
-	for line := range lines {
-		if err := writeLine(file, line); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
+// @llr REQ-TRAQ-SWL-48
 func All(lines <-chan string, errors <-chan error) (string, error) {
 	var buffer bytes.Buffer
 	for line := range lines {
@@ -133,6 +99,7 @@ func All(lines <-chan string, errors <-chan error) (string, error) {
 // unsafeCharRe contains the list of safe shell chars from Python's shlex.quote implementation.
 var unsafeCharRe = regexp.MustCompile(`[^\w@%+=:,./-]`)
 
+// @llr REQ-TRAQ-SWL-48
 func EscapeArg(arg string) string {
 	if unsafeCharRe.MatchString(arg) {
 		return fmt.Sprintf("'%s'", strings.Replace(arg, `'`, `'"'"'`, -1))
@@ -141,6 +108,7 @@ func EscapeArg(arg string) string {
 }
 
 // EscapeCommand formats the command such that it can be copy/pasted to be run.
+// @llr REQ-TRAQ-SWL-48
 func EscapeCommand(prog string, args ...string) string {
 	res := make([]string, 0, len(args)+1)
 	res = append(res, EscapeArg(prog))

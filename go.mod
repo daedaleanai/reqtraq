@@ -1,6 +1,6 @@
 module github.com/daedaleanai/reqtraq
 
-go 1.17
+go 1.8
 
 require (
 	github.com/alecthomas/chroma v0.10.0

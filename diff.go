@@ -1,3 +1,7 @@
+/*
+Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.
+*/
+
 package main
 
 import (
@@ -7,9 +11,9 @@ import (
 	"unicode"
 )
 
-// ChangedSince produces a report of how requirements have changed between prg and this reqGraph
-// @llr REQ-TRAQ-SWL-8
-func (rg reqGraph) ChangedSince(prg *reqGraph) (diffs map[string][]string) {
+// ChangedSince produces a report of how requirements have changed between two requirement graphs
+// @llr REQ-TRAQ-SWL-18
+func (rg ReqGraph) ChangedSince(prg *ReqGraph) (diffs map[string][]string) {
 	if prg == nil {
 		return
 	}
@@ -27,24 +31,20 @@ func (rg reqGraph) ChangedSince(prg *reqGraph) (diffs map[string][]string) {
 	sort.Strings(kk)
 	diffs = make(map[string][]string)
 	for _, k := range kk {
-		if dd := rg.Reqs[k].ChangedSince(prg.Reqs[k]); dd != nil {
+		if dd := rg.Reqs[k].changedSince(prg.Reqs[k]); dd != nil {
 			diffs[k] = dd
 		}
 	}
 	if len(diffs) == 0 {
 		diffs = nil
 	}
+	fmt.Printf("%v\n", diffs)
 	return
 }
 
-func onlyLetters(s string) string {
-	return strings.ToLower(strings.TrimFunc(s, func(r rune) bool { return !unicode.IsLetter(r) }))
-}
-
-// ChangedSince returns a set of messages that describe how r has changed
-// from a previous version pr.
-// @llr REQ-TRAQ-SWL-8
-func (r *Req) ChangedSince(pr *Req) (diffs []string) {
+// changedSince returns a set of messages that describe how a requirement has changed from a previous version.
+// @llr REQ-TRAQ-SWL-18, REQ-TRAQ-SWL-40
+func (r *Req) changedSince(pr *Req) (diffs []string) {
 	if r == nil && pr == nil {
 		return nil
 	}
@@ -104,6 +104,10 @@ func (r *Req) ChangedSince(pr *Req) (diffs []string) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
+		if k == "PARENTS" {
+			// done later
+			continue
+		}
 		v, ok := r.Attributes[k]
 		pv, pok := pr.Attributes[k]
 		// at least one of them is there
@@ -136,4 +140,10 @@ func (r *Req) ChangedSince(pr *Req) (diffs []string) {
 	}
 
 	return
+}
+
+// onlyLetters trims non letter characters from a string to enable meaningful comparison of requirements
+// @llr REQ-TRAQ-SWL-40
+func onlyLetters(s string) string {
+	return strings.ToLower(strings.TrimFunc(s, func(r rune) bool { return !unicode.IsLetter(r) }))
 }

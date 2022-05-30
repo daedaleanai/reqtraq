@@ -10,13 +10,13 @@ uint8_t numberOfSegments = 0;
 PcieSegment segment;
 }  // namespace
 
-// @llr REQ-TEST-SWH-11
+// @llr REQ-PROJ-SWH-11
 uint8_t System::getNumberOfSegments() {
     return numberOfSegments;
 }
 
 // This method does stuff.
-// @llr REQ-TEST-SWL-12
+// @llr REQ-PROJ-SWL-12
 const PcieSegment *System::getSegment(uint8_t i) {
     if (numberOfSegments == 1) {
         return &segment;
@@ -25,7 +25,7 @@ const PcieSegment *System::getSegment(uint8_t i) {
 }
 
 // This method does stuff also.
-// @llr REQ-TEST-SWL-13
+// @llr REQ-PROJ-SWL-13
 // @xlr R-1
 void enumerateObjects() {
     io::printf("[system] Scanning for objects\n");

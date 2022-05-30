@@ -1,10 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -50,7 +46,6 @@ func LookFor(t *testing.T, sourceFile string, tagsPerFile map[string][]*Code, ex
 func TestTagCode(t *testing.T) {
 	tags, err := tagCode([]string{"testdata/cproject1/a.c"})
 	if !assert.NoError(t, err) {
-		fmt.Println(tags)
 		return
 	}
 	assert.Equal(t, 1, len(tags))
@@ -70,52 +65,18 @@ func TestTagCode(t *testing.T) {
 }
 
 func TestFileCodeFiles(t *testing.T) {
-	// Create a fake repo directory.
-	tempDir, err := ioutil.TempDir("", "")
+	codeFiles, err := findCodeFiles("testdata/cproject1")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	// Add some files in testdata/ which should be ignored.
-	err = os.Mkdir(filepath.Join(tempDir, "testdata"), 0700)
-	if !assert.NoError(t, err) {
-		return
-	}
-	b, err := ioutil.ReadFile("testdata/cproject1/a.c")
-	if !assert.NoError(t, err) {
-		return
-	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "testdata", "a.c"), b, 0600)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	// Add a file which should be discovered.
-	err = ioutil.WriteFile(filepath.Join(tempDir, "a.c"), b, 0600)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	var codeFiles []string
-	codeFiles, err = findCodeFiles(tempDir, ".")
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	assert.Equal(t, []string{"a.c"}, codeFiles)
+	assert.Equal(t, []string{"testdata/cproject1/a.c"}, codeFiles)
 }
 
-func TestReqGraph_ParseComments(t *testing.T) {
-	rg := reqGraph{Reqs: make(map[string]*Req, 0)}
-	rg.CodeFiles = []string{"testdata/cproject1/a.c"}
-
+func TestReqGraph_ParseCode(t *testing.T) {
+	rg := ReqGraph{Reqs: make(map[string]*Req, 0)}
 	var err error
-	rg.CodeTags, err = tagCode(rg.CodeFiles)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	err = rg.parseComments()
+	rg.CodeTags, err = ParseCode("testdata/cproject1")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -124,22 +85,22 @@ func TestReqGraph_ParseComments(t *testing.T) {
 		{"enumerateObjects",
 			30,
 			`// This method does stuff also.
-// @llr REQ-PROJ-SWL-13
+// @llr REQ-TEST-SWL-13
 // @xlr R-1`},
 		{"getSegment",
 			20,
 			`// This method does stuff.
-// @llr REQ-PROJ-SWL-12`},
+// @llr REQ-TEST-SWL-12`},
 		{"getNumberOfSegments",
 			14,
-			`// @llr REQ-PROJ-SWH-11`},
+			`// @llr REQ-TEST-SWH-11`},
 	}
 	LookFor(t, "testdata/cproject1/a.c", rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-PROJ-SWL-13"] = &Req{Level: config.LOW}
-	rg.Reqs["REQ-PROJ-SWH-11"] = &Req{Level: config.HIGH}
-	errs := SortErrs(rg.resolveCodeTags(nil))
-	assert.Equal(t, 2, len(errs))
-	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getNumberOfSegments: REQ-PROJ-SWH-11 must be a Software Low-Level Requirement.", errs[0])
-	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getSegment: REQ-PROJ-SWL-12 does not exist.", errs[1])
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH}
+	errs := SortErrs(rg.resolve())
+	assert.Equal(t, 4, len(errs))
+	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getNumberOfSegments: REQ-TEST-SWH-11 must be a Low-Level Requirement.", errs[0])
+	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getSegment: REQ-TEST-SWL-12 does not exist.", errs[1])
 }

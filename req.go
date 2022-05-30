@@ -1,7 +1,18 @@
+/*
+   Functions related to the handling of requirements and code tags.
+
+   The following types and associated methods are implemented:
+     ReqGraph - The complete information about a set of requirements and associated code tags.
+     Req - A requirement node in the graph of requirements.
+     Schema - The information held in the schema file defining the rules that the requirement graph must follow.
+     byPosition, byIDNumber and ByFilenameTag - Provides sort functions to order requirements or code,
+     ReqFilter - The different parameters used to filter the requirements set.
+*/
+
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -19,29 +30,186 @@ import (
 	"github.com/pkg/errors"
 )
 
-type RequirementStatus int
-
-const (
-	NOT_STARTED RequirementStatus = iota // req does not have any children, unless code level
-	STARTED                              // req does have children but incomplete
-	COMPLETED                            // graph complete
-)
-
-var reqStatusToString = map[RequirementStatus]string{
-	NOT_STARTED: "NOT STARTED",
-	STARTED:     "STARTED",
-	COMPLETED:   "COMPLETED",
+// ReqGraph holds the complete information about a set of requirements and associated code tags.
+type ReqGraph struct {
+	// Reqs contains the requirements by ID.
+	Reqs map[string]*Req
+	// CodeTags contains the source code functions per file.
+	// The keys are paths relative to the git repo path.
+	CodeTags map[string][]*Code
+	// Errors which have been found while analyzing the graph.
+	// This is extended in multiple places.
+	Errors []error
+	// Schema holds information about what a valid ReqGraph looks like e.g. valid attributes
+	Schema Schema
 }
 
-func (rs RequirementStatus) String() string { return reqStatusToString[rs] }
+// CreateReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
+// errors found while walking the requirements, code, or resolving the graph.
+// The separate returned error indicates if reading the certdocs and code failed.
+// @llr REQ-TRAQ-SWL-1
+func CreateReqGraph(certdocsPath, codePath, schemaPath string) (*ReqGraph, error) {
+	rg := &ReqGraph{make(map[string]*Req, 0), nil, make([]error, 0), Schema{}}
 
-var (
-	reDiffRev = regexp.MustCompile(`Differential Revision:\s(.*)\s`)
-)
+	// Walk through the documents.
+	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
+		func(fileName string, info os.FileInfo, err error) error {
+			if strings.ToLower(path.Ext(fileName)) == ".md" {
+				err = rg.addCertdocToGraph(fileName)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	if err != nil {
+		return rg, errors.Wrap(err, "failed walking certdocs")
+	}
 
-// Req represenents a Requirement Node in the graph of Requirements.
-// The Attributes map has potential elements:
-//  rationale safety_impact verification urgent important mode provenance
+	// Find and parse the code files.
+	rg.CodeTags, err = ParseCode(codePath)
+	if err != nil {
+		return rg, err
+	}
+
+	// Load the schema, so we can use it to validate attributes
+	rg.Schema, err = ParseSchema(schemaPath)
+
+	// Call resolve to check links between requirements and code
+	rg.Errors = append(rg.Errors, rg.resolve()...)
+
+	return rg, nil
+}
+
+// AddReq appends the requirements list with a new requirement, after confirming that it's not already present
+// @llr REQ-TRAQ-SWL-28
+func (rg *ReqGraph) AddReq(req *Req, path string) error {
+	if v := rg.Reqs[req.ID]; v != nil {
+		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
+	}
+	req.Path = strings.TrimPrefix(path, git.RepoPath())
+
+	rg.Reqs[req.ID] = req
+	return nil
+}
+
+// addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
+// found to the regGraph
+// @llr REQ-TRAQ-SWL-27
+func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
+	reqs, err := ParseCertdoc(fileName)
+	if err != nil {
+		return fmt.Errorf("error parsing %s: %v", fileName, err)
+	}
+
+	// sort the requirements so we can check the sequence
+	sort.Sort(byIDNumber(reqs))
+
+	isReqPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
+	nextId := 1
+
+	for i, r := range reqs {
+		errs2 := r.checkID(fileName, nextId, isReqPresent)
+		nextId = r.IDNumber + 1
+		if len(errs2) != 0 {
+			rg.Errors = append(rg.Errors, errs2...)
+			continue
+		}
+		r.Position = i
+		rg.AddReq(r, fileName)
+	}
+	return nil
+}
+
+// resolve walks the requirements graph and resolves the links between different levels of requirements
+// and with code tags. References to requirements within requirements text is checked as well as validity
+// of attributes against the schema. Any errors encountered such as links to non-existent requirements
+// are returned
+// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11
+func (rg *ReqGraph) resolve() []error {
+	var reLLRReference = regexp.MustCompile(fmt.Sprintf(`\s@llr (%s)\z`, reReqIdStr))
+
+	errs := make([]error, 0)
+
+	// Walk the requirements, resolving links and looking for errors
+	for _, req := range rg.Reqs {
+		// Check for requirements with no parents
+		if len(req.ParentIds) == 0 && !(req.Level == config.SYSTEM || req.IsDeleted()) {
+			errs = append(errs, errors.New("Requirement "+req.ID+" in file "+req.Path+" has no parents."))
+		}
+		// Validate parent links of requirements
+		for _, parentID := range req.ParentIds {
+			parent := rg.Reqs[parentID]
+			if parent != nil {
+				if parent.IsDeleted() && !req.IsDeleted() {
+					errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" is deleted."))
+				}
+				parent.Children = append(parent.Children, req)
+				req.Parents = append(req.Parents, parent)
+			} else {
+				errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" does not exist."))
+			}
+		}
+		// Validate references to requirements in body text
+		matches := ReReqID.FindAllStringSubmatchIndex(req.Body, -1)
+		for _, ids := range matches {
+			reqID := req.Body[ids[0]:ids[1]]
+			v, reqFound := rg.Reqs[reqID]
+			if !reqFound {
+				errs = append(errs, fmt.Errorf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID))
+			} else if v.IsDeleted() {
+				errs = append(errs, fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID))
+			}
+		}
+		// Validate attributes
+		errs = append(errs, req.checkAttributes(rg.Schema)...)
+	}
+
+	// Walk the code tags, resolving links and looking for errors
+	for _, tags := range rg.CodeTags {
+		for i := range tags {
+			code := tags[i]
+			code.ParentIds = make([]string, 0)
+			for _, s := range code.Comment {
+				if parts := reLLRReference.FindStringSubmatch(s); len(parts) > 0 {
+					code.ParentIds = append(code.ParentIds, parts[1])
+				}
+			}
+			if len(code.ParentIds) == 0 {
+				errs = append(errs, errors.New("Function "+code.Tag+" in file "+code.Path+" has no parents."))
+			}
+			for _, parentID := range code.ParentIds {
+				parent := rg.Reqs[parentID]
+				if parent != nil {
+					if parent.IsDeleted() {
+						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" is deleted."))
+					}
+					if parent.Level == config.LOW {
+						parent.Tags = append(parent.Tags, code)
+						code.Parents = append(code.Parents, parent)
+					} else {
+						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" must be a Low-Level Requirement."))
+					}
+				} else {
+					errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" does not exist."))
+				}
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return errs
+	}
+
+	for _, req := range rg.Reqs {
+		sort.Sort(byPosition(req.Parents))
+		sort.Sort(byPosition(req.Children))
+	}
+
+	return nil
+}
+
+// Req represents a requirement node in the graph of requirements.
 type Req struct {
 	ID       string
 	IDNumber int
@@ -60,32 +228,58 @@ type Req struct {
 	// Attributes of the requirement by uppercase name.
 	Attributes map[string]string
 	Position   int
-	Status     RequirementStatus
 }
 
-// Returns the requirement type for the given requirement, which is one of SYS, SWH, SWL, HWH, HWL or the empty string if
-// the request is not initialized.
-func (r *Req) ReqType() string {
-	parts := ReReqID.FindStringSubmatch(r.ID)
-	if len(parts) == 0 {
-		return ""
+// Changelists generates a list of Phabicator revisions that have affected a requirement
+// TODO: except it doesn't really, it actually returns a list of revisions which have
+//   affected the file(s) that this requirement is referenced in, whether the associated
+//   function is affected or not. which is basically useless.
+// @llr REQ-TRAQ-SWL-22
+func (r *Req) Changelists() map[string]string {
+	var reDiffRev = regexp.MustCompile(`Differential Revision:\s(.*)\s`)
+
+	m := map[string]string{}
+	if r.Level == config.LOW {
+		for _, c := range r.Tags {
+			// TODO: this should go through the git package
+			res, err := linepipes.All(linepipes.Run("git", "log", c.Path))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			matches := reDiffRev.FindAllStringSubmatch(res, -1)
+			if len(matches) < 1 {
+				log.Printf("Could not extract differential revision for file: %s", c.Path)
+				log.Println("Newly added?")
+			}
+
+			for _, match := range matches {
+				if len(match) != 2 {
+					log.Fatal("Count not extract changelist substring for filepath: ", c.Path)
+				}
+				fields := strings.Split(match[1], "/")
+				m[fields[len(fields)-1]] = match[1]
+			}
+		}
 	}
-	return parts[2]
+	return m
 }
 
 // IsDeleted checks if the requirement title starts with 'DELETED'
-// @llr REQ-TRAQ-SWL-17
+// @llr REQ-TRAQ-SWL-23
 func (r *Req) IsDeleted() bool {
 	return strings.HasPrefix(r.Title, "DELETED")
 }
 
-func (r *Req) CheckAttributes(as []map[string]string) []error {
+// checkAttributes validates the requirement attributes against the provided schema, returns a list of errors found
+// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-29
+func (r *Req) checkAttributes(as Schema) []error {
 	var errs []error
 	if r.IsDeleted() {
 		return errs
 	}
 	// Iterate the attribute specs.
-	for _, a := range as {
+	for _, a := range as.Attributes {
 		for k, v := range a {
 			switch k {
 			case "name":
@@ -105,6 +299,7 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 					if !expr.MatchString(r.Attributes[aName]) {
 						errs = append(errs, fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'. Expected %s.", r.ID, r.Attributes[aName], aName, v))
 					}
+					// TODO check for references to missing or deleted requirements in attribute text
 				}
 			}
 		}
@@ -112,379 +307,9 @@ func (r *Req) CheckAttributes(as []map[string]string) []error {
 	return errs
 }
 
-// @llr REQ-TRAQ-SWL-9
-func (r *Req) Changelists() map[string]string {
-	m := map[string]string{}
-	if r.Level == config.LOW {
-		var paths []string
-		for _, c := range r.Children {
-			paths = append(paths, c.Path)
-		}
-		urls := changelistUrlsForFilepaths(paths)
-		for _, url := range urls {
-			fields := strings.Split(url, "/")
-			m[fields[len(fields)-1]] = url
-		}
-	}
-	return m
-}
-
-func changelistUrlsForFilepaths(filepaths []string) []string {
-	var urls []string
-	for _, path := range filepaths {
-		urls = append(urls, changelistUrlsForFilepath(path)...)
-	}
-	return urls
-}
-
-func changelistUrlsForFilepath(filepath string) []string {
-	res, err := linepipes.All(linepipes.Run("git", "-C", path.Dir(filepath), "log", filepath))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	matches := reDiffRev.FindAllStringSubmatch(res, -1)
-	if len(matches) < 1 {
-		log.Printf("Could not extract differential revision for file: %s", filepath)
-		log.Println("Newly added?")
-	}
-
-	var urls []string
-	for _, m := range matches {
-		if len(m) != 2 {
-			log.Fatal("Count not extract changelist substring for filepath: ", filepath)
-		}
-		urls = append(urls, m[1])
-	}
-
-	return urls
-}
-
-// Code represents a Code Node in the graph of Requirements.
-type Code struct {
-	// Path is the code file this was found in relative to repo root.
-	Path string
-	// Tag is the name of the function.
-	Tag string
-	// Line number where the function starts.
-	Line int
-	// The comment above the function.
-	Comment []string
-	// FileHash is the sha1 of the contents.
-	FileHash  string
-	ParentIds []string
-	Parents   []*Req
-}
-
-var reLLRReference = regexp.MustCompile(fmt.Sprintf(`\s@llr (%s)\z`, reReqIdStr))
-
-func (code *Code) URL() string {
-	return fmt.Sprintf("/code/%s#L%d", code.Path, code.CommentLine())
-}
-
-func (code *Code) CommentLine() int {
-	return code.Line - len(code.Comment)
-}
-
-func (code *Code) ReqIDsInComment() []string {
-	refs := make([]string, 0)
-	for _, s := range code.Comment {
-		if parts := reLLRReference.FindStringSubmatch(s); len(parts) > 0 {
-			refs = append(refs, parts[1])
-		}
-	}
-	return refs
-}
-
-// A ReqGraph maps IDs and code files paths to Req structures.
-// @llr REQ-TRAQ-SWL-15
-type reqGraph struct {
-	// Reqs contains the requirements by ID.
-	Reqs map[string]*Req
-	// CodeTags contains the source code functions per file.
-	// The keys are paths relative to the git repo path.
-	CodeTags map[string][]*Code
-	// CodeFiles are the paths to the discovered code files,
-	// relative to the git repo path.
-	CodeFiles []string
-	// Errors which have been found while analyzing the graph.
-	// This is extended in multiple places.
-	Errors []error
-}
-
-// CreateReqGraph returns a graph resulting from parsing the certdocs,
-// containing errors found while walking the requirements, code, or resolving
-// the graph.
-// The separate returned error specifies how reading the certdocs and code
-// failed, if it did.
-func CreateReqGraph(certdocsPath, codePath string) (*reqGraph, error) {
-	rg := &reqGraph{make(map[string]*Req, 0), nil, make([]string, 0), make([]error, 0)}
-
-	filesListFile, err := ioutil.TempFile("", "list-*")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.Remove(filesListFile.Name())
-
-	// Walk through the documents.
-	err = filepath.Walk(filepath.Join(git.RepoPath(), certdocsPath),
-		func(fileName string, info os.FileInfo, err error) error {
-			switch strings.ToLower(path.Ext(fileName)) {
-			case ".md":
-				parseErrs, err := parseCertdocToGraph(fileName, rg)
-				if err != nil {
-					return err
-				}
-				rg.Errors = append(rg.Errors, parseErrs...)
-			case ".go":
-				if _, err := filesListFile.WriteString(fileName); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-	if err != nil {
-		return rg, errors.Wrap(err, "failed walking certdocs")
-	}
-
-	// Find the code files.
-	rg.CodeFiles, err = findCodeFiles(git.RepoPath(), codePath)
-	if err != nil {
-		return rg, errors.Wrap(err, "failed to find code files")
-	}
-
-	// Discover the code procedures.
-	rg.CodeTags, err = tagCode(rg.CodeFiles)
-	if err != nil {
-		return rg, errors.Wrap(err, "failed to tag code")
-	}
-
-	// Annotate the code procedures with the associated comment.
-	if err := rg.parseComments(); err != nil {
-		return rg, errors.Wrap(err, "failed walking code")
-	}
-
-	rg.Errors = append(rg.Errors, rg.Resolve()...)
-
-	return rg, nil
-}
-
-// relativePathToRepo returns filePath relative to repoPath by
-// removing the path to the repository from filePath
-func relativePathToRepo(filePath, repoPath string) (string, error) {
-	if filePath[:1] != "/" {
-		// Already a relative path.
-		return filePath, nil
-	}
-	fields := strings.SplitN(filePath, repoPath, 2)
-	if len(fields) < 2 {
-		return "", fmt.Errorf("malformed code file path: %s not in %s", filePath, repoPath)
-	}
-	res := fields[1]
-	if res[:1] == "/" {
-		res = res[1:]
-	}
-	return res, nil
-}
-
-func (rg *reqGraph) AddReq(req *Req, path string) error {
-	if v := rg.Reqs[req.ID]; v != nil {
-		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
-	}
-	req.Path = strings.TrimPrefix(path, git.RepoPath())
-
-	rg.Reqs[req.ID] = req
-	return nil
-}
-
-func (rg *reqGraph) CheckAttributes(reportConf JsonConf, filter *ReqFilter, diffs map[string][]string) ([]error, error) {
-	var errs []error
-	for _, req := range rg.Reqs {
-		if req.Matches(filter, diffs) {
-			errs = append(errs, req.CheckAttributes(reportConf.Attributes)...)
-		}
-	}
-	return errs, nil
-}
-
-// @llr REQ-TRAQ-SWL-4
-func (rg *reqGraph) checkReqReferences(certdocPath string) ([]error, error) {
-	reParents := regexp.MustCompile(`Parents: REQ-`)
-
-	errs := make([]error, 0)
-
-	err := filepath.Walk(filepath.Join(git.RepoPath(), certdocPath),
-		func(fileName string, info os.FileInfo, err error) error {
-			r, err := os.Open(fileName)
-			if err != nil {
-				return err
-			}
-
-			scan := bufio.NewScanner(r)
-			for lno := 1; scan.Scan(); lno++ {
-				line := scan.Text()
-				// parents have alreay been checked in Resolve(), and we don't throw an eror at the place where the deleted req is defined
-				discardRefToDeleted := reParents.MatchString(line) || ReReqDeleted.MatchString(line)
-				parmatch := ReReqID.FindAllStringSubmatchIndex(line, -1)
-				for _, ids := range parmatch {
-					reqID := line[ids[0]:ids[1]]
-					v, reqFound := rg.Reqs[reqID]
-					if !reqFound {
-						errs = append(errs, fmt.Errorf("Invalid reference to inexistent requirement %s in %s:%d", reqID, fileName, lno))
-					} else if v.IsDeleted() && !discardRefToDeleted {
-						errs = append(errs, fmt.Errorf("Invalid reference to deleted requirement %s in %s:%d", reqID, fileName, lno))
-					}
-				}
-			}
-			return nil
-		})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return errs, nil
-}
-
-// @llr REQ-TRAQ-SWL-17
-func (rg *reqGraph) Resolve() []error {
-	errs := make([]error, 0)
-
-	for _, req := range rg.Reqs {
-		if len(req.ParentIds) == 0 && !(req.Level == config.SYSTEM || req.IsDeleted()) {
-			errs = append(errs, errors.New("Requirement "+req.ID+" in file "+req.Path+" has no parents."))
-		}
-		for _, parentID := range req.ParentIds {
-			parent := rg.Reqs[parentID]
-			if parent != nil {
-				if parent.IsDeleted() && !req.IsDeleted() {
-					errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" is deleted."))
-				}
-				parent.Children = append(parent.Children, req)
-				req.Parents = append(req.Parents, parent)
-			} else {
-				errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" does not exist."))
-			}
-		}
-	}
-
-	errs = rg.resolveCodeTags(errs)
-	if len(errs) > 0 {
-		return errs
-	}
-
-	for _, req := range rg.Reqs {
-		sort.Sort(byPosition(req.Parents))
-		sort.Sort(byPosition(req.Children))
-	}
-
-	return nil
-}
-
-func (rg *reqGraph) resolveCodeTags(errs []error) []error {
-	for _, tags := range rg.CodeTags {
-		for i := range tags {
-			code := tags[i]
-			code.ParentIds = code.ReqIDsInComment()
-			if len(code.ParentIds) == 0 {
-				errs = append(errs, errors.New("Function "+code.Tag+" in file "+code.Path+" has no parents."))
-			}
-			for _, parentID := range code.ParentIds {
-				parent := rg.Reqs[parentID]
-				if parent != nil {
-					if parent.IsDeleted() {
-						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" is deleted."))
-					}
-					if parent.Level == config.LOW {
-						parent.Tags = append(parent.Tags, code)
-						code.Parents = append(code.Parents, parent)
-					} else {
-						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" must be a Software Low-Level Requirement."))
-					}
-				} else {
-					errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" does not exist."))
-				}
-			}
-		}
-	}
-	return errs
-}
-
-// OrdsByPosition returns the SYSTEM requirements which don't have any parent,
-// ordered by position.
-func (rg reqGraph) OrdsByPosition() []*Req {
-	var r []*Req
-	for _, v := range rg.Reqs {
-		if v.Level == config.SYSTEM && len(v.ParentIds) == 0 {
-			r = append(r, v)
-		}
-	}
-	sort.Sort(byPosition(r))
-	return r
-}
-
-func (rg *reqGraph) ReqsWithInvalidRequirementsByPosition() []*Req {
-	var r []*Req
-
-	return r
-}
-
-type byPosition []*Req
-
-func (a byPosition) Len() int           { return len(a) }
-func (a byPosition) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byPosition) Less(i, j int) bool { return a[i].Position < a[j].Position }
-
-type byIDNumber []*Req
-
-func (a byIDNumber) Len() int           { return len(a) }
-func (a byIDNumber) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
-
-type byFilenameTag []*Code
-
-func (a byFilenameTag) Len() int      { return len(a) }
-func (a byFilenameTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a byFilenameTag) Less(i, j int) bool {
-	switch strings.Compare(a[i].Path, a[j].Path) {
-	case -1:
-		return true
-	case 0:
-		return a[i].Tag < a[j].Tag
-	}
-	return false
-}
-
-func parseCertdocToGraph(fileName string, graph *reqGraph) ([]error, error) {
-	reqs, err := ParseCertdoc(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing %s: %v", fileName, err)
-	}
-
-	// sort the requirements so we can check the sequence
-	sort.Sort(byIDNumber(reqs))
-
-	isReqPresent := make([]bool, reqs[len(reqs)-1].IDNumber)
-	NextId := 1
-
-	var errs []error
-	for i, r := range reqs {
-		errs2 := lintReq(fileName, NextId, isReqPresent, r)
-		NextId = r.IDNumber + 1
-		if len(errs2) != 0 {
-			errs = append(errs, errs2...)
-			continue
-		}
-		r.Position = i
-		graph.AddReq(r, fileName)
-	}
-	return errs, nil
-}
-
-// lintReq is called for each requirement while building the req graph
-// @llr REQ-TRAQ-SWL-3
-// @llr REQ-TRAQ-SWL-5
-func lintReq(fileName string, expectedIDNumber int, isReqPresent []bool, r *Req) []error {
+// checkID validates each part of the requirement ID
+// @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26
+func (r *Req) checkID(fileName string, expectedIDNumber int, isReqPresent []bool) []error {
 	// extract file name without extension
 	fNameWithExt := path.Base(fileName)
 	extension := filepath.Ext(fNameWithExt)
@@ -532,6 +357,70 @@ func lintReq(fileName string, expectedIDNumber int, isReqPresent []bool, r *Req)
 	return errs
 }
 
+// Schema holds the information held in the schema file defining the rules that the requirement graph must follow.
+type Schema struct {
+	Attributes []map[string]string
+}
+
+// ParseSchema loads and returns the requirements schema from the specified file
+// @llr REQ-TRAQ-SWL-29
+func ParseSchema(schemaPath string) (Schema, error) {
+	var schema Schema
+	b, err := ioutil.ReadFile(schemaPath)
+	if err != nil {
+		return schema, fmt.Errorf("Attributes specification file missing: %s", schemaPath)
+	}
+	if err := json.Unmarshal(b, &schema); err != nil {
+		return schema, fmt.Errorf("Error while parsing attributes: %s", err)
+	}
+	return schema, nil
+}
+
+// byPosition provides sort functions to order requirements by their Position value
+type byPosition []*Req
+
+// @llr REQ-TRAQ-SWL-45
+func (a byPosition) Len() int { return len(a) }
+
+// @llr REQ-TRAQ-SWL-45
+func (a byPosition) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// @llr REQ-TRAQ-SWL-45
+func (a byPosition) Less(i, j int) bool { return a[i].Position < a[j].Position }
+
+// byIDNumber provides sort functions to order requirements by their IDNumber value
+type byIDNumber []*Req
+
+// @llr REQ-TRAQ-SWL-46
+func (a byIDNumber) Len() int { return len(a) }
+
+// @llr REQ-TRAQ-SWL-46
+func (a byIDNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// @llr REQ-TRAQ-SWL-46
+func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
+
+// byFilenameTag provides sort functions to order code by their path value
+type byFilenameTag []*Code
+
+// @llr REQ-TRAQ-SWL-47
+func (a byFilenameTag) Len() int { return len(a) }
+
+// @llr REQ-TRAQ-SWL-47
+func (a byFilenameTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// @llr REQ-TRAQ-SWL-47
+func (a byFilenameTag) Less(i, j int) bool {
+	switch strings.Compare(a[i].Path, a[j].Path) {
+	case -1:
+		return true
+	case 0:
+		return a[i].Tag < a[j].Tag
+	}
+	return false
+}
+
+// ReqFilter holds the different parameters used to filter the requirements set.
 type ReqFilter struct {
 	IDRegexp           *regexp.Regexp
 	TitleRegexp        *regexp.Regexp
@@ -541,106 +430,9 @@ type ReqFilter struct {
 }
 
 // IsEmpty returns whether the filter has no restriction.
+// @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21
 func (f ReqFilter) IsEmpty() bool {
 	return f.IDRegexp == nil && f.TitleRegexp == nil &&
 		f.BodyRegexp == nil && f.AnyAttributeRegexp == nil &&
 		len(f.AttributeRegexp) == 0
-}
-
-// Matches returns true if the requirement matches the filter AND its ID is
-// in the diffs map, if any.
-// @llr REQ-TRAQ-SWL-12
-func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
-	if filter != nil {
-		if filter.IDRegexp != nil {
-			if !filter.IDRegexp.MatchString(r.ID) {
-				return false
-			}
-		}
-		if filter.TitleRegexp != nil {
-			if !filter.TitleRegexp.MatchString(r.Title) {
-				return false
-			}
-		}
-		if filter.BodyRegexp != nil {
-			if !filter.BodyRegexp.MatchString(r.Body) {
-				return false
-			}
-		}
-		if filter.AnyAttributeRegexp != nil {
-			var matches bool
-			// Any of the existing attributes must match.
-			for _, value := range r.Attributes {
-				if filter.AnyAttributeRegexp.MatchString(value) {
-					matches = true
-					break
-				}
-			}
-			if !matches {
-				return false
-			}
-		}
-		// Each of the filtered attributes must match.
-		for a, e := range filter.AttributeRegexp {
-			if !e.MatchString(r.Attributes[a]) {
-				return false
-			}
-		}
-	}
-	if diffs != nil {
-		_, ok := diffs[r.ID]
-		return ok
-	}
-	return true
-}
-
-func NextId(f string) (string, error) {
-	var (
-		reqs      []*Req
-		nextReqID string
-	)
-
-	reqs, err := ParseCertdoc(f)
-	if err != nil {
-		return "", err
-	}
-
-	if len(reqs) > 0 {
-		var (
-			lastReq    *Req
-			greatestID int = 0
-		)
-		// infer next req ID from existing req IDs
-		for _, r := range reqs {
-			parts := ReReqID.FindStringSubmatch(r.ID)
-			if parts == nil {
-				return "", fmt.Errorf("Requirement ID invalid: %s", r.ID)
-			}
-			sequenceNumber := parts[len(parts)-1]
-			currentID, err := strconv.Atoi(sequenceNumber)
-			if err != nil {
-				return "", fmt.Errorf("Requirement sequence part \"%s\" (%s) not a number:  %s", r.ID, sequenceNumber, err)
-			}
-			if currentID > greatestID {
-				greatestID = currentID
-				lastReq = r
-			}
-		}
-		ii := ReReqID.FindStringSubmatchIndex(lastReq.ID)
-		nextReqID = fmt.Sprintf("%s%d", lastReq.ID[:ii[len(ii)-2]], greatestID+1)
-	} else {
-		// infer next (=first) req ID from file name
-		fNameWithExt := path.Base(f)
-		extension := filepath.Ext(fNameWithExt)
-		fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
-		fNameComps := strings.Split(fName, "-")
-		docType := fNameComps[len(fNameComps)-1]
-		reqType, correctFileType := config.DocTypeToReqType[docType]
-		if !correctFileType {
-			return "", fmt.Errorf("Document name does not comply with naming convention.")
-		}
-		nextReqID = "REQ-" + fNameComps[0] + "-" + fNameComps[1] + "-" + reqType + "-001"
-	}
-
-	return nextReqID, nil
 }

@@ -1,5 +1,5 @@
 /*
-Functions within this file are concerned with parsing requirements out of markdown documents.
+Functions for parsing requirements out of markdown documents.
 
 The entry point is ParseCertdoc which in turns calls other functions as follows:
 - ParseCertdoc: Checks filename is valid then calls:
@@ -37,11 +37,10 @@ var (
 	reTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
 
 	// REQ, project number, project abbreviation, req type, req number
-	// For example: REQ-TRAQ-SWH-4
-	reReqIdStr   = `REQ-(\w+)-(\w+)-(\d+)`
-	ReReqID      = regexp.MustCompile(reReqIdStr)
-	reReqIDBad   = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
-	ReReqDeleted = regexp.MustCompile(reReqIdStr + ` DELETED`)
+	// For example: REQ-PROJ-SWH-4
+	reReqIdStr = `REQ-(\w+)-(\w+)-(\d+)`
+	ReReqID    = regexp.MustCompile(reReqIdStr)
+	reReqIDBad = regexp.MustCompile(`(?i)REQ-((\d+)|((\w+)-(\d+)))`)
 
 	// For detecting attributes sections and attributes
 	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n#{2,6} Attributes:$`)
@@ -59,7 +58,7 @@ const (
 )
 
 // ParseCertdoc checks the f filename is a valid certdoc name then parses raw requirements out of it.
-// @llr REQ-TRAQ-SWL-20
+// @llr REQ-TRAQ-SWL-24
 func ParseCertdoc(filename string) ([]*Req, error) {
 	ext := path.Ext(filename)
 	if strings.ToLower(ext) != ".md" {
@@ -92,7 +91,7 @@ func ParseCertdoc(filename string) ([]*Req, error) {
 }
 
 // parseMarkdown parses a certification document and returns the found requirements.
-// @llr REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-24
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-4
 func parseMarkdown(f string) ([]*Req, error) {
 	var (
 		reqs []*Req
@@ -204,6 +203,7 @@ func parseMarkdown(f string) ([]*Req, error) {
 
 // parseMarkdownFragment accepts a string containing either an ATX requirement or a requirements table and calls the
 // appropriate parsing function
+// @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
 func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, error) {
 
 	if reqType == Heading {
@@ -244,10 +244,10 @@ func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, er
 // Since the parsing is rather 'soft', ParseReq returns verbose errors indicating problems in
 // a helpful way, meaning they at least provide enough context for the user to find the text.
 //
-// @llr REQ-TRAQ-SWL-13
+// @llr REQ-TRAQ-SWL-3
 func parseReq(txt string) (*Req, error) {
 
-	ID, IDNumber, err := extractIDAndNum(txt)
+	ID, IDNumber, Level, err := extractIDNumAndLevel(txt)
 	if err != nil {
 		return nil, err
 	}
@@ -255,17 +255,13 @@ func parseReq(txt string) (*Req, error) {
 	r := &Req{
 		ID:         ID,
 		IDNumber:   IDNumber,
+		Level:      Level,
 		Attributes: map[string]string{},
-	}
-
-	var ok bool
-	if r.Level, ok = config.ReqTypeToReqLevel[r.ReqType()]; !ok {
-		return nil, fmt.Errorf("Invalid request type: %q", r.ReqType())
 	}
 
 	// chop defining ID and any punctuation
 	txt = strings.TrimPrefix(txt, ID)
-	txt = strings.TrimLeftFunc(txt, IsPunctOrSpace)
+	txt = strings.TrimLeftFunc(txt, isPunctOrSpace)
 
 	// The first line is the title.
 	parts := strings.SplitN(strings.TrimSpace(txt), "\n", 2)
@@ -333,7 +329,7 @@ func parseReq(txt string) (*Req, error) {
 //
 // The first column must be "ID" and each row must contain a valid ReqID. Other columns are optional.
 //
-// @llr REQ-TRAQ-SWL-25
+// @llr REQ-TRAQ-SWL-5
 func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 
 	var attributes []string
@@ -380,12 +376,13 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 			// For each attribute in the first row, read in the associated value on this row
 			for i, k := range attributes {
 				if k == "ID" {
-					ID, IDNumber, err := extractIDAndNum(values[i])
+					ID, IDNumber, Level, err := extractIDNumAndLevel(values[i])
 					if err != nil {
 						return reqs, err
 					}
 					r.ID = ID
 					r.IDNumber = IDNumber
+					r.Level = Level
 				} else if k == "TITLE" {
 					r.Title = values[i]
 				} else if k == "BODY" {
@@ -410,6 +407,7 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 // splitTableLine splits a pipe table row in cells. Does not count for
 // escaped `|` characters or other cases when `|` should not be considered
 // a cell separator. Removes the first and last parts if they are empty.
+// @llr REQ-TRAQ-SWL-5
 func splitTableLine(line string) []string {
 	// The `|` at the beginning of the line is ignored because it
 	// represents visually the table's left side.
@@ -427,8 +425,9 @@ func splitTableLine(line string) []string {
 	return parts
 }
 
-// extractIDAndNum parses a requirement identifier string and returns the ID string and sequence number
-func extractIDAndNum(reqStr string) (string, int, error) {
+// extractIDNumAndLevel parses a requirement identifier string and returns the ID string, sequence number and level
+// @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
+func extractIDNumAndLevel(reqStr string) (string, int, config.RequirementLevel, error) {
 	head := reqStr
 	if len(head) > 40 {
 		head = head[:40]
@@ -436,23 +435,28 @@ func extractIDAndNum(reqStr string) (string, int, error) {
 	defid := ReReqID.FindStringSubmatchIndex(reqStr)
 	if len(defid) == 0 {
 		if reReqIDBad.MatchString(reqStr) {
-			return "", 0, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
+			return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
 		}
-		return "", 0, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
+		return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
 	}
 
 	if defid[0] > 0 {
-		return "", 0, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
+		return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
 	}
 
+	level, ok := config.ReqTypeToReqLevel[reqStr[defid[4]:defid[5]]]
+	if !ok {
+		return "", 0, config.SYSTEM, fmt.Errorf("malformed requirement: Invalid type: %q", reqStr[defid[4]:defid[5]])
+	}
 	IDNumber, err := strconv.Atoi(reqStr[defid[6]:defid[7]])
 	if err != nil {
-		return "", 0, err
+		return "", 0, config.SYSTEM, err
 	}
-	return reqStr[defid[0]:defid[1]], IDNumber, nil
+	return reqStr[defid[0]:defid[1]], IDNumber, level, nil
 }
 
 // parseParents validates the Parents attribute of a requirement
+// @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
 func parseParents(r *Req) error {
 	// PARENTS must be punctuation/space separated list of parseable req-ids.
 	parents := r.Attributes["PARENTS"]
@@ -465,7 +469,7 @@ func parseParents(r *Req) error {
 		parentIDs = append(parentIDs, val)
 		if i > 0 {
 			sep := parents[parmatch[i-1][1]:ids[0]]
-			if strings.TrimFunc(sep, IsPunctOrSpace) != "" {
+			if strings.TrimFunc(sep, isPunctOrSpace) != "" {
 				return fmt.Errorf("requirement %s parents: unparseable as list of requirement ids: %q in %q", r.ID, sep, parents)
 			}
 		}
@@ -474,6 +478,8 @@ func parseParents(r *Req) error {
 	return nil
 }
 
-func IsPunctOrSpace(r rune) bool {
+// isPunctOrSpace returns true if the provided character is punctuation.... or a space
+// @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
+func isPunctOrSpace(r rune) bool {
 	return unicode.IsSpace(r) || unicode.IsPunct(r)
 }
