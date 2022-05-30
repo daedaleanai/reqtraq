@@ -6,20 +6,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func RunValidate(t *testing.T, certdocpath, codepath, schemapath string) (string, error) {
+func RunValidate(t *testing.T, config *config.Config, schemapath string) (string, error) {
 	// set the test paths
-	*fCertdocPath = certdocpath
-	*fCodePath = codepath
 	*fSchemaPath = schemapath
 	// prepare capture of stdout
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 	// run the command
-	err := validate()
+	err := validate(config)
 	assert.Empty(t, err, "Got unexpected error")
 	// save stdout data and reset
 	w.Close()
@@ -30,7 +30,28 @@ func RunValidate(t *testing.T, certdocpath, codepath, schemapath string) (string
 }
 
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
-	actual, err := RunValidate(t, "testdata/TestValidateCreateReqGraphMarkdown", "testdata/TestValidateCreateReqGraphMarkdown", "testdata/attributes.json")
+	repos.RegisterCurrentRepository(repos.BaseRepoPath())
+
+	config := config.Config {
+		CommonAttributes: make(map[string]config.Attribute),
+		Repos: map[repos.RepoName]config.RepoConfig {
+			repos.BaseRepoName(): config.RepoConfig{
+				Documents: []config.Document {
+					config.Document{
+						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-100-ORD.md",
+					},
+					config.Document{
+						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
+					},
+					config.Document{
+						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
+					},
+				},
+			},
+		},
+	}
+
+	actual, err := RunValidate(t, &config, repos.BaseRepoPath()+"/testdata/attributes.json")
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.
@@ -61,7 +82,23 @@ WARNING. Validation failed`
 }
 
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
-	actual, err := RunValidate(t, "testdata/TestValidateCheckReqReferencesMarkdown", "testdata/TestValidateCheckReqReferencesMarkdown", "testdata/attributes.json")
+	config := config.Config {
+		CommonAttributes: make(map[string]config.Attribute),
+		Repos: map[repos.RepoName]config.RepoConfig {
+			repos.BaseRepoName(): {
+				Documents: []config.Document {
+					{
+						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-100-ORD.md",
+					},
+					{
+						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-137-SRD.md",
+					},
+				},
+			},
+		},
+	}
+
+	actual, err := RunValidate(t, &config, repos.BaseRepoPath()+"/testdata/attributes.json")
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Invalid reference to non existent requirement REQ-TEST-SYS-22 in body of REQ-TEST-SWH-3.

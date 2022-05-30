@@ -19,7 +19,7 @@
             "requirements": "REQ-TRAQ-SWH-(\\d+)"
         },
         {
-            "path": "certdocs/TRAQ-138-SRD.md",
+            "path": "certdocs/TRAQ-138-SDD.md",
             "requirements": "REQ-TRAQ-SWL-(\\d+)",
             "implementation": {
                 "code": {
