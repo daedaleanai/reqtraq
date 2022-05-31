@@ -2,10 +2,10 @@ package repos
 
 import (
 	"fmt"
-	"io/ioutil"
 	"io/fs"
-	"os"
+	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -27,7 +27,7 @@ type RepoName string
 type RepoPath string
 
 var (
-	basePath string = ""
+	basePath string   = ""
 	baseName RepoName = RepoName("")
 	tempDirs []string = make([]string, 0)
 )
@@ -38,7 +38,7 @@ var repositories map[RepoName]RepoPath = make(map[RepoName]RepoPath)
 // Names from remote paths are assumed to be of either of these forms:
 func GetRepoNameFromRemotePath(remotePath RemotePath) RepoName {
 	splits := strings.Split(string(remotePath), "/")
-	name := splits[len(splits) - 1]
+	name := splits[len(splits)-1]
 
 	// If name ends with ".git" strip it, as that is part of the git URL
 	name = strings.TrimSuffix(name, ".git")
@@ -95,7 +95,7 @@ func OverrideRepository(remotePath RemotePath, gitReference string) error {
 	}
 
 	// Clone the repo
-	path, err := cloneFromRemote(RemotePath(originalRepoPath), gitReference);
+	path, err := cloneFromRemote(RemotePath(originalRepoPath), gitReference)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func GetRepoPathByRemotePath(remotePath RemotePath) (RepoName, RepoPath, error) 
 	}
 
 	// Clone the repo
-	path, err := cloneFromRemote(remotePath, "");
+	path, err := cloneFromRemote(remotePath, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -188,7 +188,7 @@ func FindFilesInDirectory(repoName RepoName, path string, pattern *regexp.Regexp
 	}
 	actualPath := filepath.Join(string(repoPath), path)
 
-	err = filepath.Walk(actualPath, func (path string, fileInfo fs.FileInfo, err error) error {
+	err = filepath.Walk(actualPath, func(path string, fileInfo fs.FileInfo, err error) error {
 		// First lets start by removing the prefix from the actualPath
 		relativePath, err := filepath.Rel(string(repoPath), path)
 		if err != nil {
@@ -241,7 +241,9 @@ func PathInRepo(repoName RepoName, path string) (string, error) {
 
 func ValidatePath(repoName RepoName, path string) error {
 	repoPath, err := PathInRepo(repoName, path)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	if _, err := os.Stat(repoPath); err == nil {
 		return nil
 	} else {

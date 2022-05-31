@@ -51,14 +51,14 @@ func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (
 	for _, codeFile := range implementation.CodeFiles {
 		codeFiles = append(codeFiles, CodeFile{
 			RepoName: repoName,
-			Path: codeFile,
+			Path:     codeFile,
 		})
 		codeFilePaths = append(codeFilePaths, codeFile)
 	}
 	for _, testFile := range implementation.TestFiles {
 		codeFiles = append(codeFiles, CodeFile{
 			RepoName: repoName,
-			Path: testFile,
+			Path:     testFile,
 		})
 		codeFilePaths = append(codeFilePaths, testFile)
 	}
@@ -142,7 +142,7 @@ func isSourceCodeFile(name string) bool {
 // @llr REQ-TRAQ-SWL-9
 func parseComments(codeFiles []CodeFile, codeTags map[string][]*Code) error {
 	for _, codeFile := range codeFiles {
-		fsPath, err :=  repos.PathInRepo(codeFile.RepoName, codeFile.Path)
+		fsPath, err := repos.PathInRepo(codeFile.RepoName, codeFile.Path)
 		if err != nil {
 			return err
 		}
@@ -288,11 +288,11 @@ func tagCode(repoName repos.RepoName, codePaths []string) (map[string][]*Code, e
 		"-f", "-",
 		"-L", "-")
 
-    select {
-	case err := <- errChannel:
+	select {
+	case err := <-errChannel:
 		return nil, err
-    default:
-    }
+	default:
+	}
 
 	tags, err := parseTags(repoName, lines)
 	if err != nil {

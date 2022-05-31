@@ -74,7 +74,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req, 0)}
 	var err error
 
-	impl := config.Implementation {
+	impl := config.Implementation{
 		CodeFiles: []string{"a.c"},
 		TestFiles: []string{},
 	}

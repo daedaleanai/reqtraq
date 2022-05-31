@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
-	"path/filepath"
 
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
@@ -150,7 +150,7 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 
 	repoName := repos.RegisterCurrentRepository(filepath.Dir(f.Name()))
 
-	doc := config.Document {
+	doc := config.Document{
 		Path: filepath.Base(f.Name()),
 	}
 
