@@ -22,7 +22,7 @@ import (
 
 var (
 	// To detect a line containing low-level requirements
-	reLLRReferenceLine = regexp.MustCompile(`^[ \*\/]*(?:@|\\)llr (?:REQ-\w+-\w+-\d+[, ]*)+$`)
+	reLLRReferenceLine = regexp.MustCompile(`^[ \*\/]*(?:@|\\)llr +(?:REQ-\w+-\w+-\d+[, ]*)+$`)
 	// To capture requirements out of the line
 	reLLRReferences = regexp.MustCompile(`(REQ-\w+-\w+-\d+)`)
 	// Blank line to stop search

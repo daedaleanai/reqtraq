@@ -18,7 +18,7 @@ func TestCheckCtagsAvailable(t *testing.T) {
 type TagMatch struct {
 	tag       string
 	line      int
-	parentids string
+	parentIds string
 }
 
 func LookFor(t *testing.T, sourceFile string, tagsPerFile map[string][]*Code, expectedTags []TagMatch) {
@@ -33,8 +33,8 @@ func LookFor(t *testing.T, sourceFile string, tagsPerFile map[string][]*Code, ex
 				found = true
 				assert.Equal(t, e.line, tag.Line)
 				assert.Equal(t, e.tag, tag.Tag)
-				if e.parentids != "" {
-					assert.Equal(t, e.parentids, strings.Join(tag.ParentIds, ","))
+				if e.parentIds != "" {
+					assert.Equal(t, e.parentIds, strings.Join(tag.ParentIds, ","))
 				}
 				break
 			}
