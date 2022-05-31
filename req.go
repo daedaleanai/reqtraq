@@ -87,13 +87,13 @@ func CreateReqGraph(reqtraqConfig *config.Config, schemaPath string) (*ReqGraph,
 // AddReq appends the requirements list with a new requirement, after confirming that it's not already present
 // @llr REQ-TRAQ-SWL-28
 func (rg *ReqGraph) AddReq(req *Req, path string) error {
-       if v := rg.Reqs[req.ID]; v != nil {
-               return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
-       }
-       req.Path = strings.TrimPrefix(path, repos.BaseRepoPath())
+	if v := rg.Reqs[req.ID]; v != nil {
+		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
+	}
+	req.Path = strings.TrimPrefix(path, repos.BaseRepoPath())
 
-       rg.Reqs[req.ID] = req
-       return nil
+	rg.Reqs[req.ID] = req
+	return nil
 }
 
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
@@ -242,8 +242,8 @@ type Req struct {
 	Attributes map[string]string
 	Position   int
 	// Link back to the document where the requirement is defined and the name of the repository
-	Document   *config.Document
-	RepoName   repos.RepoName
+	Document *config.Document
+	RepoName repos.RepoName
 }
 
 // Changelists generates a list of Phabicator revisions that have affected a requirement

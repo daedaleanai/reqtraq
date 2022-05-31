@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,11 +32,11 @@ func RunValidate(t *testing.T, config *config.Config, schemapath string) (string
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 	repos.RegisterCurrentRepository(repos.BaseRepoPath())
 
-	config := config.Config {
+	config := config.Config{
 		CommonAttributes: make(map[string]config.Attribute),
-		Repos: map[repos.RepoName]config.RepoConfig {
+		Repos: map[repos.RepoName]config.RepoConfig{
 			repos.BaseRepoName(): config.RepoConfig{
-				Documents: []config.Document {
+				Documents: []config.Document{
 					config.Document{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-100-ORD.md",
 					},
@@ -82,11 +82,11 @@ WARNING. Validation failed`
 }
 
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
-	config := config.Config {
+	config := config.Config{
 		CommonAttributes: make(map[string]config.Attribute),
-		Repos: map[repos.RepoName]config.RepoConfig {
+		Repos: map[repos.RepoName]config.RepoConfig{
 			repos.BaseRepoName(): {
-				Documents: []config.Document {
+				Documents: []config.Document{
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-100-ORD.md",
 					},

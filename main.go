@@ -29,9 +29,9 @@ var (
 	fSince                   = flag.String("since", "", "The commit representing the start of the range.")
 	fAt                      = flag.String("at", "", "The commit representing the end of the range.")
 	// TODO(ja): Remove schemaPath  and use schema from the reqtraq configuration files.
-	fSchemaPath              = flag.String("schema_path", repos.BaseRepoPath()+"/certdocs/attributes.json", "path to json with requirement schema.")
-	fStrict                  = flag.Bool("strict", false, "Exit with error if any validation checks fail.")
-	fVerbose                 = flag.Bool("v", false, "Enable verbose logs.")
+	fSchemaPath = flag.String("schema_path", repos.BaseRepoPath()+"/certdocs/attributes.json", "path to json with requirement schema.")
+	fStrict     = flag.Bool("strict", false, "Exit with error if any validation checks fail.")
+	fVerbose    = flag.Bool("v", false, "Enable verbose logs.")
 )
 
 const usage = `

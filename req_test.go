@@ -119,7 +119,7 @@ func TestReq_Significant(t *testing.T) {
 
 func TestParsing(t *testing.T) {
 	repoName := repos.RegisterCurrentRepository(filepath.Join(repos.BaseRepoPath(), "testdata"))
-	document := config.Document {
+	document := config.Document{
 		Path: "valid_system_requirement/TEST-100-ORD.md",
 	}
 
@@ -160,7 +160,7 @@ func TestParsing(t *testing.T) {
 		}
 	}
 
-	document = config.Document {
+	document = config.Document{
 		Path: "invalid_system_requirement/NAM1-100-ORD.md",
 	}
 
@@ -179,7 +179,7 @@ func TestParsing(t *testing.T) {
 	// an invalid requirements document containing sequence errors
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	document = config.Document {
+	document = config.Document{
 		Path: "invalid_system_requirement/GAP1-100-ORD.md",
 	}
 
@@ -194,7 +194,7 @@ func TestParsing(t *testing.T) {
 	// an invalid requirements document containing duplicates
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
 
-	document = config.Document {
+	document = config.Document{
 		Path: "invalid_system_requirement/DUP1-100-ORD.md",
 	}
 

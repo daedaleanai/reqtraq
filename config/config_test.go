@@ -23,11 +23,11 @@ func TestConfig_ParseConfiguration(t *testing.T) {
 	// Check common attributes
 	assert.Equal(t, config.CommonAttributes, map[string]Attribute{
 		"Rationale": {
-			Type: AttributeAny,
+			Type:  AttributeAny,
 			Value: regexp.MustCompile(".*"),
 		},
 		"Verification": {
-			Type: AttributeRequired,
+			Type:  AttributeRequired,
 			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
 		},
 	})
@@ -36,23 +36,23 @@ func TestConfig_ParseConfiguration(t *testing.T) {
 	assert.Contains(t, config.Repos, repos.RepoName("projectB"))
 	assert.Equal(t, len(config.Repos), 2)
 
-	assert.ElementsMatch(t, config.Repos["projectA"].Documents, []Document {
+	assert.ElementsMatch(t, config.Repos["projectA"].Documents, []Document{
 		{
-			Path: "TEST-100-ORD.md",
+			Path:         "TEST-100-ORD.md",
 			Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
-			Attributes: map[string]Attribute{},
+			Attributes:   map[string]Attribute{},
 			Implementation: Implementation{
 				CodeFiles: []string{},
 				TestFiles: []string{},
 			},
 		},
 		{
-			Path: "TEST-137-SRD.md",
+			Path:         "TEST-137-SRD.md",
 			Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 			Attributes: map[string]Attribute{
 				"Parents": {
 					Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
-					Type: AttributeAny,
+					Type:  AttributeAny,
 				},
 			},
 			Implementation: Implementation{
@@ -63,24 +63,24 @@ func TestConfig_ParseConfiguration(t *testing.T) {
 	})
 
 	assert.Equal(t, len(config.Repos["projectB"].Documents), 1)
-	assert.Equal(t, config.Repos["projectB"].Documents[0].Path,  "TEST-138-SDD.md")
+	assert.Equal(t, config.Repos["projectB"].Documents[0].Path, "TEST-138-SDD.md")
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Requirements, regexp.MustCompile(`REQ-TEST-SWL-(\d+)`))
 	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Attributes), 1)
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Attributes["Parents"],
 		Attribute{
 			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
-			Type: AttributeAny,
+			Type:  AttributeAny,
 		},
 	)
 	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation.CodeFiles,
-		[]string {
+		[]string{
 			"code/a.cc",
 			"code/include/a.hh",
 		},
 	)
 
 	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation.TestFiles,
-		[]string {
+		[]string{
 			"test/a/a_test.cc",
 		},
 	)

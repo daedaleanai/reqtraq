@@ -16,20 +16,20 @@ import (
 /// Types exported for parsing json files
 
 type jsonAttribute struct {
-	Name      string `json:"name"`
-	Required  string `json:"required"`
-	Value     string `json:"value"`
+	Name     string `json:"name"`
+	Required string `json:"required"`
+	Value    string `json:"value"`
 }
 
 type jsonFileQuery struct {
-	Paths              []string  `json:"paths"`
-	MatchingPattern    string    `json:"matchingPattern"`
-	IgnoredPatterns    []string  `json:"ignoredPatterns"`
+	Paths           []string `json:"paths"`
+	MatchingPattern string   `json:"matchingPattern"`
+	IgnoredPatterns []string `json:"ignoredPatterns"`
 }
 
 type jsonImplementation struct {
-	Code       jsonFileQuery  `json:"code"`
-	Tests      jsonFileQuery  `json:"tests"`
+	Code  jsonFileQuery `json:"code"`
+	Tests jsonFileQuery `json:"tests"`
 }
 
 type jsonDoc struct {
@@ -40,15 +40,16 @@ type jsonDoc struct {
 }
 
 type jsonConfig struct {
-	CommonAttributes []jsonAttribute     `json:"commonAttributes"`
-	ParentRepo       repos.RemotePath    `json:"parentRepository"`
-	ChildrenRepos    []repos.RemotePath  `json:"childrenRepositories"`
-	Docs             []jsonDoc           `json:"documents"`
+	CommonAttributes []jsonAttribute    `json:"commonAttributes"`
+	ParentRepo       repos.RemotePath   `json:"parentRepository"`
+	ChildrenRepos    []repos.RemotePath `json:"childrenRepositories"`
+	Docs             []jsonDoc          `json:"documents"`
 }
 
 /// Types exported for application use
 
 type AttributeType uint
+
 const (
 	AttributeRequired AttributeType = iota
 	AttributeOptional
@@ -56,8 +57,8 @@ const (
 )
 
 type Attribute struct {
-	Type      AttributeType
-	Value     *regexp.Regexp
+	Type  AttributeType
+	Value *regexp.Regexp
 }
 
 type Implementation struct {
@@ -66,19 +67,19 @@ type Implementation struct {
 }
 
 type Document struct {
-	Path              string
-	Requirements      *regexp.Regexp
-	Attributes        map[string]Attribute
-	Implementation    Implementation
+	Path           string
+	Requirements   *regexp.Regexp
+	Attributes     map[string]Attribute
+	Implementation Implementation
 }
 
 type RepoConfig struct {
-	Documents  []Document
+	Documents []Document
 }
 
 type Config struct {
 	CommonAttributes map[string]Attribute
-	Repos map[repos.RepoName]RepoConfig
+	Repos            map[repos.RepoName]RepoConfig
 }
 
 func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
@@ -177,11 +178,11 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 	return collectedFiles, nil
 }
 
-func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) (error) {
+func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
 		Attributes: make(map[string]Attribute),
-		Path: doc.Path,
+		Path:       doc.Path,
 	}
 
 	err = repos.ValidatePath(repoName, doc.Path)
@@ -197,7 +198,7 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) (error
 	for _, rawAttribute := range doc.Attributes {
 		parsedName, parsedAttr, err := parseAttribute(rawAttribute)
 		if err != nil {
-			return  err;
+			return err
 		}
 
 		parsedDoc.Attributes[parsedName] = parsedAttr
@@ -205,12 +206,12 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) (error
 
 	parsedDoc.Implementation.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName)
 	if err != nil {
-		return err;
+		return err
 	}
 
-    parsedDoc.Implementation.TestFiles, err = doc.Implementation.Tests.findAllMatchingFiles(repoName)
+	parsedDoc.Implementation.TestFiles, err = doc.Implementation.Tests.findAllMatchingFiles(repoName)
 	if err != nil {
-		return err;
+		return err
 	}
 
 	rc.Documents = append(rc.Documents, parsedDoc)
@@ -221,13 +222,13 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) (error
 func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonConfig) error {
 
 	// Parse this config file
-	repoConfig := RepoConfig{};
+	repoConfig := RepoConfig{}
 
 	for _, commonAttr := range jsonConfig.CommonAttributes {
 		// Add these to the list in our config
 		parsedName, parsedAttr, err := parseAttribute(commonAttr)
 		if err != nil {
-			return  err;
+			return err
 		}
 
 		config.CommonAttributes[parsedName] = parsedAttr
@@ -254,7 +255,7 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 			return err
 		}
 
-		err = config.parseConfigFile(childRepoName, childJsonConfig);
+		err = config.parseConfigFile(childRepoName, childJsonConfig)
 		if err != nil {
 			return err
 		}
@@ -263,7 +264,7 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 	return nil
 }
 
-func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document){
+func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 	for repoName := range config.Repos {
 		for docIdx := range config.Repos[repoName].Documents {
 			if config.Repos[repoName].Documents[docIdx].Path == path {
@@ -292,8 +293,8 @@ func ParseConfig(currentRepoPath string) (Config, error) {
 	}
 
 	config := Config{
-		CommonAttributes: make(map [string]Attribute),
-		Repos: make(map [repos.RepoName]RepoConfig),
+		CommonAttributes: make(map[string]Attribute),
+		Repos:            make(map[repos.RepoName]RepoConfig),
 	}
 	err = config.parseConfigFile(topLevelRepoName, topLevelConfig)
 	if err != nil {
@@ -321,8 +322,8 @@ func ParseConfigForOverridenRepo(currentRepoPath string) (Config, error) {
 	}
 
 	config := Config{
-		CommonAttributes: make(map [string]Attribute),
-		Repos: make(map [repos.RepoName]RepoConfig),
+		CommonAttributes: make(map[string]Attribute),
+		Repos:            make(map[repos.RepoName]RepoConfig),
 	}
 	err = config.parseConfigFile(topLevelRepoName, topLevelConfig)
 	if err != nil {
