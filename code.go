@@ -1,23 +1,32 @@
 /*
-Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated descriptions. The external program Universal Ctags is used to scan for functions.
+Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated requirement IDs. The external program Universal Ctags is used to scan for functions.
 */
 
 package main
 
 import (
-	"bufio"
-	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/git"
 	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/pkg/errors"
+)
+
+var (
+	// To detect a line containing low-level requirements
+	reLLRReferenceLine = regexp.MustCompile(`^[ \*\/]*(?:@|\\)llr +(?:REQ-\w+-\w+-\d+[, ]*)+$`)
+	// To capture requirements out of the line
+	reLLRReferences = regexp.MustCompile(`(REQ-\w+-\w+-\d+)`)
+	// Blank line to stop search
+	reBlankLine = regexp.MustCompile(`^\s*$`)
 )
 
 // Code represents a code node in the graph of requirements.
@@ -28,15 +37,12 @@ type Code struct {
 	Tag string
 	// Line number where the function starts.
 	Line int
-	// The comment above the function.
-	Comment []string
-	// FileHash is the sha1 of the contents.
-	FileHash  string
+	// Requirement IDs found in the comment above the function.
 	ParentIds []string
 	Parents   []*Req
 }
 
-// ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their comment descriptions, discovered. The return value is a map from each discovered source code file to a slice of Code structs representing the functions found within.
+// ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their associated requirement IDs, discovered. The return value is a map from each discovered source code file to a slice of Code structs representing the functions found within.
 // @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
 func ParseCode(codePath string) (map[string][]*Code, error) {
 
@@ -56,7 +62,7 @@ func ParseCode(codePath string) (map[string][]*Code, error) {
 		return codeTags, errors.Wrap(err, "failed to tag code")
 	}
 
-	// Annotate the code procedures with the associated comment.
+	// Annotate the code procedures with the associated requirement IDs.
 	if err := parseComments(codeFiles, codeTags); err != nil {
 		return codeTags, errors.Wrap(err, "failed walking code")
 	}
@@ -64,10 +70,10 @@ func ParseCode(codePath string) (map[string][]*Code, error) {
 	return codeTags, nil
 }
 
-// URL create a URL path to a code function by concatinating the source code path and line number of the function comment.
+// URL create a URL path to a code function by concatenating the source code path and line number of the function
 // @llr REQ-TRAQ-SWL-38
 func (code *Code) URL() string {
-	return fmt.Sprintf("/code/%s#L%d", code.Path, code.Line-len(code.Comment))
+	return fmt.Sprintf("/code/%s#L%d", code.Path, code.Line)
 }
 
 // SourceCodeFileExtensions are listed by language.
@@ -149,7 +155,7 @@ func isSourceCodeFile(name string) bool {
 	return false
 }
 
-// parseComments updates the specified tags with the comments discovered in the CodeFiles.
+// parseComments updates the specified tags with the requirement IDs discovered in the codeFiles.
 // @llr REQ-TRAQ-SWL-9
 func parseComments(codeFiles []string, codeTags map[string][]*Code) error {
 	repoPath := git.RepoPath()
@@ -162,50 +168,40 @@ func parseComments(codeFiles []string, codeTags map[string][]*Code) error {
 	return nil
 }
 
-// parseFileComments detects comments in the specified source code file and associates them with the tags detected in the same file.
+// parseFileComments detects comments in the specified source code file, parses them for requirements IDs and
+// associates them with the tags detected in the same file.
 // @llr REQ-TRAQ-SWL-9
 func parseFileComments(absolutePath string, tags []*Code) error {
-	f, err := os.Open(absolutePath)
+	// Read in the source code and break into string slice
+	sourceRaw, err := os.ReadFile(absolutePath)
 	if err != nil {
 		return err
 	}
-	h := sha1.New()
-	// git compatible hash
-	if s, err := f.Stat(); err == nil {
-		fmt.Fprintf(h, "blob %d", s.Size())
-		h.Write([]byte{0})
-	}
+	sourceLines := strings.Split(string(sourceRaw), "\n")
 
-	// Detect comments.
-	comments := make(map[int][]string, 0)
-	scanner := bufio.NewScanner(io.TeeReader(f, h))
-	var comment []string
-	var lineNumber int
-	for scanner.Scan() {
-		lineNumber++
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "*/") || strings.HasPrefix(line, "/*") || strings.HasPrefix(line, "* ") {
-			if comment == nil {
-				comment = make([]string, 0)
-			}
-			comment = append(comment, line)
-		} else {
-			if comment != nil {
-				// This is the first line after the comment.
-				comments[lineNumber] = comment
-				comment = nil
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return errors.Wrap(err, "failed to read source code file")
-	}
+	// Sort the tags so they're in line number order
+	sort.Sort(byFilenameTag(tags))
 
-	// Associate the detected comments with the tags.
+	// For each tag, search through the source code backwards looking for requirement references
+	previousTag := 0
 	for i := range tags {
-		if comment, ok := comments[tags[i].Line]; ok {
-			tags[i].Comment = comment
+		if tags[i].Line == previousTag {
+			// If there's a duplicate tag then just copy the links and continue
+			tags[i].ParentIds = tags[i-1].ParentIds
+			continue
 		}
+		for lineNo := tags[i].Line - 1; lineNo > previousTag; lineNo-- {
+			if reLLRReferenceLine.MatchString(sourceLines[lineNo]) {
+				// Looks good, extract all references straight into the tag
+				tags[i].ParentIds = reLLRReferences.FindAllString(sourceLines[lineNo], -1)
+				break
+			} else if reBlankLine.MatchString(sourceLines[lineNo]) {
+				// We've hit a blank line
+				break
+			}
+
+		}
+		previousTag = tags[i].Line
 	}
 
 	return nil

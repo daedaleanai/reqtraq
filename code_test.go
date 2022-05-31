@@ -16,9 +16,9 @@ func TestCheckCtagsAvailable(t *testing.T) {
 }
 
 type TagMatch struct {
-	tag     string
-	line    int
-	comment string
+	tag       string
+	line      int
+	parentIds string
 }
 
 func LookFor(t *testing.T, sourceFile string, tagsPerFile map[string][]*Code, expectedTags []TagMatch) {
@@ -33,8 +33,8 @@ func LookFor(t *testing.T, sourceFile string, tagsPerFile map[string][]*Code, ex
 				found = true
 				assert.Equal(t, e.line, tag.Line)
 				assert.Equal(t, e.tag, tag.Tag)
-				if e.comment != "" {
-					assert.Equal(t, e.comment, strings.Join(tag.Comment, "\n"))
+				if e.parentIds != "" {
+					assert.Equal(t, e.parentIds, strings.Join(tag.ParentIds, ","))
 				}
 				break
 			}
@@ -84,16 +84,13 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	expectedTags := []TagMatch{
 		{"enumerateObjects",
 			30,
-			`// This method does stuff also.
-// @llr REQ-TEST-SWL-13
-// @xlr R-1`},
+			`REQ-TEST-SWL-13`},
 		{"getSegment",
 			20,
-			`// This method does stuff.
-// @llr REQ-TEST-SWL-12`},
+			`REQ-TEST-SWL-12`},
 		{"getNumberOfSegments",
 			14,
-			`// @llr REQ-TEST-SWH-11`},
+			`REQ-TEST-SWH-11`},
 	}
 	LookFor(t, "testdata/cproject1/a.c", rg.CodeTags, expectedTags)
 
@@ -101,6 +98,6 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH}
 	errs := SortErrs(rg.resolve())
 	assert.Equal(t, 2, len(errs))
-	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getNumberOfSegments: REQ-TEST-SWH-11 must be a Low-Level Requirement.", errs[0])
-	assert.Equal(t, "Invalid reference in file testdata/cproject1/a.c function getSegment: REQ-TEST-SWL-12 does not exist.", errs[1])
+	assert.Equal(t, "Invalid reference in function getNumberOfSegments@testdata/cproject1/a.c:14, REQ-TEST-SWH-11 is not a low-level requirement.", errs[0])
+	assert.Equal(t, "Invalid reference in function getSegment@testdata/cproject1/a.c:20, REQ-TEST-SWL-12 does not exist.", errs[1])
 }

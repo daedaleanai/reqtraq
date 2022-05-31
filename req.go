@@ -138,11 +138,9 @@ func (rg *ReqGraph) addCertdocToGraph(fileName string) error {
 // resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema. Any errors encountered such as links to non-existent requirements
-// are returned
+// are returned.
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11
 func (rg *ReqGraph) resolve() []error {
-	var reLLRReference = regexp.MustCompile(fmt.Sprintf(`\s@llr (%s)\z`, reReqIdStr))
-
 	errs := make([]error, 0)
 
 	// Walk the requirements, resolving links and looking for errors
@@ -184,31 +182,24 @@ func (rg *ReqGraph) resolve() []error {
 
 	// Walk the code tags, resolving links and looking for errors
 	for _, tags := range rg.CodeTags {
-		for i := range tags {
-			code := tags[i]
-			code.ParentIds = make([]string, 0)
-			for _, s := range code.Comment {
-				if parts := reLLRReference.FindStringSubmatch(s); len(parts) > 0 {
-					code.ParentIds = append(code.ParentIds, parts[1])
-				}
-			}
+		for _, code := range tags {
 			if len(code.ParentIds) == 0 {
-				errs = append(errs, errors.New("Function "+code.Tag+" in file "+code.Path+" has no parents."))
+				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.Path, code.Line))
 			}
 			for _, parentID := range code.ParentIds {
 				parent := rg.Reqs[parentID]
 				if parent != nil {
 					if parent.IsDeleted() {
-						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" is deleted."))
+						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d, %s is deleted.", code.Tag, code.Path, code.Line, parentID))
 					}
 					if parent.Level == config.LOW {
 						parent.Tags = append(parent.Tags, code)
 						code.Parents = append(code.Parents, parent)
 					} else {
-						errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" must be a Low-Level Requirement."))
+						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d, %s is not a low-level requirement.", code.Tag, code.Path, code.Line, parentID))
 					}
 				} else {
-					errs = append(errs, errors.New("Invalid reference in file "+code.Path+" function "+code.Tag+": "+parentID+" does not exist."))
+					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d, %s does not exist.", code.Tag, code.Path, code.Line, parentID))
 				}
 			}
 		}
@@ -502,7 +493,7 @@ func (a byIDNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 // @llr REQ-TRAQ-SWL-46
 func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
 
-// byFilenameTag provides sort functions to order code by their path value
+// byFilenameTag provides sort functions to order code by their path value, and then line number
 type byFilenameTag []*Code
 
 // @llr REQ-TRAQ-SWL-47
@@ -517,7 +508,7 @@ func (a byFilenameTag) Less(i, j int) bool {
 	case -1:
 		return true
 	case 0:
-		return a[i].Tag < a[j].Tag
+		return a[i].Line < a[j].Line
 	}
 	return false
 }
