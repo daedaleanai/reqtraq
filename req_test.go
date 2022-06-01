@@ -14,19 +14,38 @@ import (
 func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
-	r := &Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1, Document: &config.Document{}}
+	sysDoc := config.Document{
+		Path: "path/to/sys.md",
+		Schema: config.Schema{
+			Requirements: regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+			Attributes:   make(map[string]*config.Attribute),
+		},
+	}
+
+	r := &Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1, Document: &sysDoc}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2, Document: &config.Document{}}
+	r = &Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2, Document: &sysDoc}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &config.Document{}}
+	srdDoc := config.Document{
+		Path: "path/to/srd.md",
+		Schema: config.Schema{
+			Requirements: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+			Attributes:   make(map[string]*config.Attribute),
+		},
+	}
+
+	r = &Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &config.Document{}}
+	r = &Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
 	rg.Reqs[r.ID] = r
 
-	assert.Empty(t, rg.resolve())
+	reqErrors := rg.resolve()
+	assert.Equal(t, len(reqErrors), 1)
+	assert.Equal(t, reqErrors[0].Error(),
+		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")
 
 	reqs := rg.OrdsByPosition()
 	assert.Len(t, reqs, 2)

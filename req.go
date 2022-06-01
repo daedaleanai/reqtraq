@@ -59,7 +59,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 				return rg, errors.Wrap(err, "Failed parsing certdocs")
 			}
 
-			if codeTags, err := ParseCode(repoName, &doc.Implementation); err != nil {
+			if codeTags, err := ParseCode(repoName, doc); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing implementation")
 			} else {
 				rg.mergeTags(&codeTags)
@@ -129,6 +129,11 @@ func (rg *ReqGraph) resolve() []error {
 			continue
 		}
 
+		// Validate requirement Id
+		if !req.Document.Schema.Requirements.MatchString(req.ID) {
+			errs = append(errs, fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements))
+		}
+
 		// Validate attributes
 		errs = append(errs, req.checkAttributes()...)
 
@@ -167,19 +172,20 @@ func (rg *ReqGraph) resolve() []error {
 				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line))
 			}
 			for _, parentID := range code.ParentIds {
+				if !code.Document.Schema.Requirements.MatchString(parentID) {
+					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
+						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path))
+				}
+
 				parent := rg.Reqs[parentID]
 				if parent != nil {
 					if parent.IsDeleted() {
 						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
 					}
-					if parent.Level == config.LOW {
-						parent.Tags = append(parent.Tags, code)
-						code.Parents = append(code.Parents, parent)
-					} else {
-						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is not a low-level requirement.",
-							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
-					}
+
+					parent.Tags = append(parent.Tags, code)
+					code.Parents = append(code.Parents, parent)
 				} else {
 					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
 						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))

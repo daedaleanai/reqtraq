@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -40,18 +41,34 @@ func SortErrs(errs []error) []string {
 func TestReqGraph_createMatrix(t *testing.T) {
 	rg := &ReqGraph{Reqs: make(map[string]*Req)}
 
+	sysDoc := config.Document{
+		Path: "path/to/sys.md",
+		Schema: config.Schema{
+			Requirements: regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+			Attributes:   make(map[string]*config.Attribute),
+		},
+	}
+
 	// System reqs
 	rg.Reqs["REQ-TEST-SYS-1"] = &Req{
 		ID:       "REQ-TEST-SYS-1",
 		IDNumber: 1,
 		Level:    config.SYSTEM,
-		Document: &config.Document{},
+		Document: &sysDoc,
 	}
 	rg.Reqs["REQ-TEST-SYS-2"] = &Req{
 		ID:       "REQ-TEST-SYS-2",
 		IDNumber: 2,
 		Level:    config.SYSTEM,
-		Document: &config.Document{},
+		Document: &sysDoc,
+	}
+
+	srdDoc := config.Document{
+		Path: "path/to/srd.md",
+		Schema: config.Schema{
+			Requirements: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+			Attributes:   make(map[string]*config.Attribute),
+		},
 	}
 
 	// High level requirements
@@ -59,21 +76,29 @@ func TestReqGraph_createMatrix(t *testing.T) {
 		ID:       "REQ-TEST-SWH-1",
 		IDNumber: 1,
 		Level:    config.HIGH,
-		Document: &config.Document{},
+		Document: &srdDoc,
 	}
 	rg.Reqs["REQ-TEST-SWH-2"] = &Req{
 		ID:        "REQ-TEST-SWH-2",
 		IDNumber:  2,
 		Level:     config.HIGH,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
-		Document:  &config.Document{},
+		Document:  &srdDoc,
 	}
 	rg.Reqs["REQ-TEST-SWH-3"] = &Req{
 		ID:        "REQ-TEST-SWH-3",
 		IDNumber:  3,
 		Level:     config.HIGH,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
-		Document:  &config.Document{},
+		Document:  &srdDoc,
+	}
+
+	sddDoc := config.Document{
+		Path: "path/to/sdd.md",
+		Schema: config.Schema{
+			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+			Attributes:   make(map[string]*config.Attribute),
+		},
 	}
 
 	// Low level requirements
@@ -82,7 +107,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 		IDNumber:  1,
 		Level:     config.LOW,
 		ParentIds: []string{"REQ-TEST-SWH-2"},
-		Document:  &config.Document{},
+		Document:  &sddDoc,
 	}
 	rg.Reqs["REQ-TEST-SWL-2"] = &Req{
 		ID:       "REQ-TEST-SWL-2",
@@ -92,14 +117,14 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWH-1",
 			"REQ-TEST-SWH-2",
 		},
-		Document: &config.Document{},
+		Document: &sddDoc,
 	}
 	rg.Reqs["REQ-TEST-SWL-3"] = &Req{
 		ID:        "REQ-TEST-SWL-3",
 		IDNumber:  3,
 		Level:     config.LOW,
 		ParentIds: []string{},
-		Document:  &config.Document{},
+		Document:  &sddDoc,
 	}
 
 	errs := SortErrs(rg.resolve())

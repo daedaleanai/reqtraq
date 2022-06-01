@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -76,14 +77,20 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	repoName := repos.RegisterRepository(filepath.Join(repos.BaseRepoPath(), "testdata/cproject1"))
 
 	rg := ReqGraph{Reqs: make(map[string]*Req, 0)}
-	var err error
 
-	impl := config.Implementation{
-		CodeFiles: []string{"a.c"},
-		TestFiles: []string{},
+	doc := config.Document{
+		Path: "path/to/doc.md",
+		Schema: config.Schema{
+			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+		},
+		Implementation: config.Implementation{
+			CodeFiles: []string{"a.c"},
+			TestFiles: []string{},
+		},
 	}
 
-	rg.CodeTags, err = ParseCode(repoName, &impl)
+	var err error
+	rg.CodeTags, err = ParseCode(repoName, &doc)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -101,10 +108,11 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 	LookFor(t, repoName, "a.c", rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW, Document: &config.Document{}}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH, Document: &config.Document{}}
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Level: config.LOW, Document: &doc}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Level: config.HIGH, Document: &doc}
 	errs := SortErrs(rg.resolve())
-	assert.Equal(t, 2, len(errs))
-	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14 in repo `cproject1`, REQ-TEST-SWH-11 is not a low-level requirement.", errs[0])
+	assert.Equal(t, 3, len(errs))
+	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`.", errs[0])
 	assert.Equal(t, "Invalid reference in function getSegment@a.c:20 in repo `cproject1`, REQ-TEST-SWL-12 does not exist.", errs[1])
+	assert.Equal(t, "Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`", errs[2])
 }
