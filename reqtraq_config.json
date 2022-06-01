@@ -7,6 +7,10 @@
         {
             "name": "Verification",
             "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
+        },
+        {
+            "name": "Safety Impact",
+            "value": "(None|True)"
         }
     ],
     "documents": [
@@ -16,11 +20,23 @@
         },
         {
             "path": "certdocs/TRAQ-137-SRD.md",
-            "requirements": "REQ-TRAQ-SWH-(\\d+)"
+            "requirements": "REQ-TRAQ-SWH-(\\d+)",
+            "attributes": [
+                {
+                    "name": "Parents",
+                    "value": "REQ-TRAQ-SWH-(\\d+)"
+                }
+            ]
         },
         {
             "path": "certdocs/TRAQ-138-SDD.md",
             "requirements": "REQ-TRAQ-SWL-(\\d+)",
+            "attributes": [
+                {
+                    "name": "Parents",
+                    "value": "REQ-TRAQ-SWH-(\\d+)"
+                }
+            ],
             "implementation": {
                 "code": {
                     "paths": ["."],

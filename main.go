@@ -28,10 +28,8 @@ var (
 	fAddr                    = flag.String("addr", ":8080", "The ip:port where to serve.")
 	fSince                   = flag.String("since", "", "The commit representing the start of the range.")
 	fAt                      = flag.String("at", "", "The commit representing the end of the range.")
-	// TODO(ja): Remove schemaPath  and use schema from the reqtraq configuration files.
-	fSchemaPath = flag.String("schema_path", repos.BaseRepoPath()+"/certdocs/attributes.json", "path to json with requirement schema.")
-	fStrict     = flag.Bool("strict", false, "Exit with error if any validation checks fail.")
-	fVerbose    = flag.Bool("v", false, "Enable verbose logs.")
+	fStrict                  = flag.Bool("strict", false, "Exit with error if any validation checks fail.")
+	fVerbose                 = flag.Bool("v", false, "Enable verbose logs.")
 )
 
 const usage = `
@@ -77,22 +75,19 @@ const reportUsage = `
 Usage:
 	reqtraq report<type> [--pfx=<reportfile-prefix>] [--title_filter=<regexp>] [--id_filter=<regexp>]
 		[--body_filter=<regexp>] [--since=<start_commid>] [--at=<end_commit>]
-		[--schema_path=<path_to_attributes_json>]
 Options:
 	--pfx: path and filename prefix for reports.
 	--title_filter: regular expression to filter by requirement title.
 	--id_filter: regular expression to filter by requirement id.
 	--body_filter: regular expression to filter by requirement body.
 	--since: the Git commit SHA-1 representing the start of the range.
-	--at: the commit representing the end of the range.
-	--schema_path: location of the schema json file. Default: certdocs/attributes.json`
+	--at: the commit representing the end of the range.`
 
 const validateUsage = `Runs the validation checks for the requirement documents in the current repository. Usage:
-	reqtraq validate [--at=<commit>] [--strict] [--schema_path=<path_to_attributes_json>]
+	reqtraq validate [--at=<commit>] [--strict]
 Options:
 	--at: validate this commit rather than the current working copy.
-	--strict: if any of the validation checks fail the command will exit with a non-zero code.
-	--schema_path: location of the schema json file. Default: certdocs/attributes.json`
+	--strict: if any of the validation checks fail the command will exit with a non-zero code.`
 
 const webUsage = `Starts a local web server to facilitate interaction with reqtraq. Usage:
 	reqtraq web [--addr=<hostport>]
@@ -191,30 +186,19 @@ func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) 
 		}
 
 		// Create the req graph with the new repository
-		rg, err := CreateReqGraph(&overridenConfig, *fSchemaPath)
+		rg, err := CreateReqGraph(&overridenConfig)
 		if err != nil {
 			return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
 		}
 		return rg, nil
 	}
 
-	// TODO(ja): Remove schema path, as it is covered now by the reqtraq_config.json file
-
 	// Create the req graph with the new repository
-	rg, err := CreateReqGraph(reqtraqConfig, *fSchemaPath)
+	rg, err := CreateReqGraph(reqtraqConfig)
 	if err != nil {
 		return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
 	}
 	return rg, nil
-}
-
-// checkCmdLinePaths validates the command line arguments for alternative paths or files to make sure they exist
-// @llr REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
-func checkCmdLinePaths() error {
-	if _, err := os.Stat(*fSchemaPath); os.IsNotExist(err) {
-		return err
-	}
-	return nil
 }
 
 // createFilterFromCmdLine reads the filter regular expressions from the command line arguments and
@@ -330,11 +314,6 @@ func nextId(filename string, reqtraqConfig *config.Config) error {
 // generates a top-down html report, showing the implementation for each top-level requirement
 // @llr REQ-TRAQ-SWL-35
 func reportDown(reqtraqConfig *config.Config) error {
-	err := checkCmdLinePaths()
-	if err != nil {
-		return err
-	}
-
 	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
@@ -384,11 +363,6 @@ func reportDown(reqtraqConfig *config.Config) error {
 // generates an issues html report, showing any validation problems
 // @llr REQ-TRAQ-SWL-36
 func reportIssues(reqtraqConfig *config.Config) error {
-	err := checkCmdLinePaths()
-	if err != nil {
-		return err
-	}
-
 	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
@@ -436,11 +410,6 @@ func reportIssues(reqtraqConfig *config.Config) error {
 // generates a bottom-up html report, showing the top-level requirement for each implemented function
 // @llr REQ-TRAQ-SWL-35
 func reportUp(reqtraqConfig *config.Config) error {
-	err := checkCmdLinePaths()
-	if err != nil {
-		return err
-	}
-
 	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err
@@ -514,11 +483,6 @@ func showHelp() {
 // validate builds the requirement graph, gathering any errors and prints them out. If the strict flag is set return an error.
 // @llr REQ-TRAQ-SWL-36
 func validate(reqtraqConfig *config.Config) error {
-	err := checkCmdLinePaths()
-	if err != nil {
-		return err
-	}
-
 	rg, err := buildGraph(*fAt, reqtraqConfig)
 	if err != nil {
 		return err

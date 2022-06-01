@@ -97,8 +97,8 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 	LookFor(t, "a.c", rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH}
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW, Document: &config.Document{}}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH, Document: &config.Document{}}
 	errs := SortErrs(rg.resolve())
 	assert.Equal(t, 2, len(errs))
 	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14, REQ-TEST-SWH-11 is not a low-level requirement.", errs[0])

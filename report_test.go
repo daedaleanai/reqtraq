@@ -13,7 +13,7 @@ import (
 func TestReports(t *testing.T) {
 	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
 
-	rg, err := CreateReqGraph(&reqtraqConfig, *fSchemaPath)
+	rg, err := CreateReqGraph(&reqtraqConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

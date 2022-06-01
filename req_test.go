@@ -14,16 +14,16 @@ import (
 func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
-	r := &Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1}
+	r := &Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1, Document: &config.Document{}}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2}
+	r = &Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2, Document: &config.Document{}}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}}
+	r = &Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &config.Document{}}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}}
+	r = &Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &config.Document{}}
 	rg.Reqs[r.ID] = r
 
 	assert.Empty(t, rg.resolve())

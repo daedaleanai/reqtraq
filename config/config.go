@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/daedaleanai/reqtraq/repos"
 )
@@ -151,7 +152,7 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 		}
 	}
 
-	return rawAttribute.Name, attribute, nil
+	return strings.ToUpper(rawAttribute.Name), attribute, nil
 }
 
 // Finds all matching files for the given query under the given repository.
