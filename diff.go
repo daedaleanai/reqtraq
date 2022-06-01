@@ -91,8 +91,9 @@ func (r *Req) changedSince(pr *Req) (diffs []string) {
 		}
 	}
 
-	if r.Path != pr.Path {
-		diffs = append(diffs, fmt.Sprintf("File in which found changed from %q to %q", pr.Path, r.Path))
+	if r.RepoName != pr.RepoName || r.Document.Path != pr.Document.Path {
+		diffs = append(diffs, fmt.Sprintf("File in which found changed from (%q - %q) to (%q - %q)",
+			pr.RepoName, pr.Document.Path, r.RepoName, r.Document.Path))
 	}
 
 	var keys []string

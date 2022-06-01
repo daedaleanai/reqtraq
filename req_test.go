@@ -2,7 +2,6 @@ package main
 
 import (
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strconv"
 	"testing"
@@ -12,79 +11,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReqGraph_AddReq(t *testing.T) {
-	rg := ReqGraph{Reqs: make(map[string]*Req)}
-
-	req := &Req{ID: "REQ-TEST-SWH-1"}
-	req2 := &Req{ID: "REQ-TEST-SWL-1", ParentIds: []string{"REQ-TEST-SWH-1"}}
-
-	rg.AddReq(req, "./TEST-0-SRD.md")
-	rg.AddReq(req2, "./TEST-1-SDD.md")
-
-	// if this becomes more complex we can move it into a table of tescases.
-	if expectedReq := (&Req{
-		ID:   "REQ-TEST-SWH-1",
-		Path: "./TEST-0-SRD.md",
-	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TEST-SWH-1"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TEST-SWH-1"])
-	}
-
-	if expectedReq := (&Req{
-		ID:        "REQ-TEST-SWL-1",
-		Path:      "./TEST-1-SDD.md",
-		ParentIds: []string{"REQ-TEST-SWH-1"},
-	}); !reflect.DeepEqual(expectedReq, rg.Reqs["REQ-TEST-SWL-1"]) {
-		t.Errorf("\nexpected %#v,\n     got %#v", expectedReq, rg.Reqs["REQ-TEST-SWL-1"])
-	}
-}
-
-func TestReqGraph_AddReq_someMore(t *testing.T) {
-	rg := ReqGraph{Reqs: make(map[string]*Req)}
-
-	for _, v := range []*Req{
-		{ID: "REQ-TEST-SWH-1", Position: 1},
-		{ID: "REQ-TEST-SWH-2", Position: 2},
-		{ID: "REQ-TEST-SWH-3", Position: 3},
-	} {
-		if err := rg.AddReq(v, "./TEST-0-SRD.md"); err != nil {
-			t.Errorf("addreq: %v", err)
-		}
-	}
-
-	for _, v := range []*Req{
-		{ID: "REQ-TEST-SWL-1", ParentIds: []string{"REQ-TEST-SWH-1"}, Position: 1},
-		{ID: "REQ-TEST-SWL-2", ParentIds: []string{"REQ-TEST-SWH-1"}, Position: 2},
-		{ID: "REQ-TEST-SWL-3", ParentIds: []string{"REQ-TEST-SWH-3"}, Position: 3},
-	} {
-		if err := rg.AddReq(v, "./TEST-1-SDD.md"); err != nil {
-			t.Errorf("addreq: %v", err)
-		}
-	}
-
-	for i, v := range []struct {
-		id     string
-		expect Req
-	}{
-		{"REQ-TEST-SWH-1", Req{ID: "REQ-TEST-SWH-1", Path: "./TEST-0-SRD.md", Position: 1}},
-		{"REQ-TEST-SWL-1", Req{
-			ID:        "REQ-TEST-SWL-1",
-			Path:      "./TEST-1-SDD.md",
-			ParentIds: []string{"REQ-TEST-SWH-1"},
-			Position:  1,
-		}},
-	} {
-		if !reflect.DeepEqual(v.expect, *rg.Reqs[v.id]) {
-			t.Errorf("case %d:\nexpected %#v,\n     got %#v", i, v.expect, *rg.Reqs[v.id])
-		}
-	}
-}
-
 func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req)}
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}}, "./TEST-0-SRD.md"))
+
+	r := &Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1}
+	rg.Reqs[r.ID] = r
+
+	r = &Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2}
+	rg.Reqs[r.ID] = r
+
+	r = &Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}}
+	rg.Reqs[r.ID] = r
+
+	r = &Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}}
+	rg.Reqs[r.ID] = r
+
 	assert.Empty(t, rg.resolve())
 
 	reqs := rg.OrdsByPosition()
@@ -143,7 +84,8 @@ func TestParsing(t *testing.T) {
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
 			Prefix:   "REQ",
 			Level:    config.SYSTEM,
-			Path:     document.Path,
+			Document: &document,
+			RepoName: repoName,
 			Position: reqPos,
 			Attributes: map[string]string{
 				"SAFETY IMPACT": "Impact " + reqNo,
@@ -155,7 +97,7 @@ func TestParsing(t *testing.T) {
 	assert.Equal(t, len(systemReqs), len(rg.Reqs), "Requirement count mismatch")
 
 	for i, systemReq := range rg.OrdsByPosition() {
-		if systemReqs[i].ID != systemReq.ID || systemReqs[i].Level != systemReq.Level || systemReqs[i].Path != systemReq.Path || systemReqs[i].Position != systemReq.Position {
+		if systemReqs[i].ID != systemReq.ID || systemReqs[i].Level != systemReq.Level || systemReqs[i].Document != systemReq.Document || systemReqs[i].Position != systemReq.Position || systemReqs[i].RepoName != systemReq.RepoName {
 			t.Errorf("Invalid system requirement\nExpected %#v,\n   got %#v", systemReqs[i], systemReq)
 		}
 	}

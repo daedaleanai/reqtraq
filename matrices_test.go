@@ -39,16 +39,60 @@ func SortErrs(errs []error) []string {
 
 func TestReqGraph_createMatrix(t *testing.T) {
 	rg := &ReqGraph{Reqs: make(map[string]*Req)}
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SYS-2", IDNumber: 2, Level: config.SYSTEM}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SYS-1", IDNumber: 1, Level: config.SYSTEM}, "./TEST-0-SRD.md"))
 
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWH-2", IDNumber: 2, Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWH-1", IDNumber: 1, Level: config.HIGH}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWH-3", IDNumber: 3, Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}}, "./TEST-0-SRD.md"))
+	// System reqs
+	rg.Reqs["REQ-TEST-SYS-1"] = &Req{
+		ID:       "REQ-TEST-SYS-1",
+		IDNumber: 1,
+		Level:    config.SYSTEM,
+	}
+	rg.Reqs["REQ-TEST-SYS-2"] = &Req{
+		ID:       "REQ-TEST-SYS-2",
+		IDNumber: 2,
+		Level:    config.SYSTEM,
+	}
 
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWL-3", IDNumber: 3, Level: config.LOW}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWL-1", IDNumber: 1, Level: config.LOW, ParentIds: []string{"REQ-TEST-SWH-2"}}, "./TEST-0-SRD.md"))
-	assert.NoError(t, rg.AddReq(&Req{ID: "REQ-TEST-SWL-2", IDNumber: 2, Level: config.LOW, ParentIds: []string{"REQ-TEST-SWH-1", "REQ-TEST-SWH-2"}}, "./TEST-0-SRD.md"))
+	// High level requirements
+	rg.Reqs["REQ-TEST-SWH-1"] = &Req{
+		ID:       "REQ-TEST-SWH-1",
+		IDNumber: 1,
+		Level:    config.HIGH,
+	}
+	rg.Reqs["REQ-TEST-SWH-2"] = &Req{
+		ID:        "REQ-TEST-SWH-2",
+		IDNumber:  2,
+		Level:     config.HIGH,
+		ParentIds: []string{"REQ-TEST-SYS-1"},
+	}
+	rg.Reqs["REQ-TEST-SWH-3"] = &Req{
+		ID:        "REQ-TEST-SWH-3",
+		IDNumber:  3,
+		Level:     config.HIGH,
+		ParentIds: []string{"REQ-TEST-SYS-1"},
+	}
+
+	// Low level requirements
+	rg.Reqs["REQ-TEST-SWL-1"] = &Req{
+		ID:        "REQ-TEST-SWL-1",
+		IDNumber:  1,
+		Level:     config.LOW,
+		ParentIds: []string{"REQ-TEST-SWH-2"},
+	}
+	rg.Reqs["REQ-TEST-SWL-2"] = &Req{
+		ID:       "REQ-TEST-SWL-2",
+		IDNumber: 2,
+		Level:    config.LOW,
+		ParentIds: []string{
+			"REQ-TEST-SWH-1",
+			"REQ-TEST-SWH-2",
+		},
+	}
+	rg.Reqs["REQ-TEST-SWL-3"] = &Req{
+		ID:        "REQ-TEST-SWL-3",
+		IDNumber:  3,
+		Level:     config.LOW,
+		ParentIds: []string{},
+	}
 
 	errs := SortErrs(rg.resolve())
 	assert.Equal(t, 0, len(errs))
