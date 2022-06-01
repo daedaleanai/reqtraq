@@ -84,18 +84,6 @@ func CreateReqGraph(reqtraqConfig *config.Config, schemaPath string) (*ReqGraph,
 	return rg, nil
 }
 
-// AddReq appends the requirements list with a new requirement, after confirming that it's not already present
-// @llr REQ-TRAQ-SWL-28
-func (rg *ReqGraph) AddReq(req *Req, path string) error {
-	if v := rg.Reqs[req.ID]; v != nil {
-		return fmt.Errorf("Requirement %s in %s already defined in %s", req.ID, path, v.Path)
-	}
-	req.Path = strings.TrimPrefix(path, repos.BaseRepoPath())
-
-	rg.Reqs[req.ID] = req
-	return nil
-}
-
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
 // found to the regGraph
 // @llr REQ-TRAQ-SWL-27
@@ -131,8 +119,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 			continue
 		}
 		r.Position = i
-		r.Repo = repoName
-		r.Path = documentConfig.Path
+		r.RepoName = repoName
+		r.Document = documentConfig
 		rg.Reqs[r.ID] = r
 	}
 	return nil
@@ -222,13 +210,10 @@ func (rg *ReqGraph) resolve() []error {
 
 // Req represents a requirement node in the graph of requirements.
 type Req struct {
-	ID       string                  // e.g. REQ-TEST-SWL-1
-	Prefix   string                  // e.g. REQ
-	IDNumber int                     // e.g. 1
-	Level    config.RequirementLevel // e.g. LOW
-	// Path identifies the file this was found in relative to repo root.
-	Repo      repos.RepoName
-	Path      string
+	ID        string                  // e.g. REQ-TEST-SWL-1
+	Prefix    string                  // e.g. REQ
+	IDNumber  int                     // e.g. 1
+	Level     config.RequirementLevel // e.g. LOW
 	ParentIds []string
 	// Parents holds the parent requirements.
 	Parents []*Req
@@ -244,6 +229,10 @@ type Req struct {
 	// Link back to the document where the requirement is defined and the name of the repository
 	Document *config.Document
 	RepoName repos.RepoName
+}
+
+func (r *Req) Path() string {
+	return fmt.Sprintf("(Repo `%s`, Document Path `%s`)", r.RepoName, r.Document.Path)
 }
 
 // Changelists generates a list of Phabicator revisions that have affected a requirement
