@@ -41,8 +41,22 @@ func SortErrs(errs []error) []string {
 func TestReqGraph_createMatrix(t *testing.T) {
 	rg := &ReqGraph{Reqs: make(map[string]*Req)}
 
+	sysReqSpec := config.ReqSpec{
+		Prefix: "SYS",
+		Level:  "TEST",
+	}
+	swhReqSpec := config.ReqSpec{
+		Prefix: "SWH",
+		Level:  "TEST",
+	}
+	swlReqSpec := config.ReqSpec{
+		Prefix: "SWL",
+		Level:  "TEST",
+	}
+
 	sysDoc := config.Document{
-		Path: "path/to/sys.md",
+		Path:    "path/to/sys.md",
+		ReqSpec: sysReqSpec,
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
@@ -53,18 +67,18 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	rg.Reqs["REQ-TEST-SYS-1"] = &Req{
 		ID:       "REQ-TEST-SYS-1",
 		IDNumber: 1,
-		Level:    config.SYSTEM,
 		Document: &sysDoc,
 	}
 	rg.Reqs["REQ-TEST-SYS-2"] = &Req{
 		ID:       "REQ-TEST-SYS-2",
 		IDNumber: 2,
-		Level:    config.SYSTEM,
 		Document: &sysDoc,
 	}
 
 	srdDoc := config.Document{
-		Path: "path/to/srd.md",
+		Path:          "path/to/srd.md",
+		ParentReqSpec: sysReqSpec,
+		ReqSpec:       swhReqSpec,
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
@@ -75,26 +89,25 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	rg.Reqs["REQ-TEST-SWH-1"] = &Req{
 		ID:       "REQ-TEST-SWH-1",
 		IDNumber: 1,
-		Level:    config.HIGH,
 		Document: &srdDoc,
 	}
 	rg.Reqs["REQ-TEST-SWH-2"] = &Req{
 		ID:        "REQ-TEST-SWH-2",
 		IDNumber:  2,
-		Level:     config.HIGH,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
 		Document:  &srdDoc,
 	}
 	rg.Reqs["REQ-TEST-SWH-3"] = &Req{
 		ID:        "REQ-TEST-SWH-3",
 		IDNumber:  3,
-		Level:     config.HIGH,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
 		Document:  &srdDoc,
 	}
 
 	sddDoc := config.Document{
-		Path: "path/to/sdd.md",
+		Path:          "path/to/sdd.md",
+		ParentReqSpec: swhReqSpec,
+		ReqSpec:       swlReqSpec,
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
@@ -105,14 +118,12 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	rg.Reqs["REQ-TEST-SWL-1"] = &Req{
 		ID:        "REQ-TEST-SWL-1",
 		IDNumber:  1,
-		Level:     config.LOW,
 		ParentIds: []string{"REQ-TEST-SWH-2"},
 		Document:  &sddDoc,
 	}
 	rg.Reqs["REQ-TEST-SWL-2"] = &Req{
 		ID:       "REQ-TEST-SWL-2",
 		IDNumber: 2,
-		Level:    config.LOW,
 		ParentIds: []string{
 			"REQ-TEST-SWH-1",
 			"REQ-TEST-SWH-2",
@@ -122,7 +133,6 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	rg.Reqs["REQ-TEST-SWL-3"] = &Req{
 		ID:        "REQ-TEST-SWL-3",
 		IDNumber:  3,
-		Level:     config.LOW,
 		ParentIds: []string{},
 		Document:  &sddDoc,
 	}
@@ -136,7 +146,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SYS-1 -> REQ-TEST-SWH-3",
 			"REQ-TEST-SYS-2 -> NIL",
 		},
-		rg.matrixRows(rg.createDownstreamMatrix(config.SYSTEM, config.HIGH)))
+		rg.matrixRows(rg.createDownstreamMatrix(sysReqSpec, swhReqSpec)))
 
 	assert.Equal(t,
 		[]string{
@@ -144,7 +154,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWH-2 -> REQ-TEST-SYS-1",
 			"REQ-TEST-SWH-3 -> REQ-TEST-SYS-1",
 		},
-		rg.matrixRows(rg.createUpstreamMatrix(config.HIGH, config.SYSTEM)))
+		rg.matrixRows(rg.createUpstreamMatrix(swhReqSpec, sysReqSpec)))
 
 	assert.Equal(t,
 		[]string{
@@ -153,7 +163,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWH-2 -> REQ-TEST-SWL-2",
 			"REQ-TEST-SWH-3 -> NIL",
 		},
-		rg.matrixRows(rg.createDownstreamMatrix(config.HIGH, config.LOW)))
+		rg.matrixRows(rg.createDownstreamMatrix(swhReqSpec, swlReqSpec)))
 
 	assert.Equal(t,
 		[]string{
@@ -162,5 +172,5 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWL-2 -> REQ-TEST-SWH-2",
 			"REQ-TEST-SWL-3 -> NIL",
 		},
-		rg.matrixRows(rg.createUpstreamMatrix(config.LOW, config.HIGH)))
+		rg.matrixRows(rg.createUpstreamMatrix(swlReqSpec, swhReqSpec)))
 }

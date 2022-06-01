@@ -10,8 +10,6 @@ import (
 	"log"
 	"os/exec"
 	"sort"
-
-	"github.com/daedaleanai/reqtraq/config"
 )
 
 type reportData struct {
@@ -63,7 +61,7 @@ func (rg ReqGraph) ReportIssuesFiltered(w io.Writer, filter *ReqFilter, diffs ma
 func (rg ReqGraph) OrdsByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg.Reqs {
-		if v.Level == config.SYSTEM && len(v.ParentIds) == 0 {
+		if !v.Document.HasParent() && len(v.ParentIds) == 0 {
 			r = append(r, v)
 		}
 	}
@@ -128,7 +126,7 @@ func (o Oncer) Once(r *Req) *Req {
 	if !ok {
 		return r
 	}
-	return &Req{ID: r.ID, Title: r.Title, Body: r.Body, Level: -1}
+	return &Req{ID: r.ID, Title: r.Title, Body: r.Body, Document: nil}
 }
 
 var headerFooterTmplText = `
@@ -215,9 +213,10 @@ func codeFileToString(CodeFile CodeFile) string {
 	return CodeFile.String()
 }
 
+// FIXME(ja): Fix oncer hack that used the level to link requirements...
 var reportTmplText = `
 {{ define "REQUIREMENT" }}
-	{{if ne .Level -1 }}
+	{{if ne .Document nil }}
 		<h3><a name="{{ .ID }}"></a>{{ .ID }} {{ .Title }}</h3>
 		{{ if .Body }}
 			<p>{{formatBodyAsHTML .Body }}</p>

@@ -3,14 +3,12 @@
     "documents": [
         {
             "path": "TEST-138-SDD.md",
-            "requirements": "REQ-TEST-SWL-(\\d+)",
-            "attributes": [
-                {
-                    "name": "Parents",
-                    "required": "any",
-                    "value": "REQ-TEST-SWH-(\\d+)"
-                }
-            ],
+            "prefix": "TEST",
+            "level": "SWL",
+            "parent": {
+                "prefix": "TEST",
+                "level": "SWH"
+            },
             "implementation": {
                 "code": {
                     "paths": ["code"],

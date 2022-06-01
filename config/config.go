@@ -14,6 +14,9 @@ import (
 	"github.com/daedaleanai/reqtraq/repos"
 )
 
+type ReqLevel string
+type ReqPrefix string
+
 /// Types exported for parsing json files
 
 type jsonAttribute struct {
@@ -33,9 +36,16 @@ type jsonImplementation struct {
 	Tests jsonFileQuery `json:"tests"`
 }
 
+type jsonParent struct {
+	Prefix ReqPrefix `json:"prefix"`
+	Level  ReqLevel  `json:"level"`
+}
+
 type jsonDoc struct {
 	Path           string             `json:"path"`
-	Requirements   string             `json:"requirements"`
+	Prefix         ReqPrefix          `json:"prefix"`
+	Level          ReqLevel           `json:"level"`
+	Parent         jsonParent         `json:"parent"`
 	Attributes     []jsonAttribute    `json:"attributes"`
 	Implementation jsonImplementation `json:"implementation"`
 }
@@ -72,8 +82,15 @@ type Schema struct {
 	Attributes   map[string]*Attribute
 }
 
+type ReqSpec struct {
+	Prefix ReqPrefix
+	Level  ReqLevel
+}
+
 type Document struct {
 	Path           string
+	ReqSpec        ReqSpec
+	ParentReqSpec  ReqSpec
 	Schema         Schema
 	Implementation Implementation
 }
@@ -205,7 +222,8 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 		return fmt.Errorf("Document with path `%s` in repo `%s` cannot be read: %s", doc.Path, repoName, err)
 	}
 
-	parsedDoc.Schema.Requirements, err = regexp.Compile(doc.Requirements)
+	parsedDoc.ReqSpec = ReqSpec{Prefix: doc.Prefix, Level: doc.Level}
+	parsedDoc.Schema.Requirements, err = regexp.Compile(fmt.Sprintf("(REQ|ASM)-%s-%s-(\\d+)", parsedDoc.ReqSpec.Prefix, parsedDoc.ReqSpec.Level))
 	if err != nil {
 		return err
 	}
@@ -216,7 +234,22 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 			return err
 		}
 
+		if parsedName == "PARENTS" {
+			return fmt.Errorf(`Invalid attribute Parent specified in reqtraq_config.json.
+The parent attribute is implicit from the parent declaration in the document`)
+		}
+
 		parsedDoc.Schema.Attributes[parsedName] = &parsedAttr
+	}
+
+	parsedDoc.ParentReqSpec.Level = doc.Parent.Level
+	parsedDoc.ParentReqSpec.Prefix = doc.Parent.Prefix
+	if doc.Parent.Level != "" && doc.Parent.Prefix != "" {
+		// Add the parent attribute
+		parsedDoc.Schema.Attributes["PARENTS"] = &Attribute{
+			Type:  AttributeAny,
+			Value: regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parsedDoc.ParentReqSpec.Prefix, parsedDoc.ParentReqSpec.Level)),
+		}
 	}
 
 	parsedDoc.Implementation.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName)
@@ -246,6 +279,26 @@ func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attrib
 		doc.Schema.Attributes[attrName] = (*commonAttributes)[attrName]
 	}
 	return nil
+}
+
+// Returns true if the document has a parent
+func (doc *Document) HasParent() bool {
+	return doc.ParentReqSpec.Level != "" && doc.ParentReqSpec.Prefix != ""
+}
+
+// Returns true if the document has associated implementation
+func (doc *Document) HasImplementation() bool {
+	return len(doc.Implementation.CodeFiles) != 0
+}
+
+// Returns true if the document matches the given requirement spec.
+func (doc *Document) MatchesSpec(reqSpec ReqSpec) bool {
+	return (reqSpec.Level == doc.ReqSpec.Level) && (reqSpec.Prefix == doc.ReqSpec.Prefix)
+}
+
+// Converts the requirement specification to a REQ string
+func (rs ReqSpec) ToString() string {
+	return fmt.Sprintf("REQ-%s-%s", rs.Prefix, rs.Level)
 }
 
 // Parses a configuration file into the config instance, recursing into each children until all
@@ -327,6 +380,23 @@ func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 		}
 	}
 	return "", nil
+}
+
+/// Builds a map of the linked child -> parent requirement specification to know what specs are related by a
+// parent/children relationship
+func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
+	links := make(map[ReqSpec]ReqSpec)
+
+	for repoName := range config.Repos {
+		for docIdx := range config.Repos[repoName].Documents {
+			doc := &config.Repos[repoName].Documents[docIdx]
+			if doc.HasParent() {
+				links[doc.ReqSpec] = doc.ParentReqSpec
+			}
+		}
+	}
+
+	return links
 }
 
 // Top level function to parse the configuration file from the given path in the current repository

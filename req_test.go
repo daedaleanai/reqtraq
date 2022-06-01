@@ -16,30 +16,38 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 
 	sysDoc := config.Document{
 		Path: "path/to/sys.md",
+		ReqSpec: config.ReqSpec{
+			Prefix: "TEST",
+			Level:  "SYS",
+		},
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
 		},
 	}
 
-	r := &Req{ID: "REQ-TEST-SYS-2", Level: config.SYSTEM, Position: 1, Document: &sysDoc}
+	r := &Req{ID: "REQ-TEST-SYS-2", Position: 1, Document: &sysDoc}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-TEST-SYS-1", Level: config.SYSTEM, Position: 2, Document: &sysDoc}
+	r = &Req{ID: "REQ-TEST-SYS-1", Position: 2, Document: &sysDoc}
 	rg.Reqs[r.ID] = r
 
 	srdDoc := config.Document{
 		Path: "path/to/srd.md",
+		ReqSpec: config.ReqSpec{
+			Prefix: "TEST",
+			Level:  "SWH",
+		},
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
 		},
 	}
 
-	r = &Req{ID: "REQ-TEST-SWH-1", Level: config.HIGH, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
+	r = &Req{ID: "REQ-TEST-SWH-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-UIEM-SYS-1", Level: config.SYSTEM, ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
+	r = &Req{ID: "REQ-UIEM-SYS-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
 	rg.Reqs[r.ID] = r
 
 	reqErrors := rg.resolve()
@@ -81,6 +89,10 @@ func TestParsing(t *testing.T) {
 	repoName := repos.RegisterRepository(filepath.Join(repos.BaseRepoPath(), "testdata"))
 	document := config.Document{
 		Path: "valid_system_requirement/TEST-100-ORD.md",
+		ReqSpec: config.ReqSpec{
+			Prefix: "TEST",
+			Level:  "SYS",
+		},
 	}
 
 	// test a valid requirements document
@@ -102,7 +114,6 @@ func TestParsing(t *testing.T) {
 		}
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
 			Prefix:   "REQ",
-			Level:    config.SYSTEM,
 			Document: &document,
 			RepoName: repoName,
 			Position: reqPos,
@@ -116,13 +127,17 @@ func TestParsing(t *testing.T) {
 	assert.Equal(t, len(systemReqs), len(rg.Reqs), "Requirement count mismatch")
 
 	for i, systemReq := range rg.OrdsByPosition() {
-		if systemReqs[i].ID != systemReq.ID || systemReqs[i].Level != systemReq.Level || systemReqs[i].Document != systemReq.Document || systemReqs[i].Position != systemReq.Position || systemReqs[i].RepoName != systemReq.RepoName {
+		if systemReqs[i].ID != systemReq.ID || systemReqs[i].Document != systemReq.Document || systemReqs[i].Position != systemReq.Position || systemReqs[i].RepoName != systemReq.RepoName {
 			t.Errorf("Invalid system requirement\nExpected %#v,\n   got %#v", systemReqs[i], systemReq)
 		}
 	}
 
 	document = config.Document{
 		Path: "invalid_system_requirement/NAM1-100-ORD.md",
+		ReqSpec: config.ReqSpec{
+			Prefix: "NAM1",
+			Level:  "SYS",
+		},
 	}
 
 	// an invalid requirements document containing requirement naming errors
@@ -142,6 +157,10 @@ func TestParsing(t *testing.T) {
 
 	document = config.Document{
 		Path: "invalid_system_requirement/GAP1-100-ORD.md",
+		ReqSpec: config.ReqSpec{
+			Prefix: "GAP1",
+			Level:  "SYS",
+		},
 	}
 
 	err = rg.addCertdocToGraph(repoName, &document)
@@ -157,6 +176,10 @@ func TestParsing(t *testing.T) {
 
 	document = config.Document{
 		Path: "invalid_system_requirement/DUP1-100-ORD.md",
+		ReqSpec: config.ReqSpec{
+			Prefix: "DUP1",
+			Level:  "SYS",
+		},
 	}
 
 	err = rg.addCertdocToGraph(repoName, &document)

@@ -108,8 +108,8 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 	LookFor(t, repoName, "a.c", rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Level: config.LOW, Document: &doc}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Level: config.HIGH, Document: &doc}
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc}
 	errs := SortErrs(rg.resolve())
 	assert.Equal(t, 3, len(errs))
 	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`.", errs[0])

@@ -214,13 +214,6 @@ body
 	assert.Equal(t, []string{"REQ-TEST-SYS-1"}, r.ParentIds)
 }
 
-func TestParseReq_InvalidType(t *testing.T) {
-	_, err := parseReq(`REQ-TEST-WILLNEVEREXIST-1 title
-body
-`)
-	assert.EqualError(t, err, `malformed requirement: Invalid type: "WILLNEVEREXIST"`)
-}
-
 func TestParseReq_Empty(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-SWL-1 title
 
