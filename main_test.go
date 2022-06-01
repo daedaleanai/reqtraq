@@ -33,17 +33,16 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 	repos.RegisterRepository(repos.BaseRepoPath())
 
 	config := config.Config{
-		CommonAttributes: make(map[string]config.Attribute),
 		Repos: map[repos.RepoName]config.RepoConfig{
-			repos.BaseRepoName(): config.RepoConfig{
+			repos.BaseRepoName(): {
 				Documents: []config.Document{
-					config.Document{
+					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-100-ORD.md",
 					},
-					config.Document{
+					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
 					},
-					config.Document{
+					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
 					},
 				},
@@ -83,7 +82,6 @@ WARNING. Validation failed`
 
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 	config := config.Config{
-		CommonAttributes: make(map[string]config.Attribute),
 		Repos: map[repos.RepoName]config.RepoConfig{
 			repos.BaseRepoName(): {
 				Documents: []config.Document{
