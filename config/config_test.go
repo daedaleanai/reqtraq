@@ -8,11 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConfig_ParseConfiguration(t *testing.T) {
+func TestConfig_ParseConfig(t *testing.T) {
 	repos.ClearAllRepositories()
-	projectA := repos.RegisterCurrentRepository("../testdata/projectA")
-
+	projectA := repos.RegisterRepository("../testdata/projectA")
 	assert.Equal(t, projectA, repos.RepoName("projectA"))
+
+	projectB := repos.RegisterRepository("../testdata/projectB")
+	assert.Equal(t, projectB, repos.RepoName("projectB"))
 
 	// Make sure the child can reach the parent
 	config, err := ParseConfig("../testdata/projectB")

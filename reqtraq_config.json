@@ -25,11 +25,11 @@
                 "code": {
                     "paths": ["."],
                     "matchingPattern": ".*\\.go$",
-                    "ignoredPatterns": [".*\\_test.go$"]
+                    "ignoredPatterns": [".*_test\\.go$"]
                 },
                 "tests": {
                     "paths": ["."],
-                    "matchingPattern": ".*\\_test.go$"
+                    "matchingPattern": ".*_test\\.go$"
                 }
             }
         }

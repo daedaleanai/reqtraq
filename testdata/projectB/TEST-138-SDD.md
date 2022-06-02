@@ -15,7 +15,7 @@ Body of requirement 1.
 - Safety impact: Impact 1
 
 
-### REQ-TEST-SWH-2 Section 2
+### REQ-TEST-SWL-2 Section 2
 
 Body of requirement 2.
 

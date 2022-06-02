@@ -29,6 +29,11 @@ var (
 	reBlankLine = regexp.MustCompile(`^\s*$`)
 )
 
+type CodeFile struct {
+	RepoName repos.RepoName
+	Path     string
+}
+
 // Code represents a code node in the graph of requirements.
 type Code struct {
 	// Path is the code file this was found in relative to repo root.

@@ -30,7 +30,7 @@ func RunValidate(t *testing.T, config *config.Config, schemapath string) (string
 }
 
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
-	repos.RegisterCurrentRepository(repos.BaseRepoPath())
+	repos.RegisterRepository(repos.BaseRepoPath())
 
 	config := config.Config{
 		CommonAttributes: make(map[string]config.Attribute),

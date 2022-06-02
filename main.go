@@ -131,7 +131,11 @@ func main() {
 	// assign global Verbose variable after arguments have been parsed
 	linepipes.Verbose = *fVerbose
 
-	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
+	// Register BaseRepository so that it is always accessible afterwards
+	baseRepoPath := repos.BaseRepoPath()
+	repos.RegisterRepository(baseRepoPath)
+
+	reqtraqConfig, err := config.ParseConfig(baseRepoPath)
 	if err != nil {
 		log.Fatal("Error parsing `reqtraq_config.json` file in current repo:", err)
 	}
@@ -172,13 +176,16 @@ func main() {
 // @llr REQ-TRAQ-SWL-17
 func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
 	if commit != "" {
-		err := repos.OverrideRepository(repos.RemotePath(repos.BaseRepoPath()), commit)
+		// Override the current repository to get a different revision. This will create a clone
+		// of the repo with the specified revision and it will be always used after this call for
+		// the base repo
+		_, _, err := repos.GetRepo(repos.RemotePath(repos.BaseRepoPath()), commit, true)
 		if err != nil {
 			return nil, err
 		}
 
 		// Also override reqtraq configuration... as they are different repos
-		overridenConfig, err := config.ParseConfigForOverridenRepo(repos.BaseRepoPath())
+		overridenConfig, err := config.ParseConfig(repos.BaseRepoPath())
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +254,7 @@ func list(filename string, reqtraqConfig *config.Config) error {
 
 	var repoName repos.RepoName
 	var certdocConfig *config.Document
-	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); string(repoName) != "" {
+	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); certdocConfig == nil {
 		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
 	}
 	reqs, err := ParseMarkdown(repoName, certdocConfig)
@@ -288,7 +295,7 @@ func nextId(filename string, reqtraqConfig *config.Config) error {
 
 	var repoName repos.RepoName
 	var certdocConfig *config.Document
-	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); string(repoName) == "" {
+	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); certdocConfig == nil {
 		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
 	}
 
