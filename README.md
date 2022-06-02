@@ -72,7 +72,7 @@ Server started on http://localhost:8080
 ```
 
 #### Configuration
-Reqtraq is configured using a `reqtraq_config.json` file in the root of the repository tha contains both requirements and data.
+Reqtraq is configured using a `reqtraq_config.json` file in the root of the repository that contains both requirements and data.
 
 ```json
 {
@@ -102,11 +102,11 @@ Reqtraq is configured using a `reqtraq_config.json` file in the root of the repo
                 "code": {
                     "paths": ["."],
                     "matchingPattern": ".*\\.go$",
-                    "ignoredPatterns": [".*\\_test.go$"]
+                    "ignoredPatterns": [".*_test\\.go$"]
                 },
                 "tests": {
                     "paths": ["."],
-                    "matchingPattern": ".*\\_test.go$"
+                    "matchingPattern": ".*_test\\.go$"
                 }
             }
         }
@@ -115,7 +115,7 @@ Reqtraq is configured using a `reqtraq_config.json` file in the root of the repo
 ```
 
 All document paths are specified with respect to the root of the repository they belong to. It is possible 
-to separate code and requirements accross multiple repositories with reqtraq by specifying parent 
+to separate code and requirements across multiple repositories with reqtraq by specifying parent 
 and children repositories in its configuration file. 
 
 There must always be a top level repository that contains a configuration file with no parents.
@@ -132,7 +132,7 @@ Child repository configuration:
                 {
                     "name": "Parents",
                     "required": "any",
-                    "value": "REQ-TEST-SYS-(\\d+)"
+                    "value": "REQ-TEST-SWH-(\\d+)"
                 }
             ],
             "implementation": {
@@ -176,8 +176,8 @@ Parent repository configuration:
             "attributes": []
         },
         {
-            "path": "certdocs/TEST-100-ORD.md",
-            "requirements": "REQ-TEST-SYS-(\\d+)",
+            "path": "certdocs/TEST-137-SRD.md",
+            "requirements": "REQ-TEST-SWH-(\\d+)",
             "attributes": [
                 {
                     "name": "Parents",

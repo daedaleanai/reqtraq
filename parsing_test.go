@@ -148,7 +148,7 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 		t.Fatal(err)
 	}
 
-	repoName := repos.RegisterCurrentRepository(filepath.Dir(f.Name()))
+	repoName := repos.RegisterRepository(filepath.Dir(f.Name()))
 
 	doc := config.Document{
 		Path: filepath.Base(f.Name()),

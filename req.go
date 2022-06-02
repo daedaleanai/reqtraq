@@ -27,11 +27,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type CodeFile struct {
-	RepoName repos.RepoName
-	Path     string
-}
-
 // ReqGraph holds the complete information about a set of requirements and associated code tags.
 type ReqGraph struct {
 	// Reqs contains the requirements by ID.

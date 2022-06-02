@@ -15,11 +15,11 @@
                 "code": {
                     "paths": ["code"],
                     "matchingPattern": ".*\\.(cc|hh)$",
-                    "ignoredPatterns": [".*\\_ignored.(cc|hh)$"]
+                    "ignoredPatterns": [".*_ignored\\.(cc|hh)$"]
                 },
                 "tests": {
                     "paths": ["test"],
-                    "matchingPattern": ".*\\_test.(cc|hh)$"
+                    "matchingPattern": ".*_test\\.(cc|hh)$"
                 }
             }
         }

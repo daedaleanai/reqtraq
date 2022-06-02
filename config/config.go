@@ -82,6 +82,8 @@ type Config struct {
 	Repos            map[repos.RepoName]RepoConfig
 }
 
+// Reads a json configuration file from the specify repository path.
+// The file is always located at reqtraq_config.json
 func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	// Read parent config and parse that
 	configPath := filepath.Join(string(repoPath), "reqtraq_config.json")
@@ -100,9 +102,11 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	return config, nil
 }
 
+// Finds the top-level configuration file, by searching all config files and its parents until it finds one
+// without a parent. It then returns the name of the repository where it was found and its json configuration
 func findTopLevelConfig(repoName repos.RepoName, config jsonConfig) (repos.RepoName, jsonConfig, error) {
 	if config.ParentRepo != "" {
-		parentRepoName, parentRepoPath, err := repos.GetRepoPathByRemotePath(config.ParentRepo)
+		parentRepoName, parentRepoPath, err := repos.GetRepo(config.ParentRepo, "", false)
 		if err != nil {
 			return repoName, jsonConfig{}, fmt.Errorf("Error getting repository with path: %s. %s", config.ParentRepo, err)
 		}
@@ -118,6 +122,7 @@ func findTopLevelConfig(repoName repos.RepoName, config jsonConfig) (repos.RepoN
 	return repoName, config, nil
 }
 
+// Parses an a single attribute from its json description
 func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 	var attribute Attribute
 	switch rawAttribute.Required {
@@ -146,6 +151,7 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 	return rawAttribute.Name, attribute, nil
 }
 
+// Finds all matching files for the given query under the given repository.
 func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([]string, error) {
 	var matchingPattern *regexp.Regexp = nil
 	if fileQuery.MatchingPattern != "" {
@@ -178,6 +184,8 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 	return collectedFiles, nil
 }
 
+// Parses a document, appending it to the list of documents for the repoConfig instance or returning
+// an error if the document is invalid.
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
@@ -185,7 +193,7 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 		Path:       doc.Path,
 	}
 
-	err = repos.ValidatePath(repoName, doc.Path)
+	_, err = repos.PathInRepo(repoName, doc.Path)
 	if err != nil {
 		return fmt.Errorf("Document with path `%s` in repo `%s` cannot be read: %s", doc.Path, repoName, err)
 	}
@@ -219,6 +227,8 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 	return nil
 }
 
+// Parses a configuration file into the config instance, recursing into each children until all
+// configuration files have been parsed.
 func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonConfig) error {
 
 	// Parse this config file
@@ -245,7 +255,7 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 
 	// Parse any children it has
 	for _, childRepo := range jsonConfig.ChildrenRepos {
-		childRepoName, childRepoPath, err := repos.GetRepoPathByRemotePath(childRepo)
+		childRepoName, childRepoPath, err := repos.GetRepo(childRepo, "", false)
 		if err != nil {
 			return fmt.Errorf("Error getting child repo name from: %s", childRepo)
 		}
@@ -264,6 +274,8 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 	return nil
 }
 
+// Finds the associated Document for a certdoc located at the given path or an error if the
+// document is not found
 func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 	for repoName := range config.Repos {
 		for docIdx := range config.Repos[repoName].Documents {
@@ -277,45 +289,19 @@ func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 
 // Top level function to parse the configuration file from the given path in the current repository
 func ParseConfig(currentRepoPath string) (Config, error) {
-	jsonConfig, err := readJsonConfigFromRepo(repos.RepoPath(currentRepoPath))
-	if err != nil {
-		return Config{}, err
-	}
-
-	// Register ourselves (Or the current repo path) in the registry of repositories
-	repoName := repos.RegisterCurrentRepository(currentRepoPath)
-
-	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
-	// Find the top level config, then start parsing them
-	topLevelRepoName, topLevelConfig, err := findTopLevelConfig(repoName, jsonConfig)
-	if err != nil {
-		return Config{}, err
-	}
-
-	config := Config{
-		CommonAttributes: make(map[string]Attribute),
-		Repos:            make(map[repos.RepoName]RepoConfig),
-	}
-	err = config.parseConfigFile(topLevelRepoName, topLevelConfig)
-	if err != nil {
-		return Config{}, err
-	}
-
-	return config, nil
-}
-
-// Top level function to parse the configuration file from the given path in the current repository
-func ParseConfigForOverridenRepo(currentRepoPath string) (Config, error) {
-	repoName := repos.GetRepoNameFromRemotePath(repos.RemotePath(currentRepoPath))
+	repoName := repos.GetRepoNameFromPath(currentRepoPath)
 	repoPath, err := repos.GetRepoPathByName(repoName)
 	if err != nil {
 		return Config{}, err
 	}
+
 	jsonConfig, err := readJsonConfigFromRepo(repoPath)
 	if err != nil {
 		return Config{}, err
 	}
 
+	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
+	// Find the top level config, then start parsing them
 	topLevelRepoName, topLevelConfig, err := findTopLevelConfig(repoName, jsonConfig)
 	if err != nil {
 		return Config{}, err
