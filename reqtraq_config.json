@@ -24,7 +24,7 @@
             "attributes": [
                 {
                     "name": "Parents",
-                    "value": "REQ-TRAQ-SWH-(\\d+)"
+                    "value": "REQ-TRAQ-SYS-(\\d+)"
                 }
             ]
         },
