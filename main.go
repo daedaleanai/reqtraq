@@ -125,7 +125,7 @@ func main() {
 
 	// Register BaseRepository so that it is always accessible afterwards
 	baseRepoPath := repos.BaseRepoPath()
-	repos.RegisterRepository(baseRepoPath)
+	repos.RegisterRepository(repos.BaseRepoName(), baseRepoPath)
 
 	reqtraqConfig, err := config.ParseConfig(baseRepoPath)
 	if err != nil {
@@ -171,7 +171,7 @@ func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) 
 		// Override the current repository to get a different revision. This will create a clone
 		// of the repo with the specified revision and it will be always used after this call for
 		// the base repo
-		_, _, err := repos.GetRepo(repos.RemotePath(repos.BaseRepoPath()), commit, true)
+		_, err := repos.GetRepo(repos.BaseRepoName(), repos.RemotePath(repos.BaseRepoPath()), commit, true)
 		if err != nil {
 			return nil, err
 		}

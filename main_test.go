@@ -29,7 +29,7 @@ func RunValidate(t *testing.T, config *config.Config) (string, error) {
 }
 
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
-	repos.RegisterRepository(repos.BaseRepoPath())
+	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
 
 	commonAttributes := map[string]*config.Attribute{
 		"RATIONALE": {

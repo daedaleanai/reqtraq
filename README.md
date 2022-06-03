@@ -76,6 +76,7 @@ Reqtraq is configured using a `reqtraq_config.json` file in the root of the repo
 
 ```json
 {
+    "repoName": "reqtraq",
     "commonAttributes": [
         {
             "name": "Rationale",
@@ -134,7 +135,11 @@ There must always be a top level repository that contains a configuration file w
 Child repository configuration:
 ```json
 {
-    "parentRepository": "/path/to/parent/repo",
+    "repoName": "childRepo",
+    "parentRepository": {
+        "repoName": "parentRepo",
+        "repoUrl": "/path/to/parent/repo"
+    },
     "documents": [
         {
             "path": "certdocs/TEST-138-SDD.md",
@@ -171,9 +176,16 @@ Child repository configuration:
 Parent repository configuration:
 ```json
 {
+    "repoName": "parentRepo",
     "childrenRepositories": [
-        "/path/to/child/repo",
-        "/path/to/another/child/repo"
+        {
+            "repoName": "childRepo",
+            "repoUrl": "/path/to/child/repo"
+        },
+        {
+            "repoName": "anotherChildRepo",
+            "repoUrl": "/path/to/another/child/repo"
+        }
     ],
     "commonAttributes": [
         {

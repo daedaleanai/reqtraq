@@ -7,17 +7,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/pkg/errors"
 )
 
 type ReqLevel string
 type ReqPrefix string
 
 /// Types exported for parsing json files
+
+type jsonRepoLink struct {
+	RepoName   repos.RepoName   `json:"repoName"`
+	RemotePath repos.RemotePath `json:"repoUrl"`
+}
 
 type jsonAttribute struct {
 	Name     string `json:"name"`
@@ -51,10 +59,11 @@ type jsonDoc struct {
 }
 
 type jsonConfig struct {
-	CommonAttributes []jsonAttribute    `json:"commonAttributes"`
-	ParentRepo       repos.RemotePath   `json:"parentRepository"`
-	ChildrenRepos    []repos.RemotePath `json:"childrenRepositories"`
-	Docs             []jsonDoc          `json:"documents"`
+	RepoName         repos.RepoName  `json:"repoName"`
+	CommonAttributes []jsonAttribute `json:"commonAttributes"`
+	ParentRepo       jsonRepoLink    `json:"parentRepository"`
+	ChildrenRepos    []jsonRepoLink  `json:"childrenRepositories"`
+	Docs             []jsonDoc       `json:"documents"`
 }
 
 /// Types exported for application use
@@ -125,22 +134,28 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 
 // Finds the top-level configuration file, by searching all config files and its parents until it finds one
 // without a parent. It then returns the name of the repository where it was found and its json configuration
-func findTopLevelConfig(repoName repos.RepoName, config jsonConfig) (repos.RepoName, jsonConfig, error) {
-	if config.ParentRepo != "" {
-		parentRepoName, parentRepoPath, err := repos.GetRepo(config.ParentRepo, "", false)
+func findTopLevelConfig(config jsonConfig) (jsonConfig, error) {
+	if config.ParentRepo.RepoName != "" {
+		parentRepoPath, err := repos.GetRepo(config.ParentRepo.RepoName, config.ParentRepo.RemotePath, "", false)
 		if err != nil {
-			return repoName, jsonConfig{}, fmt.Errorf("Error getting repository with path: %s. %s", config.ParentRepo, err)
+			return jsonConfig{}, fmt.Errorf("Error getting repository with path: %s. %s", config.ParentRepo, err)
 		}
 
 		parentConfig, err := readJsonConfigFromRepo(parentRepoPath)
 		if err != nil {
-			return repoName, jsonConfig{}, err
+			return jsonConfig{}, err
 		}
 
-		return findTopLevelConfig(parentRepoName, parentConfig)
+		// TODO(ja): Check the name of the parent actually matches the expectation
+		if config.ParentRepo.RepoName != parentConfig.RepoName {
+			return jsonConfig{}, fmt.Errorf("Repo `%s` defines parent repository with name `%s`, but `%s` was found in url",
+				config.RepoName, config.ParentRepo.RepoName, parentConfig.RepoName)
+		}
+
+		return findTopLevelConfig(parentConfig)
 	}
 
-	return repoName, config, nil
+	return config, nil
 }
 
 // Parses an a single attribute from its json description
@@ -303,9 +318,7 @@ func (rs ReqSpec) ToString() string {
 
 // Parses a configuration file into the config instance, recursing into each children until all
 // configuration files have been parsed.
-func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
-
-	// Parse this config file
+func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
 	repoConfig := RepoConfig{}
 
 	for _, commonAttr := range jsonConfig.CommonAttributes {
@@ -318,24 +331,24 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 		// Double-check that this attribute is not already defined
 		if _, ok := (*commonAttributes)[parsedName]; ok {
 			return fmt.Errorf("Common attribute with name `%s` found in config for repo `%s` is already defined elsewhere",
-				parsedName, repoName)
+				parsedName, jsonConfig.RepoName)
 		}
 
 		(*commonAttributes)[parsedName] = &parsedAttr
 	}
 
 	for _, doc := range jsonConfig.Docs {
-		err := repoConfig.parseDocument(repoName, doc)
+		err := repoConfig.parseDocument(jsonConfig.RepoName, doc)
 		if err != nil {
 			return err
 		}
 	}
 
-	config.Repos[repoName] = repoConfig
+	config.Repos[jsonConfig.RepoName] = repoConfig
 
 	// Parse any children it has
 	for _, childRepo := range jsonConfig.ChildrenRepos {
-		childRepoName, childRepoPath, err := repos.GetRepo(childRepo, "", false)
+		childRepoPath, err := repos.GetRepo(childRepo.RepoName, childRepo.RemotePath, "", false)
 		if err != nil {
 			return fmt.Errorf("Error getting child repo name from: %s", childRepo)
 		}
@@ -345,7 +358,13 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 			return err
 		}
 
-		err = config.parseConfigFile(childRepoName, childJsonConfig, commonAttributes)
+		// TODO(ja): Validate the name of the child and exit if it does not match
+		if childRepo.RepoName != childJsonConfig.RepoName {
+			return fmt.Errorf("Configuration for repo `%s` contains child with name `%s` but the url points to a repo with name `%s`",
+				jsonConfig.RepoName, childRepo.RepoName, childJsonConfig.RepoName)
+		}
+
+		err = config.parseConfigFile(childJsonConfig, commonAttributes)
 		if err != nil {
 			return err
 		}
@@ -382,7 +401,7 @@ func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 	return "", nil
 }
 
-/// Builds a map of the linked child -> parent requirement specification to know what specs are related by a
+// Builds a map of the linked child -> parent requirement specification to know what specs are related by a
 // parent/children relationship
 func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
 	links := make(map[ReqSpec]ReqSpec)
@@ -400,21 +419,15 @@ func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
 }
 
 // Top level function to parse the configuration file from the given path in the current repository
-func ParseConfig(currentRepoPath string) (Config, error) {
-	repoName := repos.GetRepoNameFromPath(currentRepoPath)
-	repoPath, err := repos.GetRepoPathByName(repoName)
-	if err != nil {
-		return Config{}, err
-	}
-
+func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 	jsonConfig, err := readJsonConfigFromRepo(repoPath)
 	if err != nil {
-		return Config{}, err
+		return Config{}, errors.Wrapf(err, "The requested config path `%s` does not contain a valid repository", repoPath)
 	}
 
 	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
 	// Find the top level config, then start parsing them
-	topLevelRepoName, topLevelConfig, err := findTopLevelConfig(repoName, jsonConfig)
+	topLevelConfig, err := findTopLevelConfig(jsonConfig)
 	if err != nil {
 		return Config{}, err
 	}
@@ -425,7 +438,7 @@ func ParseConfig(currentRepoPath string) (Config, error) {
 
 	commonAttributes := make(map[string]*Attribute)
 
-	err = config.parseConfigFile(topLevelRepoName, topLevelConfig, &commonAttributes)
+	err = config.parseConfigFile(topLevelConfig, &commonAttributes)
 	if err != nil {
 		return Config{}, err
 	}
@@ -433,4 +446,34 @@ func ParseConfig(currentRepoPath string) (Config, error) {
 	config.appendCommonAttributes(&commonAttributes)
 
 	return config, nil
+}
+
+// Load base repository information on init
+func init() {
+	loadBaseRepoInfo()
+}
+
+func loadBaseRepoInfo() {
+	// See details about "working directory" in https://git-scm.com/docs/githooks
+	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))
+	if err != nil {
+		log.Fatalf("Failed to check Git repository type. Are you running reqtraq in a Git repo?\n%s", err)
+	}
+	if bare == "true" {
+		log.Fatalf("Reqtraq cannot be used in bare checkouts")
+	}
+
+	toplevel, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--show-toplevel"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	basePath := repos.RepoPath(toplevel)
+
+	config, err := readJsonConfigFromRepo(basePath)
+	if err != nil {
+		log.Fatalf("Error reading configuration in path: %s, %v", basePath, err)
+	}
+
+	repos.SetBaseRepoInfo(basePath, config.RepoName)
 }

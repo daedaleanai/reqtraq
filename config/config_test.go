@@ -10,11 +10,8 @@ import (
 
 func TestConfig_ParseConfig(t *testing.T) {
 	repos.ClearAllRepositories()
-	projectA := repos.RegisterRepository("../testdata/projectA")
-	assert.Equal(t, projectA, repos.RepoName("projectA"))
-
-	projectB := repos.RegisterRepository("../testdata/projectB")
-	assert.Equal(t, projectB, repos.RepoName("projectB"))
+	repos.RegisterRepository(repos.RepoName("projectA"), repos.RepoPath("../testdata/projectA"))
+	repos.RegisterRepository(repos.RepoName("projectB"), repos.RepoPath("../testdata/projectB"))
 
 	// Make sure the child can reach the parent
 	config, err := ParseConfig("../testdata/projectB")

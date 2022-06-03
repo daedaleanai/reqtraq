@@ -86,7 +86,9 @@ func TestReq_Significant(t *testing.T) {
 }
 
 func TestParsing(t *testing.T) {
-	repoName := repos.RegisterRepository(filepath.Join(repos.BaseRepoPath(), "testdata"))
+	repoPath := repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata"))
+	repoName := repos.RepoName("testdata")
+	repos.RegisterRepository(repoName, repoPath)
 	document := config.Document{
 		Path: "valid_system_requirement/TEST-100-ORD.md",
 		ReqSpec: config.ReqSpec{

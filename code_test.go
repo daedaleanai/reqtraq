@@ -51,7 +51,8 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 }
 
 func TestTagCode(t *testing.T) {
-	repoName := repos.RegisterRepository(filepath.Join(repos.BaseRepoPath(), "testdata/cproject1"))
+	repoName := repos.RepoName("cproject1")
+	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
 	tags, err := tagCode(repoName, []string{"a.c"})
 	if !assert.NoError(t, err) {
@@ -74,7 +75,8 @@ func TestTagCode(t *testing.T) {
 }
 
 func TestReqGraph_ParseCode(t *testing.T) {
-	repoName := repos.RegisterRepository(filepath.Join(repos.BaseRepoPath(), "testdata/cproject1"))
+	repoName := repos.RepoName("cproject1")
+	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
 	rg := ReqGraph{Reqs: make(map[string]*Req, 0)}
 

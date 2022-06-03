@@ -20,9 +20,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+var reqtraqConfig *config.Config
+
 // Serve starts the web server listening on the supplied address:port
 // @llr REQ-TRAQ-SWL-37
-func Serve(addr string, reqtraqConfig *config.Config) error {
+func Serve(addr string, cfg *config.Config) error {
+	reqtraqConfig = cfg
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}
@@ -195,11 +198,6 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	repoName := repos.BaseRepoName()
 	reqPath := r.URL.Path
 
-	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
-	if err != nil {
-		log.Fatal("Error parsing `reqtraq_config.json` file in current repo:", err)
-	}
-
 	// root page
 	if reqPath == "/" {
 		commits, err := repos.AllCommits(repoName)
@@ -257,7 +255,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	if at != "" {
 		atCommit = strings.Split(at, " ")[0]
 	}
-	rg, err := buildGraph(atCommit, &reqtraqConfig)
+	rg, err := buildGraph(atCommit, reqtraqConfig)
 	if err != nil {
 		return err
 	}
@@ -272,7 +270,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		since := r.FormValue("since_commit")
 		if since != "" {
 			sinceCommit := strings.Split(since, " ")[0]
-			prg, err = buildGraph(sinceCommit, &reqtraqConfig)
+			prg, err = buildGraph(sinceCommit, reqtraqConfig)
 			if err != nil {
 				return err
 			}

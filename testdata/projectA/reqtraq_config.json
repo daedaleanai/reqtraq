@@ -1,6 +1,10 @@
 {
+    "repoName": "projectA",
     "childrenRepositories": [
-        "projectB"
+        {
+            "repoName": "projectB",
+            "repoUrl": "projectB"
+        }
     ],
     "commonAttributes": [
         {
