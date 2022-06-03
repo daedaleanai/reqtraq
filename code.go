@@ -221,6 +221,10 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 			continue
 		}
 		tag := parts[0]
+		if strings.HasPrefix(tag, "__anon") {
+			// Ignore anonymous functions like lambdas
+			continue
+		}
 		p := parts[1]
 		if !isSourceCodeFile(p) {
 			continue

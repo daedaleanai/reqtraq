@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -31,7 +32,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 	}
 	tags, ok := tagsPerFile[codeFile]
 	assert.True(t, ok)
-	assert.Equal(t, 3, len(tags))
+	assert.Equal(t, len(expectedTags), len(tags))
 
 	for _, tag := range tags {
 		found := false
@@ -54,24 +55,27 @@ func TestTagCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
-	tags, err := tagCode(repoName, []string{"a.c"})
+	tags, err := tagCode(repoName, []string{"a.cc"})
 	if !assert.NoError(t, err) {
 		return
 	}
 	assert.Equal(t, 1, len(tags))
 
 	expectedTags := []TagMatch{
+		{"operator []",
+			37,
+			""},
 		{"enumerateObjects",
-			30,
+			27,
 			""},
 		{"getSegment",
-			20,
+			17,
 			""},
 		{"getNumberOfSegments",
-			14,
+			13,
 			""},
 	}
-	LookFor(t, repoName, "a.c", tags, expectedTags)
+	LookFor(t, repoName, "a.cc", tags, expectedTags)
 }
 
 func TestReqGraph_ParseCode(t *testing.T) {
@@ -86,7 +90,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 		},
 		Implementation: config.Implementation{
-			CodeFiles: []string{"a.c"},
+			CodeFiles: []string{"a.cc"},
 			TestFiles: []string{},
 		},
 	}
@@ -98,23 +102,31 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 
 	expectedTags := []TagMatch{
+		{"operator []",
+			37,
+			"REQ-TEST-SWL-13,REQ-TEST-SWL-14"},
 		{"enumerateObjects",
-			30,
+			27,
 			`REQ-TEST-SWL-13`},
 		{"getSegment",
-			20,
+			17,
 			`REQ-TEST-SWL-12`},
 		{"getNumberOfSegments",
-			14,
+			13,
 			`REQ-TEST-SWH-11`},
 	}
-	LookFor(t, repoName, "a.c", rg.CodeTags, expectedTags)
+	LookFor(t, repoName, "a.cc", rg.CodeTags, expectedTags)
 
 	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc}
 	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc}
-	errs := SortErrs(rg.resolve())
-	assert.Equal(t, 3, len(errs))
-	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`.", errs[0])
-	assert.Equal(t, "Invalid reference in function getSegment@a.c:20 in repo `cproject1`, REQ-TEST-SWL-12 does not exist.", errs[1])
-	assert.Equal(t, "Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`", errs[2])
+
+	errs := rg.resolve()
+	assert.ElementsMatch(t,
+		errs,
+		[]error{
+			fmt.Errorf("Invalid reference in function getNumberOfSegments@a.cc:13 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`."),
+			fmt.Errorf("Invalid reference in function getSegment@a.cc:17 in repo `cproject1`, REQ-TEST-SWL-12 does not exist."),
+			fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
+			fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
+		})
 }
