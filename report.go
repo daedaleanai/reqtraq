@@ -209,7 +209,11 @@ func formatBodyAsHTML(txt string) template.HTML {
 	return template.HTML(out)
 }
 
-var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML}).Parse(headerFooterTmplText)).Parse(reportTmplText))
+var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString}).Parse(headerFooterTmplText)).Parse(reportTmplText))
+
+func codeFileToString(CodeFile CodeFile) string {
+	return CodeFile.ToString()
+}
 
 var reportTmplText = `
 {{ define "REQUIREMENT" }}
@@ -234,7 +238,7 @@ var reportTmplText = `
 	{{ if . }}
 		<p>Code:
 		{{ range . }}
-			<a href="{{ .URL }}" target="_blank">{{ .Path }}:{{ .Tag }}</a>
+			<a href="{{ .URL }}" target="_blank">{{ codeFileToString .CodeFile }} - {{ .Tag }}</a>
 		{{ end }}
 		</p>
 	{{ end }}
@@ -298,7 +302,7 @@ var reportTmplText = `
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
 			<li>
-				<h3><a href="{{ .URL }}" target="_blank">{{ .Path }}:{{ .Tag }}</a></h3>
+				<h3><a href="{{ .URL }}" target="_blank">{{ codeFileToString .CodeFile }} - {{ .Tag }}</a></h3>
 
 				<!-- LLRs -->
 				<ul>

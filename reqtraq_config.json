@@ -24,7 +24,8 @@
             "attributes": [
                 {
                     "name": "Parents",
-                    "value": "REQ-TRAQ-SYS-(\\d+)"
+                    "value": "REQ-TRAQ-SYS-(\\d+)",
+                    "required": "any"
                 }
             ]
         },
@@ -34,7 +35,8 @@
             "attributes": [
                 {
                     "name": "Parents",
-                    "value": "REQ-TRAQ-SWH-(\\d+)"
+                    "value": "REQ-TRAQ-SWH-(\\d+)",
+                    "required": "any"
                 }
             ],
             "implementation": {

@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path"
 	"regexp"
 	"strings"
 
@@ -210,7 +209,16 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if lexer == nil {
 			return errors.New("unknown file type")
 		}
-		filePath := path.Join(repos.BaseRepoPath(), reqPath[6:])
+
+		path := strings.TrimPrefix(reqPath, "/code/")
+		parts := strings.SplitN(path, "/", 2)
+		repoName := repos.RepoName(parts[0])
+		filePath := parts[1]
+
+		filePath, err := repos.PathInRepo(repoName, filePath)
+		if err != nil {
+			return errors.Wrap(err, "failed to read file")
+		}
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to read file")

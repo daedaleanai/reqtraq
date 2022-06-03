@@ -34,10 +34,14 @@ type CodeFile struct {
 	Path     string
 }
 
+func (codeFile *CodeFile) ToString() string {
+	return fmt.Sprintf("%s: %s", codeFile.RepoName, codeFile.Path)
+}
+
 // Code represents a code node in the graph of requirements.
 type Code struct {
-	// Path is the code file this was found in relative to repo root.
-	Path string
+	// The file where the code can be found
+	CodeFile CodeFile
 	// Tag is the name of the function.
 	Tag string
 	// Line number where the function starts.
@@ -49,7 +53,7 @@ type Code struct {
 
 // ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their associated requirement IDs, discovered. The return value is a map from each discovered source code file to a slice of Code structs representing the functions found within.
 // @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
-func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (map[string][]*Code, error) {
+func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)
 	codeFilePaths := make([]string, 0)
@@ -77,7 +81,7 @@ func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (
 	}
 
 	// Annotate the code procedures with the associated requirement IDs.
-	if err := parseComments(codeFiles, tags); err != nil {
+	if err := parseComments(tags); err != nil {
 		return tags, errors.Wrap(err, "failed walking code")
 	}
 
@@ -87,7 +91,7 @@ func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (
 // URL create a URL path to a code function by concatenating the source code path and line number of the function
 // @llr REQ-TRAQ-SWL-38
 func (code *Code) URL() string {
-	return fmt.Sprintf("/code/%s#L%d", code.Path, code.Line)
+	return fmt.Sprintf("/code/%s/%s#L%d", code.CodeFile.RepoName, code.CodeFile.Path, code.Line)
 }
 
 // SourceCodeFileExtensions are listed by language.
@@ -145,13 +149,13 @@ func isSourceCodeFile(name string) bool {
 
 // parseComments updates the specified tags with the requirement IDs discovered in the codeFiles.
 // @llr REQ-TRAQ-SWL-9
-func parseComments(codeFiles []CodeFile, codeTags map[string][]*Code) error {
-	for _, codeFile := range codeFiles {
+func parseComments(codeTags map[CodeFile][]*Code) error {
+	for codeFile := range codeTags {
 		fsPath, err := repos.PathInRepo(codeFile.RepoName, codeFile.Path)
 		if err != nil {
 			return err
 		}
-		if err := parseFileComments(fsPath, codeTags[codeFile.Path]); err != nil {
+		if err := parseFileComments(fsPath, codeTags[codeFile]); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed comments discovery for %s - %s", codeFile.RepoName, codeFile.Path))
 		}
 	}
@@ -228,7 +232,7 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse line number: %v", parts)
 		}
-		res = append(res, &Code{Path: relativePath, Tag: tag, Line: line})
+		res = append(res, &Code{CodeFile: CodeFile{RepoName: repoName, Path: relativePath}, Tag: tag, Line: line})
 	}
 	return res, nil
 }
@@ -254,7 +258,7 @@ func relativePathToRepo(filePath, repoPath string) (string, error) {
 
 // tagCode runs ctags over the specified code files and parses the generated tags file.
 // @llr REQ-TRAQ-SWL-8
-func tagCode(repoName repos.RepoName, codePaths []string) (map[string][]*Code, error) {
+func tagCode(repoName repos.RepoName, codePaths []string) (map[CodeFile][]*Code, error) {
 	r, w := io.Pipe()
 	errChannel := make(chan error)
 	go func(errChannel chan error) {
@@ -308,13 +312,13 @@ func tagCode(repoName repos.RepoName, codePaths []string) (map[string][]*Code, e
 		return nil, errors.Wrap(err, "failed to run ctags to find methods in the source code")
 	}
 
-	tagsByFile := make(map[string][]*Code, 0)
+	tagsByFile := make(map[CodeFile][]*Code, 0)
 	for _, tag := range tags {
-		_, ok := tagsByFile[tag.Path]
+		_, ok := tagsByFile[tag.CodeFile]
 		if !ok {
-			tagsByFile[tag.Path] = make([]*Code, 0)
+			tagsByFile[tag.CodeFile] = make([]*Code, 0)
 		}
-		tagsByFile[tag.Path] = append(tagsByFile[tag.Path], tag)
+		tagsByFile[tag.CodeFile] = append(tagsByFile[tag.CodeFile], tag)
 	}
 	return tagsByFile, nil
 }

@@ -30,7 +30,7 @@ type ReqGraph struct {
 	Reqs map[string]*Req
 	// CodeTags contains the source code functions per file.
 	// The keys are paths relative to the git repo path.
-	CodeTags map[string][]*Code
+	CodeTags map[CodeFile][]*Code
 	// Errors which have been found while analyzing the graph.
 	// This is extended in multiple places.
 	Errors []error
@@ -38,12 +38,18 @@ type ReqGraph struct {
 	ReqtraqConfig *config.Config
 }
 
+func (rg *ReqGraph) mergeTags(tags *map[CodeFile][]*Code) {
+	for tagKey := range *tags {
+		rg.CodeTags[tagKey] = (*tags)[tagKey]
+	}
+}
+
 // CreateReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
 // errors found while walking the requirements, code, or resolving the graph.
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
 func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
-	rg := &ReqGraph{make(map[string]*Req, 0), nil, make([]error, 0), reqtraqConfig}
+	rg := &ReqGraph{make(map[string]*Req, 0), make(map[CodeFile][]*Code), make([]error, 0), reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them
 	for repoName := range reqtraqConfig.Repos {
@@ -56,7 +62,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 			if codeTags, err := ParseCode(repoName, &doc.Implementation); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing implementation")
 			} else {
-				rg.CodeTags = codeTags
+				rg.mergeTags(&codeTags)
 			}
 		}
 	}
@@ -158,22 +164,25 @@ func (rg *ReqGraph) resolve() []error {
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
 			if len(code.ParentIds) == 0 {
-				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.Path, code.Line))
+				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.ToString(), code.Line))
 			}
 			for _, parentID := range code.ParentIds {
 				parent := rg.Reqs[parentID]
 				if parent != nil {
 					if parent.IsDeleted() {
-						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d, %s is deleted.", code.Tag, code.Path, code.Line, parentID))
+						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
+							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
 					}
 					if parent.Level == config.LOW {
 						parent.Tags = append(parent.Tags, code)
 						code.Parents = append(code.Parents, parent)
 					} else {
-						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d, %s is not a low-level requirement.", code.Tag, code.Path, code.Line, parentID))
+						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is not a low-level requirement.",
+							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
 					}
 				} else {
-					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d, %s does not exist.", code.Tag, code.Path, code.Line, parentID))
+					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
+						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
 				}
 			}
 		}
@@ -367,11 +376,17 @@ func (a byFilenameTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
 // @llr REQ-TRAQ-SWL-47
 func (a byFilenameTag) Less(i, j int) bool {
-	switch strings.Compare(a[i].Path, a[j].Path) {
+	switch strings.Compare(string(a[i].CodeFile.RepoName), string(a[j].CodeFile.RepoName)) {
 	case -1:
 		return true
 	case 0:
-		return a[i].Line < a[j].Line
+		switch strings.Compare(a[i].CodeFile.Path, a[j].CodeFile.Path) {
+		case -1:
+			return true
+		case 0:
+			return a[i].Line < a[j].Line
+		}
+		return false
 	}
 	return false
 }
