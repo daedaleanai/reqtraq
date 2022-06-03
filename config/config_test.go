@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-52, REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func TestConfig_ParseConfig(t *testing.T) {
 	repos.ClearAllRepositories()
 	repos.RegisterRepository(repos.RepoName("projectA"), repos.RepoPath("../testdata/projectA"))

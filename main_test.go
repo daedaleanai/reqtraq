@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-36
 func RunValidate(t *testing.T, config *config.Config) (string, error) {
 	// prepare capture of stdout
 	rescueStdout := os.Stdout
@@ -28,6 +29,7 @@ func RunValidate(t *testing.T, config *config.Config) (string, error) {
 	return string(buf), err
 }
 
+// @llr REQ-TRAQ-SWL-36
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
 
@@ -138,6 +140,7 @@ WARNING. Validation failed`
 	checkValidateError(t, actual, expected)
 }
 
+// @llr REQ-TRAQ-SWL-36
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 	commonAttributes := map[string]*config.Attribute{
 		"RATIONALE": {
@@ -210,6 +213,7 @@ WARNING. Validation failed`
 	checkValidateError(t, actual, expected)
 }
 
+// @llr REQ-TRAQ-SWL-36
 func checkValidateError(t *testing.T, validate_errors string, expected string) {
 	errs := strings.Split(validate_errors, "\n")
 	for i, e := range errs {

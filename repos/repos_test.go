@@ -12,6 +12,7 @@ import (
 )
 
 // Other packages (config) are expected to do this, but for the repos config we can do it here
+// @llr REQ-TRAQ-SWL-49
 func TestMain(m *testing.M) {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -22,16 +23,19 @@ func TestMain(m *testing.M) {
 
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_BaseRepoName(t *testing.T) {
 	assert.Equal(t, BaseRepoName(), RepoName("reqtraq"))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_BaseRepoPath(t *testing.T) {
 	workingDir, err := os.Getwd()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, BaseRepoPath(), filepath.Dir(workingDir))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_RegisterRepository(t *testing.T) {
 	ClearAllRepositories()
 
@@ -43,6 +47,7 @@ func TestRepos_RegisterRepository(t *testing.T) {
 	assert.Equal(t, path, RepoPath("/some/fake/path/MyCoolRepo"))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_ClearAllRepositories(t *testing.T) {
 	ClearAllRepositories()
 
@@ -59,6 +64,7 @@ func TestRepos_ClearAllRepositories(t *testing.T) {
 	assert.NotEqual(t, err, nil)
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_GetRepo_NoOverrideRegistered(t *testing.T) {
 	baseRepoPath := BaseRepoPath()
 	baseRepoName := BaseRepoName()
@@ -70,6 +76,7 @@ func TestRepos_GetRepo_NoOverrideRegistered(t *testing.T) {
 	assert.Equal(t, path, RepoPath(baseRepoPath))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_GetRepo_NoOverrideNotRegistered(t *testing.T) {
 	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
@@ -82,6 +89,7 @@ func TestRepos_GetRepo_NoOverrideNotRegistered(t *testing.T) {
 	assert.True(t, strings.HasPrefix(string(path), tempDirPrefix))
 }
 
+// @llr REQ-TRAQ-SWL-50
 func TestRepos_GetRepo_OverrideRegistered(t *testing.T) {
 	baseRepoPath := BaseRepoPath()
 	baseRepoName := BaseRepoName()
@@ -96,6 +104,7 @@ func TestRepos_GetRepo_OverrideRegistered(t *testing.T) {
 	assert.True(t, strings.HasPrefix(string(path), tempDirPrefix))
 }
 
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-51
 func TestRepos_FindFilesInDirectory(t *testing.T) {
 	baseRepoPath := BaseRepoPath()
 	baseRepoName := BaseRepoName()
@@ -134,6 +143,7 @@ func TestRepos_FindFilesInDirectory(t *testing.T) {
 	})
 }
 
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-51
 func TestRepos_PathInRepo(t *testing.T) {
 	baseRepoPath := BaseRepoPath()
 	baseRepoName := BaseRepoName()
@@ -149,6 +159,7 @@ func TestRepos_PathInRepo(t *testing.T) {
 	assert.NotEqual(t, err, nil)
 }
 
+// @llr REQ-TRAQ-SWL-16
 func TestRepos_AllCommits(t *testing.T) {
 	baseRepoPath := BaseRepoPath()
 	baseRepoName := BaseRepoName()

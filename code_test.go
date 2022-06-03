@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-8
 func TestCheckCtagsAvailable(t *testing.T) {
 	if err := checkCtagsAvailable(); err != nil {
 		t.Fatal(errors.Wrap(err, "ctags not available - REQTRAQ_CTAGS env var can be set to specify location"))
@@ -25,6 +26,7 @@ type TagMatch struct {
 	parentIds string
 }
 
+// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
 func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFile map[CodeFile][]*Code, expectedTags []TagMatch) {
 	codeFile := CodeFile{
 		Path:     sourceFile,
@@ -51,6 +53,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 	}
 }
 
+// @llr REQ-TRAQ-SWL-8
 func TestTagCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
@@ -78,6 +81,7 @@ func TestTagCode(t *testing.T) {
 	LookFor(t, repoName, "a.cc", tags, expectedTags)
 }
 
+// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
 func TestReqGraph_ParseCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))

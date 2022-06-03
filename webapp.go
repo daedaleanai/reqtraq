@@ -53,6 +53,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Helper function for the HTML template to get a string with only the first character in capitals
+// @llr REQ-TRAQ-SWL-37
 func Title(str string) string {
 	return strings.Title(strings.ToLower(str))
 }
@@ -177,6 +179,8 @@ type indexData struct {
 	CodeLinks    []config.ReqSpec
 }
 
+// Gets the requirement specifier from the http request string
+// @llr REQ-TRAQ-SWL-37
 func parseReqSpecFromRequest(specString string) (config.ReqSpec, error) {
 	if !strings.HasPrefix(specString, "REQ-") {
 		return config.ReqSpec{}, fmt.Errorf("Invalid requirement specification `%s`", specString)

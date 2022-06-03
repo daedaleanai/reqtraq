@@ -114,6 +114,7 @@ type Config struct {
 
 // Reads a json configuration file from the specify repository path.
 // The file is always located at reqtraq_config.json
+// @llr REQ-TRAQ-SWL-53
 func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	// Read parent config and parse that
 	configPath := filepath.Join(string(repoPath), "reqtraq_config.json")
@@ -134,6 +135,7 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 
 // Finds the top-level configuration file, by searching all config files and its parents until it finds one
 // without a parent. It then returns the name of the repository where it was found and its json configuration
+// @llr REQ-TRAQ-SWL-52
 func findTopLevelConfig(config jsonConfig) (jsonConfig, error) {
 	if config.ParentRepo.RepoName != "" {
 		parentRepoPath, err := repos.GetRepo(config.ParentRepo.RepoName, config.ParentRepo.RemotePath, "", false)
@@ -159,6 +161,7 @@ func findTopLevelConfig(config jsonConfig) (jsonConfig, error) {
 }
 
 // Parses an a single attribute from its json description
+// @llr REQ-TRAQ-SWL-53
 func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 	var attribute Attribute
 	switch rawAttribute.Required {
@@ -188,6 +191,7 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 }
 
 // Finds all matching files for the given query under the given repository.
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([]string, error) {
 	var matchingPattern *regexp.Regexp = nil
 	if fileQuery.MatchingPattern != "" {
@@ -222,6 +226,7 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 
 // Parses a document, appending it to the list of documents for the repoConfig instance or returning
 // an error if the document is invalid.
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
@@ -284,6 +289,7 @@ The parents attribute is implicit from the parent declaration in the document`)
 
 // Appends the common attributes to the document and exits with an error if some attribute is
 // already defined by the document's attributes.
+// @llr REQ-TRAQ-SWL-53
 func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attribute) error {
 	for attrName := range *commonAttributes {
 		if _, ok := doc.Schema.Attributes[attrName]; ok {
@@ -297,27 +303,32 @@ func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attrib
 }
 
 // Returns true if the document has a parent
+// @llr REQ-TRAQ-SWL-55
 func (doc *Document) HasParent() bool {
 	return doc.ParentReqSpec.Level != "" && doc.ParentReqSpec.Prefix != ""
 }
 
 // Returns true if the document has associated implementation
+// @llr REQ-TRAQ-SWL-56
 func (doc *Document) HasImplementation() bool {
 	return len(doc.Implementation.CodeFiles) != 0
 }
 
 // Returns true if the document matches the given requirement spec.
+// @llr REQ-TRAQ-SWL-55
 func (doc *Document) MatchesSpec(reqSpec ReqSpec) bool {
 	return (reqSpec.Level == doc.ReqSpec.Level) && (reqSpec.Prefix == doc.ReqSpec.Prefix)
 }
 
 // Converts the requirement specification to a REQ string
+// @llr REQ-TRAQ-SWL-55
 func (rs ReqSpec) ToString() string {
 	return fmt.Sprintf("REQ-%s-%s", rs.Prefix, rs.Level)
 }
 
 // Parses a configuration file into the config instance, recursing into each children until all
 // configuration files have been parsed.
+// @llr REQ-TRAQ-SWL-53
 func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
 	repoConfig := RepoConfig{}
 
@@ -376,6 +387,7 @@ func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *m
 // Appends common attributes to each of the document's attributes to build a comprehensive list of
 // attributes per document. If any of the documents already contrains the attribute it will exit
 // with an error to let the user know about this duplication
+// @llr REQ-TRAQ-SWL-53
 func (config *Config) appendCommonAttributes(commonAttributes *map[string]*Attribute) error {
 	for repoName := range config.Repos {
 		for docIndex := range config.Repos[repoName].Documents {
@@ -390,6 +402,7 @@ func (config *Config) appendCommonAttributes(commonAttributes *map[string]*Attri
 
 // Finds the associated Document for a certdoc located at the given path or an error if the
 // document is not found
+// @llr REQ-TRAQ-SWL-54
 func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 	for repoName := range config.Repos {
 		for docIdx := range config.Repos[repoName].Documents {
@@ -403,6 +416,7 @@ func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 
 // Builds a map of the linked child -> parent requirement specification to know what specs are related by a
 // parent/children relationship
+// @llr REQ-TRAQ-SWL-54
 func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
 	links := make(map[ReqSpec]ReqSpec)
 
@@ -419,6 +433,7 @@ func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
 }
 
 // Top level function to parse the configuration file from the given path in the current repository
+// @llr REQ-TRAQ-SWL-53
 func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 	jsonConfig, err := readJsonConfigFromRepo(repoPath)
 	if err != nil {
@@ -449,10 +464,13 @@ func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 }
 
 // Load base repository information on init
+// @llr REQ-TRAQ-SWL-53
 func init() {
 	loadBaseRepoInfo()
 }
 
+// Loads the information for the base repository from git
+// @llr REQ-TRAQ-SWL-53
 func loadBaseRepoInfo() {
 	// See details about "working directory" in https://git-scm.com/docs/githooks
 	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))

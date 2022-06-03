@@ -50,6 +50,13 @@ Reqtraq has the following outputs:
 - The next available requirement <abbr title="Identification">ID</abbr> for a given document, to the command line
 - An abridged version of the requirements from a given document, to the command line
 
+Reqtraq uses a configuration file to determine:
+- What documents are part of the requirements identification. Reqtraq will parse all certification documents listed in the configuration and extract requirements from all of them.
+- What kind of requirements can be found in each of these documents. Reqtraq must categorize requirements according to their level and prefix.
+- What are the relationships between documents and requirements. Requirements at different levels have a parent-children relationship that is specified by the reqtraq configuration.
+- Where the implementation of low-level-requirements is located. Reqtraq must check all implentation and tests in order to complete its traceability report.
+- What attributes are allowed by the reqtraq schema and their allowed range of values. This may depend on the document or requirement level.
+
 ### Software Design and Implementation Details
 
 Documents (markdown and source code) are discovered and parsed from the current Git repository. Each requirement found is parsed into an instance of the `Req` data structure, and each code function in the `Code` data structure. They are all held within a `ReqGraph` object, which is a dictionary of requirements by IDs at a particular Git commit.
@@ -65,8 +72,10 @@ ReqGraph source code is arranged as follows:
 - report.go: Generating html reports to save to disk or provide to a web server
 - matrices.go: Generating traceability tables to provide to a web server
 - webapp.go: Launch and service a local web server
-- git/git.go: Wrapper functions for git commands used within Reqtraq
+- repos/repos.go: Keeps a registry of all repositories where code and certification documents can be found
 - linepipes/run.go: Wrapper functions the golang command interface
+- config/config.go: Parses the reqtraq configuration for the git repository in the current directory. 
+Registers any parent and children repositories found in the configuration file, and recursively parses their configuration.
 
 ## Low-level Software Requirements Identification
 
@@ -74,9 +83,9 @@ ReqGraph source code is arranged as follows:
 
 Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated requirement IDs. The external program Universal Ctags is used to scan for functions.
 
-#### REQ-TRAQ-SWL-6 Scan for source code
+#### REQ-TRAQ-SWL-6 Check for supported source code
 
-Reqtraq SHALL scan all folders within a given path, relative to the git repository root, searching for supported source code files (those with an extension: c, h, cc, hh or go).
+The code component SHALL check the provided source code files and make sure only supported files are parsed as code.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-2
@@ -84,7 +93,7 @@ Reqtraq SHALL scan all folders within a given path, relative to the git reposito
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-7 Skip testdata
+#### REQ-TRAQ-SWL-7 DELETED
 
 Reqtraq SHALL skip any folder named "testdata" when searching for source code.
 
@@ -163,9 +172,10 @@ Reqtraq SHALL not report differences to non letter characters when comparing req
 - Verification: Test
 - Safety Impact: None
 
-### git/git.go
+### repos/repos.go
 
-Wrapper functions for git commands used within Reqtraq.
+Keeps a registry of all repositories where code and certification documents can be found. Reqtraq interacts with multiple repositories where the requirements are defined.
+The repos module ensures that the correct instance of each repository is used and provides facilities for identifying repositories based on names, as well as overriding or registering repositories. It wraps git commands to checkout specific revisions of each repository.
 
 #### REQ-TRAQ-SWL-16 Wrap git commands
 
@@ -173,6 +183,36 @@ Reqtraq SHALL wrap git commands needed with go functions.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-7
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-49 Repository registry
+
+Reqtraq SHALL keep a repository registry that provides access to multiple repositories and their contents by name.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-50 Repository override
+
+Reqtraq SHALL provide facilities for overriding repositories in order to check different revisions or the differences between multiple revisions.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-51 Find files
+
+Reqtraq SHALL provide facilities for finding files with matching patterns within a repository.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18, REQ-TRAQ-SWH-2
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -311,9 +351,8 @@ Where a column contains source code Reqtraq SHALL sort alphabetically by source 
 
 Functions for parsing requirements out of markdown documents.
 
-The entry point is ParseCertdoc which in turns calls other functions as follows:
-- ParseCertdoc: Checks filename is valid then calls:
-- parseMarkdown: Scans file one line at a time looking for requirements that either formatted within ATX headings
+The entry point is ParseMarkdown which in turns calls other functions as follows:
+- ParseMarkdown: Scans file one line at a time looking for requirements that either formatted within ATX headings
                  or held in tables. For each ATX requirement or table calls:
 - parseMarkdownFragment: Depending on the type of requirement calls one of the following functions.
 - parseReq: Parses ATX heading requirements into the Req structure and returns it.
@@ -329,15 +368,8 @@ The requirement attributes are formatted one per line:
     - NAME1: VALUE1
     - NAME2: VALUE2
 
-Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in an `attributes.json` file in the `certdocs` directory. For example, the `attributes.json` for the current document would be:
-
-```
-{ "attributes": [
-  { "name": "Parent", "optional": false }, 
-  { "name": "Verification", "value": "(Demonstration|Unit Test)",
-    "optional": false },
-  { "name": "Safety Impact", "optional": false } ] }
-```
+Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in the configuration file `reqtraq_config.json` file in the root of the repository. For more information about the format of the configuration file see the [Config](#config/config.go) section.
+Attributes are specified per document or globally as common attributes that apply to any requirements found in any document.
 
 Reqtraq reads the attributes of each requirement held in a requirement table from each column of the table. The first row of the table contains the attribute name for each column, the first column being "ID" to represent requirement ID. The second row is a delimiter. The third row onward contains the requirement ID and associated attribute text as shown:
 
@@ -348,21 +380,9 @@ Reqtraq reads the attributes of each requirement held in a requirement table fro
 > | ReqID2 | <text> | <text> | <text> | <text> |
 ```
 
-As with ATX headings, attributes can be optional or mandatory as specified in the `attributes.json` file.
+As with ATX headings, attributes can be optional or mandatory as specified in the `reqtraq_config.json` file.
 
-#### REQ-TRAQ-SWL-24 Certification document names
-
-Reqtraq SHALL check the validity of a certification document name by checking the parts delimited by `-`:
-
-1. Project abbreviation, which shall be the same for all the certification documents of a system, e.g. "TRAQ"
-2. Document type sequence number, e.g. "138"
-3. Document type, e.g. "SDD"
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-11
-- Rationale:
-- Verification: Test
-- Safety Impact: None
+#### REQ-TRAQ-SWL-24 DELETED
 
 #### REQ-TRAQ-SWL-2 Requirement definition detection (ATX heading)
 
@@ -605,9 +625,9 @@ The interface between the parsing tool and the report generation tool is a data 
 - `.md` certification documents files that may define requirements,
 - `.cc`, `.hh`, `.go` source files that may reference requirements.
 
-#### REQ-TRAQ-SWL-1 Scan for markdown
+#### REQ-TRAQ-SWL-1 Parse all requirement documents
 
-Reqtraq SHALL scan all folders within a given path, relative to the git repository root, searching for markdown files which will then be parsed for requirements.
+Reqtraq SHALL parse all requirements found in any of the certification documents provided by the configuration component.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-1
@@ -665,30 +685,15 @@ Reqtraq SHALL generate a list of all changelists that touched the definition or 
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-29 Load schema
-
-Reqtraq SHALL load a schema file 'attributes.json' which describes the valid range of requirement attributes and use it to validate requirements against. The schema allows the following settings to be specified:
-- name: the name of attribute expected
-- filter: which requirements the attribute applies to, as a regexp
-- required: has one of the following values:
-    - true: the attribute is required (default value if not set)
-    - false: the attribute is optional
-    - any: at least one of the attributes marked as this is required
-- value: the value expected for the attribute, as a regexp
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-13
-- Rationale:
-- Verification: Test
-- Safety Impact: None
+#### REQ-TRAQ-SWL-29 DELETED
 
 #### REQ-TRAQ-SWL-25 Uniform requirement ID format
 
 Reqtraq SHALL check that the requirements defined in each document have a correct id, composed of four parts separated by `-`:
 
-1. `REQ` or `ASM`
-2. the project/system abbrev, identical to the first part of the document name where the requirement is defined, e.g. "TRAQ" for "TRAQ-100-ORD.md"
-3. the requirement type:
+1. The variant of the requirement, which must be either `REQ` or `ASM`
+2. the project/system prefix, which is specified by the document as part of the requirement specification
+3. the requirement level, which is specified by the document as part of the requirement specification. Typically it is one of:
     - `SYS` for system/overall requirements (defined in ORD documents)
     - `SWH` for software high-level requirements (defined in SRD documents)
     - `SWL` for software low-level requirements (defined in SDD documents)
@@ -768,6 +773,194 @@ The command must be executed in the repository for which the reports will be gen
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-17
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### config/config.go
+
+Reqtraq contains a configuration component that parses an arbitrary number of configuration files named `reqtraq_config.json` to determine the 
+structure of the project and requirements. Requirements and implementation can be scattered across multiple repositories and reqtraq must
+be able to locate all dependencies and collect requirement and code information from all of them.
+
+When reqtraq is started, the configuration from the Git repository in the current directory is parsed. A `reqtraq_config.json` file is located at
+the root of the repository and contains information regarding:
+- The name of the repository.
+- Parent and children repositories that must be checked by reqtraq.
+- A list of certification documents defined in the current repository
+- A list of common requirement attributes across all documents and repositories.
+
+A sample configuration file is shown below:
+
+```json
+{
+    "repoName": "projectB",
+    "parentRepository": {
+        "repoName": "projectA",
+        "repoUrl": "https://github.com/org/projectA"
+    },
+    "childrenRepositories": [
+        {
+            "repoName": "projectC",
+            "repoUrl": "https://github.com/org/projectC"
+        }
+    ],
+    "commonAttributes": [
+        {
+            "name": "Rationale",
+            "required": "any"
+        },
+        {
+            "name": "Verification",
+            "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
+        }
+    ],
+    "documents": [
+        {
+            "path": "TEST-138-SDD.md",
+            "prefix": "TEST",
+            "level": "SWL",
+            "parent": {
+                "prefix": "TEST",
+                "level": "SWH"
+            },
+            "implementation": {
+                "code": {
+                    "paths": ["code"],
+                    "matchingPattern": ".*\\.(cc|hh)$",
+                    "ignoredPatterns": [".*_ignored\\.(cc|hh)$"]
+                },
+                "tests": {
+                    "paths": ["test"],
+                    "matchingPattern": ".*_test\\.(cc|hh)$"
+                }
+            }
+        }
+    ]
+}
+```
+
+Parent and children repositories are specified via the name of the repository and their associated name.
+There can only be one parent repository per configuration file, but multiple children repositories can exist.
+
+Each document contains:
+- A path where it can be located inside the repository that defines it.
+- A requirement specification in terms of a `prefix` and `level`. Together they fully specify how the 
+requirements in the document will look like. A document with level `SWL` and prefix `TEST` will have 
+requirements of the form `REQ-TEST-SWL-1`.
+- An optional parent. If there is a parent document, it contains also a `prefix` and `level` with the 
+specification of the parent so that requirements can be linked from children to parent. The parent also
+implies a `Parents` attribute with a filter for the requirement specification of the parent will be 
+added to the schema of the document.
+- An implementation, which consists of separated matchers for both code and tests.
+
+Common attributes are appended to the attribute schema in each document to fully define the schema 
+of the attributes in the requirements that belong to the document.
+
+Parsing the configuration is an involved process that requires:
+- Finding the top-level repository that does not have any parents.
+- Iterating all the children from the top repository and parsing all requirement documents.
+
+The result of this process is a structure that contains, for each repository, all the certification 
+documents that must be parsed. This is used by other components (e.g.: the req.go component) to parse 
+and validate requirements.
+
+#### REQ-TRAQ-SWL-52 Find top-level configuration
+
+Reqtraq SHALL find the top level configuration file and parse the complete configuration starting from 
+the top of the configuration tree.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-53 Parse `reqtraq_config.json`
+
+Reqtraq SHALL provide a method to parse a `requirement_config.json` file, validating them 
+(making sure they contain all relevant information and doesn't contradict other files)
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-15
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-54 Find certification document
+
+Reqtraq SHALL provide a method to find a certification document inside any of the associated repositories.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-55 Find linked documents
+
+Reqtraq SHALL provide a method to find linked requirements across different documents that share a 
+parent/child relationship.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-15
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-56 Find code and test files
+
+Reqtraq SHALL provide a method to find code and test files in each associated document.
+The configuration shall allow to specify folders where code and tests are located, as well as
+positive and negative filtering criteria for the files within those folders.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+## Appendix
+
+### Deleted Requirements
+
+#### DELETED-7 Skip testdata
+
+Reqtraq SHALL skip any folder named "testdata" when searching for source code.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
+- Rationale: testdata folder may contain source code, which should not be included in the traceability.
+- Verification: Test
+- Safety Impact: None
+
+#### DELETED-24 Certification document names
+
+Reqtraq SHALL check the validity of a certification document name by checking the parts delimited by `-`:
+
+1. Project abbreviation, which shall be the same for all the certification documents of a system, e.g. "TRAQ"
+2. Document type sequence number, e.g. "138"
+3. Document type, e.g. "SDD"
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-11
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### DELETED-29 Load schema
+
+Reqtraq SHALL load a schema file 'attributes.json' which describes the valid range of requirement attributes and use it to validate requirements against. The schema allows the following settings to be specified:
+- name: the name of attribute expected
+- filter: which requirements the attribute applies to, as a regexp
+- required: has one of the following values:
+    - true: the attribute is required (default value if not set)
+    - false: the attribute is optional
+    - any: at least one of the attributes marked as this is required
+- value: the value expected for the attribute, as a regexp
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-13
 - Rationale:
 - Verification: Test
 - Safety Impact: None

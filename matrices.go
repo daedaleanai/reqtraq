@@ -14,7 +14,7 @@ import (
 )
 
 // GenerateTraceTables generates HTML for inspecting the gaps in the mappings between the two specified node types.
-// @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-15
+// @llr REQ-TRAQ-SWL-14
 func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.ReqSpec) error {
 	data := struct {
 		From, To         string
@@ -31,6 +31,8 @@ func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.
 	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
 }
 
+// GenerateTraceTables generates HTML for inspecting the gaps in the mappings between the two specified node types.
+// @llr REQ-TRAQ-SWL-15
 func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec) error {
 	data := struct {
 		From, To         string
@@ -234,7 +236,7 @@ func (rg ReqGraph) createUpstreamMatrix(from, to config.ReqSpec) []TableRow {
 	return items
 }
 
-// reqsOfLevel returns the non-deleted requirements of the specified level, mapped by ID.
+// reqsWithSpec returns the non-deleted requirements of the specified ReqSpec, mapped by ID.
 // @llr REQ-TRAQ-SWL-14
 func (rg ReqGraph) reqsWithSpec(spec config.ReqSpec) map[string]*Req {
 	reqs := make(map[string]*Req, 0)
@@ -278,6 +280,11 @@ func (rg ReqGraph) sortMatrices(matrices ...[]TableRow) {
 				return a0.OrderNumber < b0.OrderNumber
 			}
 			a1, b1 := matrix[i][1], matrix[j][1]
+			if a1 == nil {
+				return true
+			} else if b1 == nil {
+				return false
+			}
 			return a1.OrderNumber < b1.OrderNumber
 		})
 	}

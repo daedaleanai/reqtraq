@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13, REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-30, REQ-TRAQ-SWL-31
 func TestReports(t *testing.T) {
 	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
 
@@ -62,6 +63,7 @@ func TestReports(t *testing.T) {
 	}
 }
 
+// @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-31
 func checkFilteredReports(t *testing.T, rg *ReqGraph, filter *ReqFilter) {
 	var diffs map[string][]string
 
@@ -82,6 +84,7 @@ func checkFilteredReports(t *testing.T, rg *ReqGraph, filter *ReqFilter) {
 	}
 }
 
+// @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-31, REQ-TRAQ-SWL-19
 func TestReport_Matches_filter(t *testing.T) {
 	tests := []struct {
 		req     Req

@@ -39,6 +39,8 @@ var (
 	repositories map[RepoName]RepoPath = make(map[RepoName]RepoPath)
 )
 
+// Collects the information about the base repository (the repository where the reqtraq command is run)
+// @llr REQ-TRAQ-SWL-49
 func SetBaseRepoInfo(repoPath RepoPath, repoName RepoName) {
 	if baseRepoInfoSet {
 		panic("Attempted to set base repository information twice")
@@ -49,6 +51,8 @@ func SetBaseRepoInfo(repoPath RepoPath, repoName RepoName) {
 	baseName = repoName
 }
 
+// Returns the local path to the base repository. Requires that SetBaseRepoInfo has been called before.
+// @llr REQ-TRAQ-SWL-49
 func BaseRepoPath() RepoPath {
 	if !baseRepoInfoSet {
 		panic("Base repo information is not set!")
@@ -56,6 +60,8 @@ func BaseRepoPath() RepoPath {
 	return basePath
 }
 
+// Returns the name to the base repository. Requires that SetBaseRepoInfo has been called before.
+// @llr REQ-TRAQ-SWL-49
 func BaseRepoName() RepoName {
 	if !baseRepoInfoSet {
 		panic("Base repo information is not set!")
@@ -63,16 +69,21 @@ func BaseRepoName() RepoName {
 	return baseName
 }
 
+// Registers a repository in the registry, that can be queried using the repository name.
+// @llr REQ-TRAQ-SWL-49
 func RegisterRepository(name RepoName, path RepoPath) {
 	repositories[name] = path
 }
 
+// Unregisters all repositories from the registry, leaving it empty
+// @llr REQ-TRAQ-SWL-49
 func ClearAllRepositories() {
 	repositories = make(map[RepoName]RepoPath)
 }
 
-// If it is already registered, it just returns the key and path as stored internally, unless you set
-// the override flag
+// Gets the local path to a repository by name. The remotePath will be used to create a local
+// repository copy if the repository is not registered or the override flag is set.
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-50
 func GetRepo(repoName RepoName, remotePath RemotePath, gitReference string, override bool) (RepoPath, error) {
 	if !override {
 		// Check if it is already registered, if so just return it
@@ -93,7 +104,8 @@ func GetRepo(repoName RepoName, remotePath RemotePath, gitReference string, over
 	return path, nil
 }
 
-// Obtains the path of a repository from its name
+// Obtains the local path to a repository from its name, if the repository is registered
+// @llr REQ-TRAQ-SWL-49
 func GetRepoPathByName(name RepoName) (RepoPath, error) {
 	if path, ok := repositories[name]; ok {
 		return path, nil
@@ -101,7 +113,10 @@ func GetRepoPathByName(name RepoName) (RepoPath, error) {
 	return "", fmt.Errorf("Could not find path for repository with name `%s`", name)
 }
 
-/// Obtains a RepoPath from a RemotePath by cloning the repository locally
+// Creates a local copy of the given remote repository in a temporary folder and registers it for
+// deletion when ClearAllRepositories is called.
+// @llr REQ-TRAQ-SWL-49
+// @llr REQ-TRAQ-SWL-16
 func cloneFromRemote(repoName RepoName, remotePath RemotePath, gitReference string) (RepoPath, error) {
 	cloneDir, err := ioutil.TempDir("", ".reqtraq")
 	if err != nil {
@@ -125,16 +140,21 @@ func cloneFromRemote(repoName RepoName, remotePath RemotePath, gitReference stri
 	return repoPath, nil
 }
 
+// Removes any temporary directories where repositories have been cloned
+// @llr REQ-TRAQ-SWL-49
 func CleanupTemporaryDirectories() {
 	for _, dir := range tempDirs {
 		os.RemoveAll(dir)
 	}
 }
 
-// 1. Repo where files are located
-// 2. The path to look in
-// 3. pattern to match against
-// 4. Ignored paths
+// Finds a files in the given repository, returning an array of paths to each matched file
+// Its arguments are:
+// - `repoName`: Repo where files are located
+// - `path`: The path to look in. Only files in this path (relative to the root of the repo) will be matched.
+// - `pattern` The pattern to match against. If the pattern matches, it is added to the result array.
+// - `ignoredPaths`: Any ignored path regexp. If the file matches any regular expression in this array it will not be matched
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-51
 func FindFilesInDirectory(repoName RepoName, path string, pattern *regexp.Regexp, ignoredPaths []*regexp.Regexp) ([]string, error) {
 	var files []string
 
@@ -185,6 +205,9 @@ This should not happen. Please inform the developers by rasing an issue if you s
 	return files, nil
 }
 
+// Returns an absolute path to a file inside a repository. It validates that the file exists.
+// If it doesn't an error is returned.
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-51
 func PathInRepo(repoName RepoName, path string) (string, error) {
 	repoPath, err := GetRepoPathByName(repoName)
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 
 // TestParseMarkdown checks that parseMarkdown finds the requirements blocks
 // correctly.
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5
 func TestParseMarkdown(t *testing.T) {
 
 	// Heading style requirements
@@ -139,6 +140,7 @@ Assumption body
 			Attributes: map[string]string{}})
 }
 
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5
 func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Req) {
 	f, err := createTempFile(content, "checkParse")
 	if f != nil {
@@ -182,6 +184,7 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 
 // createTempFile creates a temporary file. It is the caller's responsibility
 // to remove the file when not nil.
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5
 func createTempFile(content, prefix string) (*os.File, error) {
 	f, err := ioutil.TempFile("", prefix)
 	if err != nil {
@@ -196,6 +199,7 @@ func createTempFile(content, prefix string) (*os.File, error) {
 	return f, nil
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq(t *testing.T) {
 	r, err := parseReq(`REQ-TEST-SWL-1 title
 body
@@ -216,6 +220,7 @@ body
 	assert.Equal(t, []string{"REQ-TEST-SYS-1"}, r.ParentIds)
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_Empty(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-SWL-1 title
 
@@ -224,6 +229,7 @@ func TestParseReq_Empty(t *testing.T) {
 	assert.EqualError(t, err, "Requirement must not be empty: REQ-TEST-SWL-1")
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_Deleted(t *testing.T) {
 	// Make sure it can be parsed even when it has no description.
 	r, err := parseReq(`REQ-T-SYS-1 DELETED`)
@@ -247,6 +253,7 @@ body
 	assert.True(t, r.IsDeleted())
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_EmptyBody(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-SWL-1 title
 
@@ -257,6 +264,7 @@ func TestParseReq_EmptyBody(t *testing.T) {
 	assert.EqualError(t, err, "Requirement body must not be empty: REQ-TEST-SWL-1")
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_FlexibleAttributesHeading(t *testing.T) {
 	r, err := parseReq(`REQ-TEST-SWL-1 title
 body
@@ -267,6 +275,7 @@ body
 	assert.Equal(t, "This is why.", r.Attributes["RATIONALE"])
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_NoAttributes(t *testing.T) {
 	r, err := parseReq(`REQ-TEST-SWL-1 title
 body`)
@@ -274,6 +283,7 @@ body`)
 	assert.Equal(t, "body", r.Body)
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_EmptyAttributesSection(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-SWL-1 title
 body
@@ -283,6 +293,7 @@ body
 	assert.Contains(t, err.Error(), "Requirement REQ-TEST-SWL-1 contains an attribute section but no attributes")
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_DuplicateAttributes(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-SWL-1 title
 body
@@ -293,6 +304,7 @@ body
 	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 contains duplicate attribute: "RATIONALE"`)
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_Parents(t *testing.T) {
 	r, err := parseReq(`REQ-T-SWL-1 title
 body
@@ -303,6 +315,7 @@ body
 	assert.Equal(t, []string{"REQ-T-SWH-1", "REQ-T-SWH-1000", "REQ-T-SWH-1001"}, r.ParentIds)
 }
 
+// @llr REQ-TRAQ-SWL-3
 func TestParseReq_InvalidParents(t *testing.T) {
 	_, err := parseReq(`REQ-TEST-SWL-1 title
 body
@@ -312,6 +325,7 @@ body
 	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: " and " in "REQ-TEST-SWH-1 and REQ-TEST-SWH-2"`)
 }
 
+// @llr REQ-TRAQ-SWL-5
 func TestParseReqTable(t *testing.T) {
 	reqs, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact | Parents |
 | ----- | ----- | ----- | ----- | ----- | ----- |
@@ -333,6 +347,7 @@ func TestParseReqTable(t *testing.T) {
 	}
 }
 
+// @llr REQ-TRAQ-SWL-5
 func TestParseReqTable_NoIDCol(t *testing.T) {
 	_, err := parseReqTable(`| Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- |
@@ -341,6 +356,7 @@ func TestParseReqTable_NoIDCol(t *testing.T) {
 	assert.EqualError(t, err, "requirement table must have at least 2 columns, first column head must be \"ID\"")
 }
 
+// @llr REQ-TRAQ-SWL-5
 func TestParseReqTable_OneCol(t *testing.T) {
 	_, err := parseReqTable(`| ID |
 | ----- |
@@ -349,6 +365,7 @@ func TestParseReqTable_OneCol(t *testing.T) {
 	assert.EqualError(t, err, "requirement table must have at least 2 columns, first column head must be \"ID\"")
 }
 
+// @llr REQ-TRAQ-SWL-5
 func TestParseReqTable_MissingCell(t *testing.T) {
 	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- | ----- |
@@ -357,6 +374,7 @@ func TestParseReqTable_MissingCell(t *testing.T) {
 	assert.EqualError(t, err, "too few cells on row 3 of requirement table")
 }
 
+// @llr REQ-TRAQ-SWL-5
 func TestParseReqTable_BadID(t *testing.T) {
 	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- | ----- |
@@ -365,6 +383,7 @@ func TestParseReqTable_BadID(t *testing.T) {
 	assert.EqualError(t, err, "malformed requirement: found only malformed ID: \"REQ-TEST-1\" (doesn't match \"(REQ|ASM)-(\\\\w+)-(\\\\w+)-(\\\\d+)\")")
 }
 
+// @llr REQ-TRAQ-SWL-5
 func TestParseReqTable_MissingID(t *testing.T) {
 	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- | ----- |

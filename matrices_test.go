@@ -2,7 +2,6 @@ package main
 
 import (
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 
 // matrixRows creates a simple textual representation of the matrix,
 // for comparison purposes.
+// @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-42, REQ-TRAQ-SWL-43
 func (rg *ReqGraph) matrixRows(matrix []TableRow) []string {
 	rg.sortMatrices(matrix)
 	parts := make([]string, 0)
@@ -29,15 +29,7 @@ func (rg *ReqGraph) matrixRows(matrix []TableRow) []string {
 	return parts
 }
 
-func SortErrs(errs []error) []string {
-	res := make([]string, len(errs))
-	for i, err := range errs {
-		res[i] = err.Error()
-	}
-	sort.Strings(res)
-	return res
-}
-
+// @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-42, REQ-TRAQ-SWL-43
 func TestReqGraph_createMatrix(t *testing.T) {
 	rg := &ReqGraph{Reqs: make(map[string]*Req)}
 
@@ -137,7 +129,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 		Document:  &sddDoc,
 	}
 
-	errs := SortErrs(rg.resolve())
+	errs := rg.resolve()
 	assert.Equal(t, 0, len(errs))
 
 	assert.Equal(t,

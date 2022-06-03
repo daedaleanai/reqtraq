@@ -36,6 +36,7 @@ type ReqGraph struct {
 	ReqtraqConfig *config.Config
 }
 
+// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
 func (rg *ReqGraph) mergeTags(tags *map[CodeFile][]*Code) {
 	for tagKey := range *tags {
 		rg.CodeTags[tagKey] = (*tags)[tagKey]
@@ -115,8 +116,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 
 // resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
-// of attributes against the schema. Any errors encountered such as links to non-existent requirements
-// are returned.
+// of attributes against the schema for their document. Any errors encountered such as links to
+// non-existent requirements are returned.
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11
 func (rg *ReqGraph) resolve() []error {
 	errs := make([]error, 0)
@@ -233,10 +234,6 @@ type Req struct {
 	RepoName repos.RepoName
 }
 
-func (r *Req) Path() string {
-	return fmt.Sprintf("(Repo `%s`, Document Path `%s`)", r.RepoName, r.Document.Path)
-}
-
 // Changelists generates a list of Phabicator revisions that have affected a requirement
 // @llr REQ-TRAQ-SWL-22
 func (r *Req) Changelists() map[string]string {
@@ -254,7 +251,7 @@ func (r *Req) IsDeleted() bool {
 
 // checkAttributes validates the requirement attributes against the schema from its document,
 // returns a list of errors found.
-// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-29
+// @llr REQ-TRAQ-SWL-10
 func (r *Req) checkAttributes() []error {
 	var errs []error
 	var anyAttributes []string
@@ -365,7 +362,7 @@ func (a byIDNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 // @llr REQ-TRAQ-SWL-46
 func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
 
-// byFilenameTag provides sort functions to order code by their path value, and then line number
+// byFilenameTag provides sort functions to order code by their repo name, then path value, and then line number
 type byFilenameTag []*Code
 
 // @llr REQ-TRAQ-SWL-47
