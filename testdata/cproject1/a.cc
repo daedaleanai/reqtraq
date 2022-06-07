@@ -36,6 +36,10 @@ void enumerateObjects() {
 // @llr REQ-TEST-SWL-13, REQ-TEST-SWL-14
 int A::operator[](size_t) { return 0; }
 
+// \llr REQ-TEST-SWL-13
+// \llr REQ-TEST-SWL-15
+int SeparateCommentsForLLrs(size_t) { return 0; }
+
 }  // namespace nc
 }  // namespace nb
 }  // namespace na

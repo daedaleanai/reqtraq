@@ -192,11 +192,11 @@ func parseFileComments(absolutePath string, tags []*Code) error {
 			tags[i].ParentIds = tags[i-1].ParentIds
 			continue
 		}
+		tags[i].ParentIds = []string{}
 		for lineNo := tags[i].Line - 1; lineNo > previousTag; lineNo-- {
 			if reLLRReferenceLine.MatchString(sourceLines[lineNo]) {
 				// Looks good, extract all references straight into the tag
-				tags[i].ParentIds = reLLRReferences.FindAllString(sourceLines[lineNo], -1)
-				break
+				tags[i].ParentIds = append(tags[i].ParentIds, reLLRReferences.FindAllString(sourceLines[lineNo], -1)...)
 			} else if reBlankLine.MatchString(sourceLines[lineNo]) {
 				// We've hit a blank line
 				break
