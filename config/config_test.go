@@ -29,6 +29,10 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Type:  AttributeRequired,
 			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
 		},
+		"SAFETY IMPACT": {
+			Type:  AttributeRequired,
+			Value: regexp.MustCompile(".*"),
+		},
 	}
 
 	assert.Contains(t, config.Repos, repos.RepoName("projectA"))
@@ -45,8 +49,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SYS-(\d+)`),
 				Attributes: map[string]*Attribute{
-					"RATIONALE":    commonAttributes["RATIONALE"],
-					"VERIFICATION": commonAttributes["VERIFICATION"],
+					"RATIONALE":     commonAttributes["RATIONALE"],
+					"VERIFICATION":  commonAttributes["VERIFICATION"],
+					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 				},
 			},
 			Implementation: Implementation{
@@ -67,8 +72,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SWH-(\d+)`),
 				Attributes: map[string]*Attribute{
-					"RATIONALE":    commonAttributes["RATIONALE"],
-					"VERIFICATION": commonAttributes["VERIFICATION"],
+					"RATIONALE":     commonAttributes["RATIONALE"],
+					"VERIFICATION":  commonAttributes["VERIFICATION"],
+					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 					"PARENTS": {
 						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 						Type:  AttributeAny,
@@ -88,7 +94,15 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TEST-SWL-(\d+)`))
-	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Schema.Attributes), 3)
+	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Attributes, map[string]*Attribute{
+		"RATIONALE":     commonAttributes["RATIONALE"],
+		"VERIFICATION":  commonAttributes["VERIFICATION"],
+		"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+		"PARENTS": {
+			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+			Type:  AttributeAny,
+		},
+	})
 	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.Attributes["PARENTS"],
 		Attribute{
 			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -232,7 +233,7 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 		if err != nil {
 			return nil, err
 		}
-		relativePath, err := relativePathToRepo(p, string(repoPath))
+		relativePath, err := filepath.Rel(string(repoPath), p)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to parse path on line: %v", parts))
 		}
@@ -244,25 +245,6 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 			return nil, fmt.Errorf("failed to parse line number: %v", parts)
 		}
 		res = append(res, &Code{CodeFile: CodeFile{RepoName: repoName, Path: relativePath}, Tag: tag, Line: line})
-	}
-	return res, nil
-}
-
-// relativePathToRepo returns filePath relative to repoPath by
-// removing the path to the repository from filePath
-// @llr REQ-TRAQ-SWL-6
-func relativePathToRepo(filePath, repoPath string) (string, error) {
-	if filePath[:1] != "/" {
-		// Already a relative path.
-		return filePath, nil
-	}
-	fields := strings.SplitN(filePath, repoPath, 2)
-	if len(fields) < 2 {
-		return "", fmt.Errorf("malformed code file path: %s not in %s", filePath, repoPath)
-	}
-	res := fields[1]
-	if res[:1] == "/" {
-		res = res[1:]
 	}
 	return res, nil
 }

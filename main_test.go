@@ -235,3 +235,24 @@ func checkValidateError(t *testing.T, validate_errors string, expected string) {
 
 	assert.Empty(t, errs, "Got unexpected errors")
 }
+
+// @llr REQ-TRAQ-SWL-36
+func TestValidateMultipleRepos(t *testing.T) {
+	// Actually read configuration from repositories
+	repos.ClearAllRepositories()
+	repos.RegisterRepository(repos.RepoName("projectA"), repos.RepoPath("testdata/projectA"))
+	repos.RegisterRepository(repos.RepoName("projectB"), repos.RepoPath("testdata/projectB"))
+
+	// Make sure the child can reach the parent
+	config, err := config.ParseConfig("testdata/projectB")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual, err := RunValidate(t, &config)
+	assert.Empty(t, err, "Got unexpected error")
+
+	expected := `Validation passed`
+
+	checkValidateError(t, actual, expected)
+}

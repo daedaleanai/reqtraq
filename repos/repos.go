@@ -214,11 +214,7 @@ func PathInRepo(repoName RepoName, path string) (string, error) {
 		return "", err
 	}
 
-	actualPath := fmt.Sprintf("%s/%s", repoPath, path)
-	if err != nil {
-		return "", err
-	}
-
+	actualPath := filepath.Join(string(repoPath), path)
 	if _, err := os.Stat(actualPath); err != nil {
 		return "", fmt.Errorf("Path `%s` does not seem to be accessible from the user: %s", actualPath, err)
 	}
