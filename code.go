@@ -34,7 +34,7 @@ type CodeFile struct {
 	Path     string
 }
 
-func (codeFile *CodeFile) ToString() string {
+func (codeFile *CodeFile) String() string {
 	return fmt.Sprintf("%s: %s", codeFile.RepoName, codeFile.Path)
 }
 

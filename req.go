@@ -164,7 +164,7 @@ func (rg *ReqGraph) resolve() []error {
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
 			if len(code.ParentIds) == 0 {
-				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.ToString(), code.Line))
+				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line))
 			}
 			for _, parentID := range code.ParentIds {
 				parent := rg.Reqs[parentID]
@@ -251,7 +251,7 @@ func (r *Req) checkAttributes() []error {
 	anyCount := 0
 
 	// Iterate the attribute rules
-	for name, attribute := range (*r.Document).Schema.Attributes {
+	for name, attribute := range r.Document.Schema.Attributes {
 		if attribute.Type == config.AttributeAny {
 			anyAttributes = append(anyAttributes, name)
 		}

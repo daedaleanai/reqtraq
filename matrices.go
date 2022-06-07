@@ -61,7 +61,6 @@ var matrixTmplText = `
 </div>
 {{ end }}
 
-
 {{ define "MATRIX" }}
 	{{template "HEADER"}}
 	<h1>Trace Matrices {{ .From }}&ndash;{{ .To }}</h1>
@@ -126,7 +125,7 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 	info.fileIndexFactor = 0
 	// build a list of filenames and find the function with the highest line number
 	for file, tags := range rg.CodeTags {
-		files = append(files, file.ToString())
+		files = append(files, file.String())
 		for _, codeTag := range tags {
 			if info.fileIndexFactor < codeTag.Line {
 				info.fileIndexFactor = codeTag.Line
@@ -253,7 +252,7 @@ func (rg ReqGraph) sortMatrices(matrices ...[]TableRow) {
 						// requirements sorted by ID number
 						item.OrderNumber = item.req.IDNumber
 					} else if item.code != nil {
-						if fileIdx, ok := codeOrderInfo.filesIndex[item.code.CodeFile.ToString()]; ok {
+						if fileIdx, ok := codeOrderInfo.filesIndex[item.code.CodeFile.String()]; ok {
 							item.OrderNumber = fileIdx*codeOrderInfo.fileIndexFactor + item.code.Line
 						} else {
 							panic("Code file could not be found in filesIndex. This is a bug")

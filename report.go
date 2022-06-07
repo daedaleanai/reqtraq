@@ -212,7 +212,7 @@ func formatBodyAsHTML(txt string) template.HTML {
 var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString}).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
 func codeFileToString(CodeFile CodeFile) string {
-	return CodeFile.ToString()
+	return CodeFile.String()
 }
 
 var reportTmplText = `
