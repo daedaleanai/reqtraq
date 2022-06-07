@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/daedaleanai/reqtraq/repos"
 )
@@ -66,10 +67,14 @@ type Implementation struct {
 	TestFiles []string
 }
 
+type Schema struct {
+	Requirements *regexp.Regexp
+	Attributes   map[string]*Attribute
+}
+
 type Document struct {
 	Path           string
-	Requirements   *regexp.Regexp
-	Attributes     map[string]Attribute
+	Schema         Schema
 	Implementation Implementation
 }
 
@@ -78,8 +83,7 @@ type RepoConfig struct {
 }
 
 type Config struct {
-	CommonAttributes map[string]Attribute
-	Repos            map[repos.RepoName]RepoConfig
+	Repos map[repos.RepoName]RepoConfig
 }
 
 // Reads a json configuration file from the specify repository path.
@@ -148,7 +152,7 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 		}
 	}
 
-	return rawAttribute.Name, attribute, nil
+	return strings.ToUpper(rawAttribute.Name), attribute, nil
 }
 
 // Finds all matching files for the given query under the given repository.
@@ -189,8 +193,11 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
-		Attributes: make(map[string]Attribute),
-		Path:       doc.Path,
+		Path: doc.Path,
+		Schema: Schema{
+			Requirements: nil,
+			Attributes:   make(map[string]*Attribute),
+		},
 	}
 
 	_, err = repos.PathInRepo(repoName, doc.Path)
@@ -198,7 +205,7 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 		return fmt.Errorf("Document with path `%s` in repo `%s` cannot be read: %s", doc.Path, repoName, err)
 	}
 
-	parsedDoc.Requirements, err = regexp.Compile(doc.Requirements)
+	parsedDoc.Schema.Requirements, err = regexp.Compile(doc.Requirements)
 	if err != nil {
 		return err
 	}
@@ -209,7 +216,7 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 			return err
 		}
 
-		parsedDoc.Attributes[parsedName] = parsedAttr
+		parsedDoc.Schema.Attributes[parsedName] = &parsedAttr
 	}
 
 	parsedDoc.Implementation.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName)
@@ -227,9 +234,23 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 	return nil
 }
 
+// Appends the common attributes to the document and exits with an error if some attribute is
+// already defined by the document's attributes.
+func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attribute) error {
+	for attrName := range *commonAttributes {
+		if _, ok := doc.Schema.Attributes[attrName]; ok {
+			return fmt.Errorf("Document with path `%s` redefines attribute with name `%s`, but it is listed as a common attribute",
+				doc.Path, attrName)
+		}
+
+		doc.Schema.Attributes[attrName] = (*commonAttributes)[attrName]
+	}
+	return nil
+}
+
 // Parses a configuration file into the config instance, recursing into each children until all
 // configuration files have been parsed.
-func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonConfig) error {
+func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
 
 	// Parse this config file
 	repoConfig := RepoConfig{}
@@ -241,7 +262,13 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 			return err
 		}
 
-		config.CommonAttributes[parsedName] = parsedAttr
+		// Double-check that this attribute is not already defined
+		if _, ok := (*commonAttributes)[parsedName]; ok {
+			return fmt.Errorf("Common attribute with name `%s` found in config for repo `%s` is already defined elsewhere",
+				parsedName, repoName)
+		}
+
+		(*commonAttributes)[parsedName] = &parsedAttr
 	}
 
 	for _, doc := range jsonConfig.Docs {
@@ -265,12 +292,27 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 			return err
 		}
 
-		err = config.parseConfigFile(childRepoName, childJsonConfig)
+		err = config.parseConfigFile(childRepoName, childJsonConfig, commonAttributes)
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+// Appends common attributes to each of the document's attributes to build a comprehensive list of
+// attributes per document. If any of the documents already contrains the attribute it will exit
+// with an error to let the user know about this duplication
+func (config *Config) appendCommonAttributes(commonAttributes *map[string]*Attribute) error {
+	for repoName := range config.Repos {
+		for docIndex := range config.Repos[repoName].Documents {
+			err := config.Repos[repoName].Documents[docIndex].appendCommonAttributes(commonAttributes)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -308,13 +350,17 @@ func ParseConfig(currentRepoPath string) (Config, error) {
 	}
 
 	config := Config{
-		CommonAttributes: make(map[string]Attribute),
-		Repos:            make(map[repos.RepoName]RepoConfig),
+		Repos: make(map[repos.RepoName]RepoConfig),
 	}
-	err = config.parseConfigFile(topLevelRepoName, topLevelConfig)
+
+	commonAttributes := make(map[string]*Attribute)
+
+	err = config.parseConfigFile(topLevelRepoName, topLevelConfig, &commonAttributes)
 	if err != nil {
 		return Config{}, err
 	}
+
+	config.appendCommonAttributes(&commonAttributes)
 
 	return config, nil
 }

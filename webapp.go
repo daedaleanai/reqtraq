@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path"
 	"regexp"
 	"strings"
 
@@ -51,7 +50,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var indexTemplate = template.Must(template.New("index").Parse(
+func Title(str string) string {
+	return strings.Title(strings.ToLower(str))
+}
+
+var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"title": Title}).Parse(
 	`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -107,10 +110,10 @@ var indexTemplate = template.Must(template.New("index").Parse(
 <div class="rTableCell">Attributes:</div>
 <div class="rTableCell"><input name="any_attribute_filter" type="text"></div>
 </div>
-{{ range .Attributes }}
+{{ range $attrName, $attr := .Attributes }}
 <div class="rTableRow">
-<div class="rTableCell" style="padding-left: 2em;">{{ . }}:</div>
-<div class="rTableCell"><input name="attribute_filter_{{ . }}" type="text"></div>
+<div class="rTableCell" style="padding-left: 2em;">{{ title $attrName }}:</div>
+<div class="rTableCell"><input name="attribute_filter_{{ title $attrName }}" type="text"></div>
 </div>
 {{ end }}
 <div class="rTableRow">
@@ -164,7 +167,7 @@ var indexTemplate = template.Must(template.New("index").Parse(
 
 type indexData struct {
 	RepoName   string
-	Attributes []string
+	Attributes map[string]*config.Attribute
 	Commits    []string
 }
 
@@ -181,18 +184,22 @@ func get(w http.ResponseWriter, r *http.Request) error {
 
 	// root page
 	if reqPath == "/" {
-		schema, err := ParseSchema(*fSchemaPath)
-		if err != nil {
-			return errors.Wrap(err, "Failed to parse config")
-		}
-		attributes := make([]string, 0, len(schema.Attributes)+1)
-		for n := range schema.Attributes {
-			attributes = append(attributes, n)
-		}
 		commits, err := repos.AllCommits(repoName)
 		if err != nil {
 			return err
 		}
+		attributes := make(map[string]*config.Attribute)
+
+		for _, repo := range reqtraqConfig.Repos {
+			for _, document := range repo.Documents {
+				for attributeName, attribute := range document.Schema.Attributes {
+					if _, ok := attributes[attributeName]; !ok {
+						attributes[attributeName] = attribute
+					}
+				}
+			}
+		}
+
 		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits})
 	}
 
@@ -202,7 +209,16 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if lexer == nil {
 			return errors.New("unknown file type")
 		}
-		filePath := path.Join(repos.BaseRepoPath(), reqPath[6:])
+
+		path := strings.TrimPrefix(reqPath, "/code/")
+		parts := strings.SplitN(path, "/", 2)
+		repoName := repos.RepoName(parts[0])
+		filePath := parts[1]
+
+		filePath, err := repos.PathInRepo(repoName, filePath)
+		if err != nil {
+			return errors.Wrap(err, "failed to read file")
+		}
 		contents, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to read file")

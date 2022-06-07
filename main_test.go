@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -11,9 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func RunValidate(t *testing.T, config *config.Config, schemapath string) (string, error) {
-	// set the test paths
-	*fSchemaPath = schemapath
+func RunValidate(t *testing.T, config *config.Config) (string, error) {
 	// prepare capture of stdout
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -32,26 +31,72 @@ func RunValidate(t *testing.T, config *config.Config, schemapath string) (string
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 	repos.RegisterRepository(repos.BaseRepoPath())
 
+	commonAttributes := map[string]*config.Attribute{
+		"RATIONALE": {
+			Type:  config.AttributeAny,
+			Value: regexp.MustCompile(".*"),
+		},
+		"VERIFICATION": {
+			Type:  config.AttributeRequired,
+			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
+		},
+		"SAFETY IMPACT": {
+			Type:  config.AttributeRequired,
+			Value: regexp.MustCompile(".*"),
+		},
+	}
+
 	config := config.Config{
-		CommonAttributes: make(map[string]config.Attribute),
 		Repos: map[repos.RepoName]config.RepoConfig{
-			repos.BaseRepoName(): config.RepoConfig{
+			repos.BaseRepoName(): {
 				Documents: []config.Document{
-					config.Document{
+					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-100-ORD.md",
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+							},
+						},
 					},
-					config.Document{
+					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+								"PARENTS": {
+									Type:  config.AttributeAny,
+									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+								},
+							},
+						},
 					},
-					config.Document{
+					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-TEST-SWL-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+								"PARENTS": {
+									Type:  config.AttributeAny,
+									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+								},
+							},
+						},
 					},
 				},
 			},
 		},
 	}
 
-	actual, err := RunValidate(t, &config, repos.BaseRepoPath()+"/testdata/attributes.json")
+	actual, err := RunValidate(t, &config)
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.
@@ -82,23 +127,57 @@ WARNING. Validation failed`
 }
 
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
+	commonAttributes := map[string]*config.Attribute{
+		"RATIONALE": {
+			Type:  config.AttributeAny,
+			Value: regexp.MustCompile(".*"),
+		},
+		"VERIFICATION": {
+			Type:  config.AttributeRequired,
+			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
+		},
+		"SAFETY IMPACT": {
+			Type:  config.AttributeRequired,
+			Value: regexp.MustCompile(".*"),
+		},
+	}
+
 	config := config.Config{
-		CommonAttributes: make(map[string]config.Attribute),
 		Repos: map[repos.RepoName]config.RepoConfig{
 			repos.BaseRepoName(): {
 				Documents: []config.Document{
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-100-ORD.md",
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+							},
+						},
 					},
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-137-SRD.md",
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+								"PARENTS": {
+									Type:  config.AttributeAny,
+									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+								},
+							},
+						},
 					},
 				},
 			},
 		},
 	}
 
-	actual, err := RunValidate(t, &config, repos.BaseRepoPath()+"/testdata/attributes.json")
+	actual, err := RunValidate(t, &config)
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Invalid reference to non existent requirement REQ-TEST-SYS-22 in body of REQ-TEST-SWH-3.

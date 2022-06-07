@@ -61,7 +61,6 @@ var matrixTmplText = `
 </div>
 {{ end }}
 
-
 {{ define "MATRIX" }}
 	{{template "HEADER"}}
 	<h1>Trace Matrices {{ .From }}&ndash;{{ .To }}</h1>
@@ -96,7 +95,7 @@ type TableRow [2]*TableCell
 // @llr REQ-TRAQ-SWL-15
 func newCodeTableCell(code *Code) *TableCell {
 	item := &TableCell{}
-	item.Name = code.Path + " " + code.Tag
+	item.Name = fmt.Sprintf("%s: %s - %s", code.CodeFile.RepoName, code.CodeFile.Path, code.Tag)
 	item.code = code
 	return item
 }
@@ -126,7 +125,7 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 	info.fileIndexFactor = 0
 	// build a list of filenames and find the function with the highest line number
 	for file, tags := range rg.CodeTags {
-		files = append(files, file)
+		files = append(files, file.String())
 		for _, codeTag := range tags {
 			if info.fileIndexFactor < codeTag.Line {
 				info.fileIndexFactor = codeTag.Line
@@ -253,10 +252,13 @@ func (rg ReqGraph) sortMatrices(matrices ...[]TableRow) {
 						// requirements sorted by ID number
 						item.OrderNumber = item.req.IDNumber
 					} else if item.code != nil {
-						// code sorted by filename and then line number of function
-						item.OrderNumber = codeOrderInfo.filesIndex[item.code.Path]*codeOrderInfo.fileIndexFactor + item.code.Line
+						if fileIdx, ok := codeOrderInfo.filesIndex[item.code.CodeFile.String()]; ok {
+							item.OrderNumber = fileIdx*codeOrderInfo.fileIndexFactor + item.code.Line
+						} else {
+							panic("Code file could not be found in filesIndex. This is a bug")
+						}
 					} else {
-						item.OrderNumber = 0
+						panic("Matrix element with no valid code or requirements. This should never happen")
 					}
 				}
 			}

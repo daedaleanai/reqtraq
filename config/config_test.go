@@ -22,17 +22,16 @@ func TestConfig_ParseConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check common attributes
-	assert.Equal(t, config.CommonAttributes, map[string]Attribute{
-		"Rationale": {
+	commonAttributes := map[string]*Attribute{
+		"RATIONALE": {
 			Type:  AttributeAny,
 			Value: regexp.MustCompile(".*"),
 		},
-		"Verification": {
+		"VERIFICATION": {
 			Type:  AttributeRequired,
 			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
 		},
-	})
+	}
 
 	assert.Contains(t, config.Repos, repos.RepoName("projectA"))
 	assert.Contains(t, config.Repos, repos.RepoName("projectB"))
@@ -40,21 +39,30 @@ func TestConfig_ParseConfig(t *testing.T) {
 
 	assert.ElementsMatch(t, config.Repos["projectA"].Documents, []Document{
 		{
-			Path:         "TEST-100-ORD.md",
-			Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
-			Attributes:   map[string]Attribute{},
+			Path: "TEST-100-ORD.md",
+			Schema: Schema{
+				Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+				Attributes: map[string]*Attribute{
+					"RATIONALE":    commonAttributes["RATIONALE"],
+					"VERIFICATION": commonAttributes["VERIFICATION"],
+				},
+			},
 			Implementation: Implementation{
 				CodeFiles: []string{},
 				TestFiles: []string{},
 			},
 		},
 		{
-			Path:         "TEST-137-SRD.md",
-			Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
-			Attributes: map[string]Attribute{
-				"Parents": {
-					Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
-					Type:  AttributeAny,
+			Path: "TEST-137-SRD.md",
+			Schema: Schema{
+				Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+				Attributes: map[string]*Attribute{
+					"RATIONALE":    commonAttributes["RATIONALE"],
+					"VERIFICATION": commonAttributes["VERIFICATION"],
+					"PARENTS": {
+						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+						Type:  AttributeAny,
+					},
 				},
 			},
 			Implementation: Implementation{
@@ -66,9 +74,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 
 	assert.Equal(t, len(config.Repos["projectB"].Documents), 1)
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Path, "TEST-138-SDD.md")
-	assert.Equal(t, config.Repos["projectB"].Documents[0].Requirements, regexp.MustCompile(`REQ-TEST-SWL-(\d+)`))
-	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Attributes), 1)
-	assert.Equal(t, config.Repos["projectB"].Documents[0].Attributes["Parents"],
+	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`REQ-TEST-SWL-(\d+)`))
+	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Schema.Attributes), 3)
+	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.Attributes["PARENTS"],
 		Attribute{
 			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 			Type:  AttributeAny,

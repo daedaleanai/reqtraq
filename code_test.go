@@ -23,8 +23,12 @@ type TagMatch struct {
 	parentIds string
 }
 
-func LookFor(t *testing.T, sourceFile string, tagsPerFile map[string][]*Code, expectedTags []TagMatch) {
-	tags, ok := tagsPerFile[sourceFile]
+func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFile map[CodeFile][]*Code, expectedTags []TagMatch) {
+	codeFile := CodeFile{
+		Path:     sourceFile,
+		RepoName: repoName,
+	}
+	tags, ok := tagsPerFile[codeFile]
 	assert.True(t, ok)
 	assert.Equal(t, 3, len(tags))
 
@@ -65,7 +69,7 @@ func TestTagCode(t *testing.T) {
 			14,
 			""},
 	}
-	LookFor(t, "a.c", tags, expectedTags)
+	LookFor(t, repoName, "a.c", tags, expectedTags)
 }
 
 func TestReqGraph_ParseCode(t *testing.T) {
@@ -95,12 +99,12 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			14,
 			`REQ-TEST-SWH-11`},
 	}
-	LookFor(t, "a.c", rg.CodeTags, expectedTags)
+	LookFor(t, repoName, "a.c", rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH}
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{Level: config.LOW, Document: &config.Document{}}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{Level: config.HIGH, Document: &config.Document{}}
 	errs := SortErrs(rg.resolve())
 	assert.Equal(t, 2, len(errs))
-	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14, REQ-TEST-SWH-11 is not a low-level requirement.", errs[0])
-	assert.Equal(t, "Invalid reference in function getSegment@a.c:20, REQ-TEST-SWL-12 does not exist.", errs[1])
+	assert.Equal(t, "Invalid reference in function getNumberOfSegments@a.c:14 in repo `cproject1`, REQ-TEST-SWH-11 is not a low-level requirement.", errs[0])
+	assert.Equal(t, "Invalid reference in function getSegment@a.c:20 in repo `cproject1`, REQ-TEST-SWL-12 does not exist.", errs[1])
 }
