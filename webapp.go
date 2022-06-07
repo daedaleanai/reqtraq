@@ -20,12 +20,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var reqtraqConfig *config.Config
-
 // Serve starts the web server listening on the supplied address:port
 // @llr REQ-TRAQ-SWL-37
-func Serve(addr string, cfg *config.Config) error {
-	reqtraqConfig = cfg
+func Serve(addr string) error {
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,6 +13,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+// Setup the configuration when init runs
+// @llr REQ-TRAQ-SWL-8
+func init() {
+	if err := setupConfiguration(); err != nil {
+		log.Fatalf("Unable to setup configuration: %s", err.Error())
+	}
+}
 
 // @llr REQ-TRAQ-SWL-8
 func TestCheckCtagsAvailable(t *testing.T) {
@@ -55,6 +64,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 
 // @llr REQ-TRAQ-SWL-8
 func TestTagCode(t *testing.T) {
+
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 

@@ -64,7 +64,13 @@ Documents (markdown and source code) are discovered and parsed from the current 
 Various actions, such as comparison or filtering, are then performed on the `ReqGraph` object, depending on the type of output requested. The requested output is then generated.
 
 ReqGraph source code is arranged as follows:
-- main.go: The main entry point to the program, deals with parsing command line arguments and acting accordingly
+- main.go: The main entry point to the program, defines the top level command handler and invokes one of the commands defined in:
+    - `completion_cmd.go`: Defines a `completion` subcommand that prints completion scripts for multiple shells (bash, zsh and fish).
+    - `list_cmd.go`: Defines a `list` subcommand that lists all requirements in the given certdoc.
+    - `nextid_cmd.go`: Defines a `nextid` subcommand that prints the next requirement id for the given certdoc.
+    - `report_cmd.go`: Defines a `report` subcommand that creates HTM reports.
+    - `validate_cmd.go`: Defines a `validate` subcommand that runs the validation checks on all certification documents.
+    - `web_cmd.go`: Defines a `web` subcommand that runs the web application.
 - req.go: The top-level functions dealing with finding and discovering markdown and source code files
     - parsing.go: Reading and parsing markdown files
     - code.go: Reading and parsing source code files
@@ -908,6 +914,21 @@ positive and negative filtering criteria for the files within those folders.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### completion_cmd.go
+
+The completion command takes advantage of the underlying cobra infrastructure to print completion 
+scripts for different shells. Supported shells are `bash`, `zsh` and `fish`.
+
+#### REQ-TRAQ-SWL-57 Generate shell completions
+
+Reqtraq SHALL provide a subcommand to generate shell completions.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
 - Rationale:
 - Verification: Test
 - Safety Impact: None
