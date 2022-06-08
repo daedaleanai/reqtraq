@@ -227,14 +227,14 @@ func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, er
 // @llr REQ-TRAQ-SWL-3
 func parseReq(txt string) (*Req, error) {
 
-	ID, Prefix, IDNumber, err := extractIDParts(txt)
+	ID, Variant, IDNumber, err := extractIDParts(txt)
 	if err != nil {
 		return nil, err
 	}
 
 	r := &Req{
 		ID:         ID,
-		Prefix:     Prefix,
+		Variant:    Variant,
 		IDNumber:   IDNumber,
 		Attributes: map[string]string{},
 	}
@@ -356,12 +356,12 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 			// For each attribute in the first row, read in the associated value on this row
 			for i, k := range attributes {
 				if k == "ID" {
-					ID, Prefix, IDNumber, err := extractIDParts(values[i])
+					ID, Variant, IDNumber, err := extractIDParts(values[i])
 					if err != nil {
 						return reqs, err
 					}
 					r.ID = ID
-					r.Prefix = Prefix
+					r.Variant = Variant
 					r.IDNumber = IDNumber
 				} else if k == "TITLE" {
 					r.Title = values[i]
@@ -407,7 +407,9 @@ func splitTableLine(line string) []string {
 
 // extractIDParts parses a requirement identifier string and returns the ID string, prefix, sequence number and level
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
-func extractIDParts(reqStr string) (string, string, int, error) {
+func extractIDParts(reqStr string) (string, ReqVariant, int, error) {
+	var variant ReqVariant
+
 	head := reqStr
 	if len(head) > 40 {
 		head = head[:40]
@@ -415,20 +417,30 @@ func extractIDParts(reqStr string) (string, string, int, error) {
 	defid := ReReqID.FindStringSubmatchIndex(reqStr)
 	if len(defid) == 0 {
 		if reReqIDBad.MatchString(reqStr) {
-			return "", "", 0, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
+			return "", variant, 0, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
 		}
-		return "", "", 0, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
+		return "", variant, 0, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
 	}
 
 	if defid[0] > 0 {
-		return "", "", 0, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
+		return "", variant, 0, fmt.Errorf("malformed requirement: ID must be at the start of the title: %q", head)
 	}
 
 	IDNumber, err := strconv.Atoi(reqStr[defid[8]:defid[9]])
 	if err != nil {
-		return "", "", 0, err
+		return "", variant, 0, err
+
 	}
-	return reqStr[defid[0]:defid[1]], reqStr[defid[2]:defid[3]], IDNumber, nil
+
+	switch reqStr[defid[2]:defid[3]] {
+	case "REQ":
+		variant = ReqVariantRequirement
+	case "ASM":
+		variant = ReqVariantAssumption
+	default:
+		return "", variant, 0, fmt.Errorf("Unknown requirement variant %q", reqStr[defid[2]:defid[3]])
+	}
+	return reqStr[defid[0]:defid[1]], variant, IDNumber, nil
 }
 
 // parseParents splits the Parents attribute of a requirement into a slice of requirement identifiers and assigns to ParentIds

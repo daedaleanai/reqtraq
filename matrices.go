@@ -37,7 +37,7 @@ func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec) 
 		ItemsAB, ItemsBA []TableRow
 	}{
 		From: reqSpec.ToString(),
-		To:   "Code",
+		To:   "CODE",
 	}
 
 	data.ItemsAB = rg.createSWLCodeMatrix(reqSpec)

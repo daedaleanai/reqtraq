@@ -235,8 +235,8 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 		}
 
 		if parsedName == "PARENTS" {
-			return fmt.Errorf(`Invalid attribute Parent specified in reqtraq_config.json.
-The parent attribute is implicit from the parent declaration in the document`)
+			return fmt.Errorf(`Invalid attribute Parents specified in reqtraq_config.json.
+The parents attribute is implicit from the parent declaration in the document`)
 		}
 
 		parsedDoc.Schema.Attributes[parsedName] = &parsedAttr

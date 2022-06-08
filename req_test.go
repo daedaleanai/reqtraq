@@ -113,7 +113,7 @@ func TestParsing(t *testing.T) {
 			reqPos = i + 1
 		}
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
-			Prefix:   "REQ",
+			Variant:  ReqVariantRequirement,
 			Document: &document,
 			RepoName: repoName,
 			Position: reqPos,

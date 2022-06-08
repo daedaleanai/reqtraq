@@ -94,10 +94,10 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 
 	for i, r := range reqs {
 		var newErrs []error
-		if r.Prefix == "REQ" {
+		if r.Variant == ReqVariantRequirement {
 			newErrs = r.checkID(documentConfig, nextReqId, isReqPresent)
 			nextReqId = r.IDNumber + 1
-		} else if r.Prefix == "ASM" {
+		} else if r.Variant == ReqVariantAssumption {
 			newErrs = r.checkID(documentConfig, nextAsmId, isAsmPresent)
 			nextAsmId = r.IDNumber + 1
 		}
@@ -204,11 +204,18 @@ func (rg *ReqGraph) resolve() []error {
 	return nil
 }
 
+type ReqVariant uint
+
+const (
+	ReqVariantRequirement ReqVariant = iota
+	ReqVariantAssumption
+)
+
 // Req represents a requirement node in the graph of requirements.
 type Req struct {
 	ID        string // e.g. REQ-TEST-SWL-1
-	Prefix    string // e.g. REQ
-	IDNumber  int    // e.g. 1
+	Variant   ReqVariant
+	IDNumber  int // e.g. 1
 	ParentIds []string
 	// Parents holds the parent requirements.
 	Parents []*Req

@@ -287,9 +287,9 @@ func nextId(filename string, reqtraqConfig *config.Config) error {
 
 	// count existing REQ and ASM IDs
 	for _, r := range reqs {
-		if r.Prefix == "REQ" && r.IDNumber > greatestReqID {
+		if r.Variant == ReqVariantRequirement && r.IDNumber > greatestReqID {
 			greatestReqID = r.IDNumber
-		} else if r.Prefix == "ASM" && r.IDNumber > greatestAsmID {
+		} else if r.Variant == ReqVariantAssumption && r.IDNumber > greatestAsmID {
 			greatestAsmID = r.IDNumber
 		}
 	}
