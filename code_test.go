@@ -48,7 +48,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 	for _, tag := range tags {
 		found := false
 		for _, e := range expectedTags {
-			if e.tag == tag.Tag {
+			if e.tag == tag.Tag && tag.Line == e.line {
 				found = true
 				assert.Equal(t, e.line, tag.Line)
 				assert.Equal(t, e.tag, tag.Tag)
@@ -113,7 +113,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 
 	var err error
-	rg.CodeTags, err = ParseCode(repoName, &doc)
+	rg.CodeTags, err = ParseCode(repoName, &doc, false)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -150,4 +150,57 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
 			fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
 		})
+}
+
+// @llr REQ-TRAQ-SWL-8
+func TestTagCodeLibClang(t *testing.T) {
+
+	repoName := repos.RepoName("libclangtest")
+	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/libclangtest")))
+
+	codeFiles := []CodeFile{
+		{RepoName: repoName, Path: "code/a.cc"},
+		{RepoName: repoName, Path: "code/include/a.hh"},
+		{RepoName: repoName, Path: "test/a/a_test.cc"},
+	}
+
+	clangArgs := []string{
+		"-std=c++20",
+		"-Icode/include",
+	}
+
+	tags, err := tagCodeLibClang(repoName, codeFiles, "", clangArgs)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, 3, len(tags))
+
+	expectedTags := []TagMatch{
+		{"doThings", 17, ""},
+		{"doMoreThings", 23, ""},
+		{"Array<T, N>", 38, ""},
+		{"operator[]", 45, ""},
+		{"ButThisIsPublic", 59, ""},
+		{"StructMethodsArePublicByDefault", 66, ""},
+		{"JustAFreeFunction", 75, ""},
+		{"sort", 95, ""},
+		{"sort", 89, ""},
+		{"cool", 113, ""},
+	}
+	LookFor(t, repoName, "code/include/a.hh", tags, expectedTags)
+
+	expectedTags = []TagMatch{
+		{"hiddenFunction", 9, ""},
+		{"doThings", 15, ""},
+		{"doMoreThings", 21, ""},
+		{"allReqsCovered", 24, ""},
+	}
+	LookFor(t, repoName, "code/a.cc", tags, expectedTags)
+
+	expectedTags = []TagMatch{
+		{"TestDoThings", 9, ""},
+		{"TestDoMoreThings", 15, ""},
+		{"TestAllReqsCovered", 21, ""},
+	}
+	LookFor(t, repoName, "test/a/a_test.cc", tags, expectedTags)
 }

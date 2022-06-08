@@ -73,7 +73,7 @@ ReqGraph source code is arranged as follows:
     - `web_cmd.go`: Defines a `web` subcommand that runs the web application.
 - req.go: The top-level functions dealing with finding and discovering markdown and source code files
     - parsing.go: Reading and parsing markdown files
-    - code.go: Reading and parsing source code files
+    - code.go: Reading and parsing source code files. Reqtraq can use ctags or optionally libclang to obtain code references.
 - diff.go: Comparison of ReqGraph objects
 - report.go: Generating html reports to save to disk or provide to a web server
 - matrices.go: Generating traceability tables to provide to a web server
@@ -993,6 +993,23 @@ Reqtraq SHALL provide a command line option to start a local web sever to genera
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-14, REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### clang.go
+
+Reqtraq can use libclang to parse the ast of any linked code and obtain code references. This option
+is preferred for a fine-grained code parsing, while ctags is preferred for compatibility with other 
+languages like Go.
+
+#### REQ-TRAQ-SWL-61 Support for libclang backend to parse code
+
+Reqtraq SHALL provide libclang as a backend to parse code and find public functions/methods and type 
+aliases.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
 - Rationale:
 - Verification: Test
 - Safety Impact: None

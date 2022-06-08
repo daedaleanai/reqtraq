@@ -40,8 +40,10 @@ type jsonFileQuery struct {
 }
 
 type jsonImplementation struct {
-	Code  jsonFileQuery `json:"code"`
-	Tests jsonFileQuery `json:"tests"`
+	Code                jsonFileQuery `json:"code"`
+	Tests               jsonFileQuery `json:"tests"`
+	CompilationDatabase string        `json:"compilationDatabase"`
+	ClangArguments      []string      `json:"clangArguments"`
 }
 
 type jsonParent struct {
@@ -65,6 +67,7 @@ type jsonConfig struct {
 	ParentRepo       jsonRepoLink    `json:"parentRepository"`
 	ChildrenRepos    []jsonRepoLink  `json:"childrenRepositories"`
 	Docs             []jsonDoc       `json:"documents"`
+	PreferLibClang   bool            `json:"preferLibClang"`
 }
 
 /// Types exported for application use
@@ -91,8 +94,10 @@ type Attribute struct {
 
 // A structure describing the implementation for a given certification document.
 type Implementation struct {
-	CodeFiles []string
-	TestFiles []string
+	CodeFiles           []string
+	TestFiles           []string
+	CompilationDatabase string
+	ClangArguments      []string
 }
 
 // The schema for requirements inside a certification document
@@ -125,7 +130,8 @@ type RepoConfig struct {
 
 // A global configuration structure for all repositories that compose the system.
 type Config struct {
-	Repos map[repos.RepoName]RepoConfig
+	Repos          map[repos.RepoName]RepoConfig
+	PreferLibClang bool
 }
 
 // Top level function to parse the configuration file from the given path in the current repository
@@ -431,6 +437,8 @@ The parents attribute for assumptions is implicit and refers to requirements in 
 	if err != nil {
 		return err
 	}
+	parsedDoc.Implementation.CompilationDatabase = doc.Implementation.CompilationDatabase
+	parsedDoc.Implementation.ClangArguments = doc.Implementation.ClangArguments
 
 	rc.Documents = append(rc.Documents, parsedDoc)
 
@@ -505,6 +513,10 @@ func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *m
 		if err != nil {
 			return err
 		}
+	}
+
+	if jsonConfig.PreferLibClang {
+		config.PreferLibClang = true
 	}
 
 	return nil

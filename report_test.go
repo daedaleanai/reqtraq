@@ -12,7 +12,12 @@ import (
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13, REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-30, REQ-TRAQ-SWL-31
 func TestReports(t *testing.T) {
+	repos.ClearAllRepositories()
+	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
 	reqtraqConfig, err := config.ParseConfig(repos.BaseRepoPath())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	rg, err := CreateReqGraph(&reqtraqConfig)
 	if err != nil {

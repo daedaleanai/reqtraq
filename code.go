@@ -60,7 +60,7 @@ type Code struct {
 // implementation for the given document. The return value is a map from each discovered source code
 // file to a slice of Code structs representing the functions found within.
 // @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
-func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
+func ParseCode(repoName repos.RepoName, document *config.Document, useLibClang bool) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)
 	codeFilePaths := make([]string, 0)
@@ -82,7 +82,16 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 	// TODO(ja): Distinguish between code and tests so that we can get the test coverage and the
 	// source coverage separately
 
-	tags, err := tagCode(repoName, codeFilePaths)
+	var tags map[CodeFile][]*Code
+	var err error
+
+	if useLibClang {
+		tags, err = tagCodeLibClang(repoName, codeFiles,
+			document.Implementation.CompilationDatabase, document.Implementation.ClangArguments)
+	} else {
+		tags, err = tagCode(repoName, codeFilePaths)
+	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to tag code")
 	}

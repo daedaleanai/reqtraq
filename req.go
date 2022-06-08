@@ -87,7 +87,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 				return rg, errors.Wrap(err, "Failed parsing certdocs")
 			}
 
-			if codeTags, err := ParseCode(repoName, doc); err != nil {
+			if codeTags, err := ParseCode(repoName, doc, reqtraqConfig.PreferLibClang); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing implementation")
 			} else {
 				rg.mergeTags(&codeTags)

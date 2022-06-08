@@ -19,3 +19,5 @@
 # Compiled reqtraq binary
 reqtraq/reqtraq
 
+testdata/libclangtest/build
+testdata/libclangtest/.cache

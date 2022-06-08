@@ -259,3 +259,24 @@ WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)
 }
+
+// @llr REQ-TRAQ-SWL-36
+func TestValidateUsingLibClang(t *testing.T) {
+	// Actually read configuration from repositories
+	repos.ClearAllRepositories()
+	repos.RegisterRepository(repos.RepoName("libclangtest"), repos.RepoPath("testdata/libclangtest"))
+
+	// Make sure the child can reach the parent
+	config, err := config.ParseConfig("testdata/libclangtest")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual, err := RunValidate(t, &config)
+	assert.Empty(t, err, "Got unexpected error")
+
+	expected := `Invalid reference in function operator[]@code/include/a.hh:45 in repo ` + "`" + `libclangtest` + "`" + `, REQ-TEST-SWL-12 does not exist.
+WARNING. Validation failed`
+
+	checkValidateError(t, actual, expected)
+}
