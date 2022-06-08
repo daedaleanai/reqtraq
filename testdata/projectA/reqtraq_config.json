@@ -15,18 +15,17 @@
     "documents": [
         {
             "path": "TEST-100-ORD.md",
-            "requirements": "REQ-TEST-SYS-(\\d+)"
+            "prefix": "TEST",
+            "level": "SYS"
         },
         {
             "path": "TEST-137-SRD.md",
-            "requirements": "REQ-TEST-SWH-(\\d+)",
-            "attributes": [
-                {
-                    "name": "Parents",
-                    "required": "any",
-                    "value": "REQ-TEST-SYS-(\\d+)"
-                }
-            ]
+            "prefix": "TEST",
+            "level": "SWH",
+            "parent": {
+                "prefix": "TEST",
+                "level": "SYS"
+            }
         }
     ]
 }

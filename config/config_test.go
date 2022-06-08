@@ -40,8 +40,12 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.ElementsMatch(t, config.Repos["projectA"].Documents, []Document{
 		{
 			Path: "TEST-100-ORD.md",
+			ReqSpec: ReqSpec{
+				Prefix: ReqPrefix("TEST"),
+				Level:  ReqLevel("SYS"),
+			},
 			Schema: Schema{
-				Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SYS-(\d+)`),
 				Attributes: map[string]*Attribute{
 					"RATIONALE":    commonAttributes["RATIONALE"],
 					"VERIFICATION": commonAttributes["VERIFICATION"],
@@ -54,8 +58,16 @@ func TestConfig_ParseConfig(t *testing.T) {
 		},
 		{
 			Path: "TEST-137-SRD.md",
+			ReqSpec: ReqSpec{
+				Prefix: ReqPrefix("TEST"),
+				Level:  ReqLevel("SWH"),
+			},
+			ParentReqSpec: ReqSpec{
+				Prefix: ReqPrefix("TEST"),
+				Level:  ReqLevel("SYS"),
+			},
 			Schema: Schema{
-				Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SWH-(\d+)`),
 				Attributes: map[string]*Attribute{
 					"RATIONALE":    commonAttributes["RATIONALE"],
 					"VERIFICATION": commonAttributes["VERIFICATION"],
@@ -74,7 +86,10 @@ func TestConfig_ParseConfig(t *testing.T) {
 
 	assert.Equal(t, len(config.Repos["projectB"].Documents), 1)
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Path, "TEST-138-SDD.md")
-	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`REQ-TEST-SWL-(\d+)`))
+	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Prefix, ReqPrefix("TEST"))
+	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
+	assert.Equal(t, config.Repos["projectB"].Documents[0].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
+	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TEST-SWL-(\d+)`))
 	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Schema.Attributes), 3)
 	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.Attributes["PARENTS"],
 		Attribute{

@@ -15,28 +15,33 @@ import (
 
 // GenerateTraceTables generates HTML for inspecting the gaps in the mappings between the two specified node types.
 // @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-15
-func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB string) error {
+func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.ReqSpec) error {
 	data := struct {
 		From, To         string
 		ItemsAB, ItemsBA []TableRow
 	}{
-		From: nodeTypeA,
-		To:   nodeTypeB,
+		From: nodeTypeA.ToString(),
+		To:   nodeTypeB.ToString(),
 	}
 
-	switch nodeTypeA + ":" + nodeTypeB {
-	case "SYS:SWH":
-		data.ItemsAB = rg.createDownstreamMatrix(config.SYSTEM, config.HIGH)
-		data.ItemsBA = rg.createUpstreamMatrix(config.HIGH, config.SYSTEM)
-	case "SWH:SWL":
-		data.ItemsAB = rg.createDownstreamMatrix(config.HIGH, config.LOW)
-		data.ItemsBA = rg.createUpstreamMatrix(config.LOW, config.HIGH)
-	case "SWL:CODE":
-		data.ItemsAB = rg.createSWLCodeMatrix()
-		data.ItemsBA = rg.createCodeSWLMatrix()
-	default:
-		return fmt.Errorf("unknown mapping: %s-%s", nodeTypeA, nodeTypeB)
+	data.ItemsAB = rg.createDownstreamMatrix(nodeTypeA, nodeTypeB)
+	data.ItemsBA = rg.createUpstreamMatrix(nodeTypeB, nodeTypeA)
+
+	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
+	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
+}
+
+func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec) error {
+	data := struct {
+		From, To         string
+		ItemsAB, ItemsBA []TableRow
+	}{
+		From: reqSpec.ToString(),
+		To:   "CODE",
 	}
+
+	data.ItemsAB = rg.createSWLCodeMatrix(reqSpec)
+	data.ItemsBA = rg.createCodeSWLMatrix(reqSpec)
 
 	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
 	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
@@ -143,15 +148,17 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 
 // createCodeSWLMatrix creates an upstream matrix mapping code procedures to low level requirements.
 // @llr REQ-TRAQ-SWL-15
-func (rg *ReqGraph) createCodeSWLMatrix() []TableRow {
+func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec) []TableRow {
 	items := make([]TableRow, 0)
 	for _, tags := range rg.CodeTags {
 		for _, codeTag := range tags {
 			count := 0
 			for _, parentReq := range codeTag.Parents {
-				row := TableRow{newCodeTableCell(codeTag), newReqTableCell(parentReq)}
-				items = append(items, row)
-				count++
+				if parentReq.Document.MatchesSpec(reqSpec) {
+					row := TableRow{newCodeTableCell(codeTag), newReqTableCell(parentReq)}
+					items = append(items, row)
+					count++
+				}
 			}
 			if count == 0 {
 				row := TableRow{newCodeTableCell(codeTag), nil}
@@ -164,13 +171,13 @@ func (rg *ReqGraph) createCodeSWLMatrix() []TableRow {
 
 // createDownstreamMatrix returns a Trace Matrix from a set of requirements to a lower level set of requirements.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) createDownstreamMatrix(from, to config.RequirementLevel) []TableRow {
-	reqsHigh := rg.reqsOfLevel(from)
+func (rg ReqGraph) createDownstreamMatrix(from, to config.ReqSpec) []TableRow {
+	reqsHigh := rg.reqsWithSpec(from)
 	items := make([]TableRow, 0, len(reqsHigh))
 	for _, r := range reqsHigh {
 		count := 0
 		for _, childReq := range r.Children {
-			if childReq.Level == to {
+			if childReq.Document.MatchesSpec(to) {
 				row := TableRow{newReqTableCell(r), newReqTableCell(childReq)}
 				items = append(items, row)
 				count++
@@ -186,8 +193,9 @@ func (rg ReqGraph) createDownstreamMatrix(from, to config.RequirementLevel) []Ta
 
 // createSWLCodeMatrix creates a downstream matrix mapping low level requirements to code procedures.
 // @llr REQ-TRAQ-SWL-15
-func (rg *ReqGraph) createSWLCodeMatrix() []TableRow {
-	reqs := rg.reqsOfLevel(config.LOW)
+func (rg *ReqGraph) createSWLCodeMatrix(reqSpec config.ReqSpec) []TableRow {
+	reqs := rg.reqsWithSpec(reqSpec)
+
 	items := make([]TableRow, 0, len(reqs))
 	for _, r := range reqs {
 		count := 0
@@ -206,13 +214,13 @@ func (rg *ReqGraph) createSWLCodeMatrix() []TableRow {
 
 // createUpstreamMatrix returns a Trace Matrix from a set of requirements to an upper level set of requirements.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) createUpstreamMatrix(from, to config.RequirementLevel) []TableRow {
-	reqsLow := rg.reqsOfLevel(from)
+func (rg ReqGraph) createUpstreamMatrix(from, to config.ReqSpec) []TableRow {
+	reqsLow := rg.reqsWithSpec(from)
 	items := make([]TableRow, 0, len(reqsLow))
 	for _, r := range reqsLow {
 		count := 0
 		for _, parentReq := range r.Parents {
-			if parentReq.Level == to {
+			if parentReq.Document.MatchesSpec(to) {
 				row := TableRow{newReqTableCell(r), newReqTableCell(parentReq)}
 				items = append(items, row)
 				count++
@@ -228,10 +236,10 @@ func (rg ReqGraph) createUpstreamMatrix(from, to config.RequirementLevel) []Tabl
 
 // reqsOfLevel returns the non-deleted requirements of the specified level, mapped by ID.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) reqsOfLevel(level config.RequirementLevel) map[string]*Req {
+func (rg ReqGraph) reqsWithSpec(spec config.ReqSpec) map[string]*Req {
 	reqs := make(map[string]*Req, 0)
 	for _, r := range rg.Reqs {
-		if r.Level == level && !r.IsDeleted() {
+		if r.Document.MatchesSpec(spec) && !r.IsDeleted() {
 			reqs[r.ID] = r
 		}
 	}

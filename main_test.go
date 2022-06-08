@@ -52,6 +52,10 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 				Documents: []config.Document{
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-100-ORD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "TEST",
+							Level:  "SYS",
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -63,6 +67,10 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "TEST",
+							Level:  "SWH",
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -78,6 +86,10 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "TEST",
+							Level:  "SWL",
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SWL-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -148,6 +160,10 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 				Documents: []config.Document{
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-100-ORD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "TEST",
+							Level:  "SYS",
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -159,6 +175,10 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 					},
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-137-SRD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "TEST",
+							Level:  "SWH",
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 							Attributes: map[string]*config.Attribute{

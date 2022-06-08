@@ -12,8 +12,6 @@ package main
 
 import (
 	"fmt"
-	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -59,7 +57,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 				return rg, errors.Wrap(err, "Failed parsing certdocs")
 			}
 
-			if codeTags, err := ParseCode(repoName, &doc.Implementation); err != nil {
+			if codeTags, err := ParseCode(repoName, doc); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing implementation")
 			} else {
 				rg.mergeTags(&codeTags)
@@ -96,11 +94,11 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 
 	for i, r := range reqs {
 		var newErrs []error
-		if r.Prefix == "REQ" {
-			newErrs = r.checkID(documentConfig.Path, nextReqId, isReqPresent)
+		if r.Variant == ReqVariantRequirement {
+			newErrs = r.checkID(documentConfig, nextReqId, isReqPresent)
 			nextReqId = r.IDNumber + 1
-		} else if r.Prefix == "ASM" {
-			newErrs = r.checkID(documentConfig.Path, nextAsmId, isAsmPresent)
+		} else if r.Variant == ReqVariantAssumption {
+			newErrs = r.checkID(documentConfig, nextAsmId, isAsmPresent)
 			nextAsmId = r.IDNumber + 1
 		}
 		if len(newErrs) != 0 {
@@ -127,6 +125,11 @@ func (rg *ReqGraph) resolve() []error {
 	for _, req := range rg.Reqs {
 		if req.IsDeleted() {
 			continue
+		}
+
+		// Validate requirement Id
+		if !req.Document.Schema.Requirements.MatchString(req.ID) {
+			errs = append(errs, fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements))
 		}
 
 		// Validate attributes
@@ -167,19 +170,20 @@ func (rg *ReqGraph) resolve() []error {
 				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line))
 			}
 			for _, parentID := range code.ParentIds {
+				if !code.Document.Schema.Requirements.MatchString(parentID) {
+					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
+						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path))
+				}
+
 				parent := rg.Reqs[parentID]
 				if parent != nil {
 					if parent.IsDeleted() {
 						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
 					}
-					if parent.Level == config.LOW {
-						parent.Tags = append(parent.Tags, code)
-						code.Parents = append(code.Parents, parent)
-					} else {
-						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is not a low-level requirement.",
-							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
-					}
+
+					parent.Tags = append(parent.Tags, code)
+					code.Parents = append(code.Parents, parent)
 				} else {
 					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
 						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
@@ -200,12 +204,18 @@ func (rg *ReqGraph) resolve() []error {
 	return nil
 }
 
+type ReqVariant uint
+
+const (
+	ReqVariantRequirement ReqVariant = iota
+	ReqVariantAssumption
+)
+
 // Req represents a requirement node in the graph of requirements.
 type Req struct {
-	ID        string                  // e.g. REQ-TEST-SWL-1
-	Prefix    string                  // e.g. REQ
-	IDNumber  int                     // e.g. 1
-	Level     config.RequirementLevel // e.g. LOW
+	ID        string // e.g. REQ-TEST-SWL-1
+	Variant   ReqVariant
+	IDNumber  int // e.g. 1
 	ParentIds []string
 	// Parents holds the parent requirements.
 	Parents []*Req
@@ -289,25 +299,15 @@ func (r *Req) checkAttributes() []error {
 
 // checkID verifies that the requirement is not duplicated
 // @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26
-func (r *Req) checkID(fileName string, expectedIDNumber int, isReqPresent []bool) []error {
-	// extract file name without extension
-	fNameWithExt := path.Base(fileName)
-	extension := filepath.Ext(fNameWithExt)
-	fName := fNameWithExt[0 : len(fNameWithExt)-len(extension)]
-
-	// figure out req type from doc type
-	fNameComps := strings.Split(fName, "-")
-	docType := fNameComps[len(fNameComps)-1]
-	reqType := config.DocTypeToReqType[docType]
-
+func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPresent []bool) []error {
 	var errs []error
 	reqIDComps := strings.Split(r.ID, "-") // results in an array such as [REQ PROJECT REQTYPE 1234]
 	// check requirement name, no need to check prefix because it would not have been parsed otherwise
-	if reqIDComps[1] != fNameComps[0] {
-		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, fNameComps[0], reqIDComps[1]))
+	if reqIDComps[1] != string(document.ReqSpec.Prefix) {
+		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]))
 	}
-	if reqIDComps[2] != reqType {
-		errs = append(errs, fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, reqType, reqIDComps[2]))
+	if reqIDComps[2] != string(document.ReqSpec.Level) {
+		errs = append(errs, fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]))
 	}
 	if reqIDComps[3][0] == '0' {
 		errs = append(errs, fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]))

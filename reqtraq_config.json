@@ -1,44 +1,41 @@
 {
     "commonAttributes": [
         {
-            "name": "Rationale",
-            "required": "any"
-        },
-        {
             "name": "Verification",
             "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
         },
         {
             "name": "Safety Impact",
             "value": "(None|True)"
+        },
+        {
+            "name": "Rationale",
+            "required": "any"
         }
     ],
     "documents": [
         {
             "path": "certdocs/TRAQ-100-ORD.md",
-            "requirements": "REQ-TRAQ-SYS-(\\d+)"
+            "prefix": "TRAQ",
+            "level": "SYS"
         },
         {
             "path": "certdocs/TRAQ-137-SRD.md",
-            "requirements": "REQ-TRAQ-SWH-(\\d+)",
-            "attributes": [
-                {
-                    "name": "Parents",
-                    "value": "REQ-TRAQ-SYS-(\\d+)",
-                    "required": "any"
-                }
-            ]
+            "prefix": "TRAQ",
+            "level": "SWH",
+            "parent": {
+                "prefix": "TRAQ",
+                "level": "SYS"
+            }
         },
         {
             "path": "certdocs/TRAQ-138-SDD.md",
-            "requirements": "REQ-TRAQ-SWL-(\\d+)",
-            "attributes": [
-                {
-                    "name": "Parents",
-                    "value": "REQ-TRAQ-SWH-(\\d+)",
-                    "required": "any"
-                }
-            ],
+            "prefix": "TRAQ",
+            "level": "SWL",
+            "parent": {
+                "prefix": "TRAQ",
+                "level": "SWH"
+            },
             "implementation": {
                 "code": {
                     "paths": ["."],

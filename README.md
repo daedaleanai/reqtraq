@@ -89,15 +89,26 @@ Reqtraq is configured using a `reqtraq_config.json` file in the root of the repo
     "documents": [
         {
             "path": "certdocs/TRAQ-100-ORD.md",
-            "requirements": "REQ-TRAQ-SYS-(\\d+)"
+            "prefix": "TRAQ",
+            "level": "SYS",
         },
         {
             "path": "certdocs/TRAQ-137-SRD.md",
-            "requirements": "REQ-TRAQ-SWH-(\\d+)"
+            "prefix": "TRAQ",
+            "level": "SWH",
+            "parent": {
+                "prefix": "TRAQ",
+                "level": "SYS"
+            }
         },
         {
             "path": "certdocs/TRAQ-138-SDD.md",
-            "requirements": "REQ-TRAQ-SWL-(\\d+)",
+            "prefix": "TRAQ",
+            "level": "SWL",
+            "parent": {
+                "prefix": "TRAQ",
+                "level": "SWH"
+            },
             "implementation": {
                 "code": {
                     "paths": ["."],
@@ -127,7 +138,12 @@ Child repository configuration:
     "documents": [
         {
             "path": "certdocs/TEST-138-SDD.md",
-            "requirements": "REQ-TEST-SWL-(\\d+)",
+            "prefix": "TRAQ",
+            "level": "SWL",
+            "parent": {
+                "prefix": "TRAQ",
+                "level": "SWH"
+            },
             "attributes": [
                 {
                     "name": "Parents",
@@ -172,19 +188,18 @@ Parent repository configuration:
     "documents": [
         {
             "path": "certdocs/TEST-100-ORD.md",
-            "requirements": "REQ-TEST-SYS-(\\d+)",
+            "prefix": "TRAQ",
+            "level": "SYS",
             "attributes": []
         },
         {
             "path": "certdocs/TEST-137-SRD.md",
-            "requirements": "REQ-TEST-SWH-(\\d+)",
-            "attributes": [
-                {
-                    "name": "Parents",
-                    "required": "any",
-                    "value": "REQ-TEST-SYS-(\\d+)"
-                }
-            ]
+            "prefix": "TRAQ",
+            "level": "SWH",
+            "parent": {
+                "prefix": "TRAQ",
+                "level": "SYS"
+            }
         }
     ]
 }

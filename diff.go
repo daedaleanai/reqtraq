@@ -76,10 +76,6 @@ func (r *Req) changedSince(pr *Req) (diffs []string) {
 		diffs = append(diffs, fmt.Sprintf("ID from %q to %q (should not happen!)", pr.ID, r.ID))
 	}
 
-	if r.Level != pr.Level {
-		diffs = append(diffs, fmt.Sprintf("Level from %q to %q (should not happen!)", pr.Level, r.Level))
-	}
-
 	if c, p := onlyLetters(r.Title), onlyLetters(pr.Title); c != p {
 		diffs = append(diffs, fmt.Sprintf("Changed from %q to %q", p, c))
 	} else {

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 
@@ -93,8 +92,6 @@ const webUsage = `Starts a local web server to facilitate interaction with reqtr
 	reqtraq web [--addr=<hostport>]
 Options:
 	--addr: the ip:port where to serve. Default: localhost:8080.`
-
-var reCertdoc = regexp.MustCompile(`^(\w+)-(\d+)-(\w+)$`)
 
 // @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-34, REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
 func main() {
@@ -288,23 +285,20 @@ func nextId(filename string, reqtraqConfig *config.Config) error {
 		return err
 	}
 
-	// ParseCertdoc validated the filename format, so no need to validate again
-	filenameParts := reCertdoc.FindStringSubmatch(strings.TrimSuffix(path.Base(filename), ".md"))
-
 	// count existing REQ and ASM IDs
 	for _, r := range reqs {
-		if r.Prefix == "REQ" && r.IDNumber > greatestReqID {
+		if r.Variant == ReqVariantRequirement && r.IDNumber > greatestReqID {
 			greatestReqID = r.IDNumber
-		} else if r.Prefix == "ASM" && r.IDNumber > greatestAsmID {
+		} else if r.Variant == ReqVariantAssumption && r.IDNumber > greatestAsmID {
 			greatestAsmID = r.IDNumber
 		}
 	}
 
-	fmt.Printf("REQ-%s-%s-%d\n", filenameParts[1], config.DocTypeToReqType[filenameParts[3]], greatestReqID+1)
+	fmt.Printf("REQ-%s-%s-%d\n", certdocConfig.ReqSpec.Prefix, certdocConfig.ReqSpec.Level, greatestReqID+1)
 
 	// don't bother reporting assumptions if none are defined yet
 	if greatestAsmID > 0 {
-		fmt.Printf("ASM-%s-%s-%d\n", filenameParts[1], config.DocTypeToReqType[filenameParts[3]], greatestAsmID+1)
+		fmt.Printf("ASM-%s-%s-%d\n", certdocConfig.ReqSpec.Prefix, certdocConfig.ReqSpec.Level, greatestAsmID+1)
 	}
 
 	return nil

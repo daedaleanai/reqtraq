@@ -49,22 +49,24 @@ type Code struct {
 	// Requirement IDs found in the comment above the function.
 	ParentIds []string
 	Parents   []*Req
+	// Link back to its parent document. Used to validate the requirements belong to this document
+	Document *config.Document
 }
 
 // ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their associated requirement IDs, discovered. The return value is a map from each discovered source code file to a slice of Code structs representing the functions found within.
 // @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
-func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (map[CodeFile][]*Code, error) {
+func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)
 	codeFilePaths := make([]string, 0)
-	for _, codeFile := range implementation.CodeFiles {
+	for _, codeFile := range document.Implementation.CodeFiles {
 		codeFiles = append(codeFiles, CodeFile{
 			RepoName: repoName,
 			Path:     codeFile,
 		})
 		codeFilePaths = append(codeFilePaths, codeFile)
 	}
-	for _, testFile := range implementation.TestFiles {
+	for _, testFile := range document.Implementation.TestFiles {
 		codeFiles = append(codeFiles, CodeFile{
 			RepoName: repoName,
 			Path:     testFile,
@@ -83,6 +85,12 @@ func ParseCode(repoName repos.RepoName, implementation *config.Implementation) (
 	// Annotate the code procedures with the associated requirement IDs.
 	if err := parseComments(tags); err != nil {
 		return tags, errors.Wrap(err, "failed walking code")
+	}
+
+	for codeFile := range tags {
+		for tagIdx := range tags[codeFile] {
+			tags[codeFile][tagIdx].Document = document
+		}
 	}
 
 	return tags, nil

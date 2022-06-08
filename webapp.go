@@ -88,7 +88,7 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 </head>
 
 <body>
-<h1><img src="https://www.daedalean.ai/favicon-32x32.png"> {{.RepoName}}</h1>
+<h1><img src="https://static.tildacdn.com/tild3132-3161-4531-b932-626532316433/favicon.ico"> {{.RepoName}}</h1>
 
 <h2>Reports</h2>
 <form action="/report" method="get">
@@ -142,33 +142,51 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 <h2>Trace Matrices</h2>
 <div style="display: flex;">
 	<div class="matrices">
+	{{ range $childReqSpec, $parentReqSpec := .ReqSpecLinks }}
 		<div>
-			<div><a href="/matrix?from=SYS&to=SWH">SYS&ndash;SWH</a></div>
+			<div>
+				<a href="/matrix?from=REQ-{{ $parentReqSpec.Prefix }}-{{ $parentReqSpec.Level }}&to=REQ-{{ $childReqSpec.Prefix }}-{{ $childReqSpec.Level }}">
+					REQ-{{ $parentReqSpec.Prefix }}-{{ $parentReqSpec.Level }} -> REQ-{{ $childReqSpec.Prefix }}-{{ $childReqSpec.Level }}
+				</a>
+			</div>
 		</div>
-		<div>
-			<div><a href="/matrix?from=SWH&to=SWL">SWH&ndash;SWL</a></div>
-		</div>
-		<div>
-			<div><a href="/matrix?from=SWL&to=CODE">SWL&ndash;CODE</a></div>
-		</div>
-	</div>
+	{{ end }}
 
-	<div class="matrices">
+	{{ range $reqSpec := .CodeLinks }}
 		<div>
-			<div><a href="/matrix?from=SWH&to=HTC">SWH&ndash;HTC</a></div>
+			<div>
+				<a href="/matrix?from=REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }}&to=CODE">
+					REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }} -> CODE
+				</a>
+			</div>
 		</div>
-		<div>
-			<div><a href="/matrix?from=SWL&to=LTC">SWL&ndash;LTC</a></div>
-		</div>
+	{{ end }}
 	</div>
 </div>
 </body>
 </html>`))
 
 type indexData struct {
-	RepoName   string
-	Attributes map[string]*config.Attribute
-	Commits    []string
+	RepoName     string
+	Attributes   map[string]*config.Attribute
+	Commits      []string
+	ReqSpecLinks map[config.ReqSpec]config.ReqSpec
+	CodeLinks    []config.ReqSpec
+}
+
+func parseReqSpecFromRequest(specString string) (config.ReqSpec, error) {
+	if !strings.HasPrefix(specString, "REQ-") {
+		return config.ReqSpec{}, fmt.Errorf("Invalid requirement specification `%s`", specString)
+	}
+
+	parts := strings.Split(strings.TrimPrefix(specString, "REQ-"), "-")
+	if len(parts) != 2 {
+		return config.ReqSpec{}, fmt.Errorf("Invalid requirement specification `%s`", specString)
+	}
+	return config.ReqSpec{
+		Prefix: config.ReqPrefix(parts[0]),
+		Level:  config.ReqLevel(parts[1]),
+	}, nil
 }
 
 // get provides the page information for a given request
@@ -189,6 +207,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		attributes := make(map[string]*config.Attribute)
+		codeLinks := []config.ReqSpec{}
 
 		for _, repo := range reqtraqConfig.Repos {
 			for _, document := range repo.Documents {
@@ -197,10 +216,14 @@ func get(w http.ResponseWriter, r *http.Request) error {
 						attributes[attributeName] = attribute
 					}
 				}
+				if document.HasImplementation() {
+					codeLinks = append(codeLinks, document.ReqSpec)
+				}
 			}
 		}
+		reqSpecLinks := reqtraqConfig.GetLinkedReqSpecs()
 
-		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits})
+		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits, reqSpecLinks, codeLinks})
 	}
 
 	// code files linked to from reports
@@ -273,9 +296,21 @@ func get(w http.ResponseWriter, r *http.Request) error {
 			return rg.ReportIssues(w)
 		}
 	case reqPath == "/matrix":
-		from := r.FormValue("from")
+		fromSpec, err := parseReqSpecFromRequest(r.FormValue("from"))
+		if err != nil {
+			return err
+		}
+
 		to := r.FormValue("to")
-		return rg.GenerateTraceTables(w, from, to)
+		if to == "CODE" {
+			return rg.GenerateCodeTraceTables(w, fromSpec)
+		}
+
+		toSpec, err := parseReqSpecFromRequest(to)
+		if err != nil {
+			return err
+		}
+		return rg.GenerateTraceTables(w, fromSpec, toSpec)
 	}
 	return nil
 }
