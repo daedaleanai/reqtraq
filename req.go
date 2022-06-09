@@ -172,7 +172,14 @@ func (rg *ReqGraph) resolve() []error {
 		}
 
 		// Validate attributes
-		errs = append(errs, req.checkAttributes()...)
+		var attributes map[string]*config.Attribute
+		switch req.Variant {
+		case ReqVariantRequirement:
+			attributes = req.Document.Schema.Attributes
+		case ReqVariantAssumption:
+			attributes = req.Document.Schema.AsmAttributes
+		}
+		errs = append(errs, req.checkAttributes(attributes)...)
 
 		// Validate parent links of requirements
 		for _, parentID := range req.ParentIds {
@@ -290,13 +297,13 @@ func (r *Req) IsDeleted() bool {
 // checkAttributes validates the requirement attributes against the schema from its document,
 // returns a list of errors found.
 // @llr REQ-TRAQ-SWL-10
-func (r *Req) checkAttributes() []error {
+func (r *Req) checkAttributes(schemaAttributes map[string]*config.Attribute) []error {
 	var errs []error
 	var anyAttributes []string
 	anyCount := 0
 
 	// Iterate the attribute rules
-	for name, attribute := range r.Document.Schema.Attributes {
+	for name, attribute := range schemaAttributes {
 		if attribute.Type == config.AttributeAny {
 			anyAttributes = append(anyAttributes, name)
 		}
@@ -324,7 +331,7 @@ func (r *Req) checkAttributes() []error {
 
 	// Iterate the requirement attributes to check for unknown ones
 	for name := range r.Attributes {
-		if _, present := r.Document.Schema.Attributes[strings.ToUpper(name)]; !present {
+		if _, present := schemaAttributes[strings.ToUpper(name)]; !present {
 			errs = append(errs, fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name))
 		}
 	}

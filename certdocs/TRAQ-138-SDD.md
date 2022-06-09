@@ -803,6 +803,18 @@ A sample configuration file is shown below:
                 "prefix": "TEST",
                 "level": "SWH"
             },
+            "attributes": [
+                {
+                    "name": "Custom Attribute",
+                    "required": "false",
+                },
+            ],
+            "asmAttributes": [
+                {
+                    "name": "Validation",
+                    "required": "true",
+                },
+            ],
             "implementation": {
                 "code": {
                     "paths": ["code"],
@@ -832,6 +844,7 @@ specification of the parent so that requirements can be linked from children to 
 implies a `Parents` attribute with a filter for the requirement specification of the parent will be 
 added to the schema of the document.
 - An implementation, which consists of separated matchers for both code and tests.
+- Any attributes for its requirements and assumptions.
 
 Common attributes are appended to the attribute schema in each document to fully define the schema 
 of the attributes in the requirements that belong to the document.

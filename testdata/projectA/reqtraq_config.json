@@ -32,7 +32,13 @@
             "parent": {
                 "prefix": "TEST",
                 "level": "SYS"
-            }
+            },
+            "asmAttributes": [
+                {
+                    "name": "Validation",
+                    "required": "true"
+                }
+            ]
         }
     ]
 }
