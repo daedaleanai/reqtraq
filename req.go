@@ -36,13 +36,6 @@ type ReqGraph struct {
 	ReqtraqConfig *config.Config
 }
 
-// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
-func (rg *ReqGraph) mergeTags(tags *map[CodeFile][]*Code) {
-	for tagKey := range *tags {
-		rg.CodeTags[tagKey] = (*tags)[tagKey]
-	}
-}
-
 // CreateReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
 // errors found while walking the requirements, code, or resolving the graph.
 // The separate returned error indicates if reading the certdocs and code failed.
@@ -70,6 +63,15 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	rg.Errors = append(rg.Errors, rg.resolve()...)
 
 	return rg, nil
+}
+
+// Merges all tags from the given map into the ReqGraph instance, potentially replacing them if they
+// are already in the requirements graph
+// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
+func (rg *ReqGraph) mergeTags(tags *map[CodeFile][]*Code) {
+	for tagKey := range *tags {
+		rg.CodeTags[tagKey] = (*tags)[tagKey]
+	}
 }
 
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
@@ -295,7 +297,7 @@ func (r *Req) checkAttributes() []error {
 }
 
 // checkID verifies that the requirement is not duplicated
-// @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26
+// @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26, REQ-TRAQ-SWL-28
 func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPresent []bool) []error {
 	var errs []error
 	reqIDComps := strings.Split(r.ID, "-") // results in an array such as [REQ PROJECT REQTYPE 1234]

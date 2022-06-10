@@ -163,8 +163,7 @@ func main() {
 }
 
 // buildGraph returns the requirements graph at the specified commit, or the graph for the current files if commit
-// is empty. In case the commit is specified, a temporary clone of the repository is created and the path to it is
-// returned.
+// is empty. In case the commit is specified, a temporary clone of the repository is created
 // @llr REQ-TRAQ-SWL-17
 func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
 	if commit != "" {

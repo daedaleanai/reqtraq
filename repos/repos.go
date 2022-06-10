@@ -1,3 +1,10 @@
+/*
+	Manages multiple repositories, registering them and allowing the user to lookup files within them
+
+	The base repository is the one where reqtraq was originally invoked. This is registered with
+	SetBaseRepoInfo and must be done before any of the other methods are called
+*/
+
 package repos
 
 import (
@@ -114,9 +121,8 @@ func GetRepoPathByName(name RepoName) (RepoPath, error) {
 }
 
 // Creates a local copy of the given remote repository in a temporary folder and registers it for
-// deletion when ClearAllRepositories is called.
-// @llr REQ-TRAQ-SWL-49
-// @llr REQ-TRAQ-SWL-16
+// deletion when CleanupTemporaryDirectories is called.
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-16
 func cloneFromRemote(repoName RepoName, remotePath RemotePath, gitReference string) (RepoPath, error) {
 	cloneDir, err := ioutil.TempDir("", ".reqtraq")
 	if err != nil {
@@ -148,7 +154,7 @@ func CleanupTemporaryDirectories() {
 	}
 }
 
-// Finds a files in the given repository, returning an array of paths to each matched file
+// Finds files in the given repository, returning an array of paths to each matched file
 // Its arguments are:
 // - `repoName`: Repo where files are located
 // - `path`: The path to look in. Only files in this path (relative to the root of the repo) will be matched.

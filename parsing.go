@@ -54,7 +54,7 @@ const (
 	Table
 )
 
-// parseMarkdown parses a certification document and returns the found requirements.
+// ParseMarkdown parses a certification document and returns the found requirements.
 // @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-4
 func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]*Req, error) {
 	var (
@@ -405,7 +405,7 @@ func splitTableLine(line string) []string {
 	return parts
 }
 
-// extractIDParts parses a requirement identifier string and returns the ID string, prefix, sequence number and level
+// extractIDParts parses a requirement identifier string and returns the ID string, variant and sequence number
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
 func extractIDParts(reqStr string) (string, ReqVariant, int, error) {
 	var variant ReqVariant

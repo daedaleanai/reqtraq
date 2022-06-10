@@ -116,6 +116,16 @@ Reqtraq SHALL use git repositories to store and track changes to requirements do
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWH-18 Multiple repositories
+
+Reqtraq SHALL allow the user to trace code and requirements located across multiple repositories.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SYS-1
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 #### REQ-TRAQ-SWH-8 Requirement Comparison
 
 Reqtraq SHALL be capable of comparing two versions of a requirements graph and reporting differences between them.
@@ -205,16 +215,6 @@ Reqtraq SHALL have a simple web interface that allows generation and filtering o
 ##### Attributes:
 - Parents:
 - Rationale: Web interface allows for simple presentation of reports to auditors.
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWH-18 Multiple repositories
-
-Reqtraq SHALL allow the user to trace code and requirements located across multiple repositories.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SYS-1
-- Rationale:
 - Verification: Test
 - Safety Impact: None
 

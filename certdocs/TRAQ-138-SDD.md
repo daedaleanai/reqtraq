@@ -95,14 +95,6 @@ The code component SHALL check the provided source code files and make sure only
 
 #### REQ-TRAQ-SWL-7 DELETED
 
-Reqtraq SHALL skip any folder named "testdata" when searching for source code.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-2
-- Rationale: testdata folder may contain source code, which should not be included in the traceability.
-- Verification: Test
-- Safety Impact: None
-
 #### REQ-TRAQ-SWL-8 Ctags
 
 Reqtraq SHALL use the Universal Ctags application to parse supported source code files (those with an extension: c, h, cc, hh or go) for function names, and store them.
@@ -566,7 +558,7 @@ Reqtraq SHALL allow the user to filter the bottom up report by ID, title, body, 
 #### REQ-TRAQ-SWL-30 Issue report
 
 Reqtraq SHALL allow the user to create a report showing issues with:
-- Attributes - the attributes of each requirement are checked against the schema defined in the attributes.json
+- Attributes - the attributes of each requirement are checked against the schema defined in the reqtraq_config.json
 - References - parent attributes are checked to ensure they are pointing to valid requirements (they exist and are not deleted)
 
 ##### Attributes:
@@ -840,7 +832,7 @@ A sample configuration file is shown below:
 }
 ```
 
-Parent and children repositories are specified via the name of the repository and their associated name.
+Parent and children repositories are specified via the name of the repository and their associated URL.
 There can only be one parent repository per configuration file, but multiple children repositories can exist.
 
 Each document contains:
@@ -871,7 +863,7 @@ Reqtraq SHALL find the top level configuration file and parse the complete confi
 the top of the configuration tree.
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-18
+- Parents: REQ-TRAQ-SWH-18, REQ-TRAQ-SWH-13
 - Rationale:
 - Verification: Test
 - Safety Impact: None

@@ -31,7 +31,8 @@ func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.
 	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
 }
 
-// GenerateTraceTables generates HTML for inspecting the gaps in the mappings between the two specified node types.
+// GenerateCodeTraceTables generates HTML for inspecting the gaps in the mappings between the specified
+// node type and code
 // @llr REQ-TRAQ-SWL-15
 func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec) error {
 	data := struct {
