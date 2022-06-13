@@ -1,7 +1,7 @@
 package repos
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,37 +11,48 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRepos_GetRepoNameFromPath(t *testing.T) {
-	assert.Equal(t, GetRepoNameFromPath("git@github.com:daedaleanai/reqtraq.git"), RepoName("reqtraq"))
-	assert.Equal(t, GetRepoNameFromPath("https://github.com/daedaleanai/reqtraq.git"), RepoName("reqtraq"))
-	assert.Equal(t, GetRepoNameFromPath("/some/folder/in/my/filesystem/reqtraq"), RepoName("reqtraq"))
+// Other packages (config) are expected to do this, but for the repos config we can do it here
+// @llr REQ-TRAQ-SWL-49
+func TestMain(m *testing.M) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current directory")
+	}
+
+	SetBaseRepoInfo(RepoPath(filepath.Dir(workingDir)), RepoName("reqtraq"))
+
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_BaseRepoName(t *testing.T) {
 	assert.Equal(t, BaseRepoName(), RepoName("reqtraq"))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_BaseRepoPath(t *testing.T) {
 	workingDir, err := os.Getwd()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, BaseRepoPath(), filepath.Dir(workingDir))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_RegisterRepository(t *testing.T) {
 	ClearAllRepositories()
 
-	repoName := RegisterRepository("/some/fake/path/MyCoolRepo")
-	assert.Equal(t, repoName, RepoName("MyCoolRepo"))
+	repoName := RepoName("MyCoolRepo")
+	RegisterRepository(repoName, RepoPath("/some/fake/path/MyCoolRepo"))
 
 	path, err := GetRepoPathByName(repoName)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, path, RepoPath("/some/fake/path/MyCoolRepo"))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_ClearAllRepositories(t *testing.T) {
 	ClearAllRepositories()
 
-	repoName := RegisterRepository("/some/fake/path/MyCoolRepo")
+	repoName := RepoName("MyCoolRepo")
+	RegisterRepository(repoName, "/some/fake/path/MyCoolRepo")
 	assert.Equal(t, repoName, RepoName("MyCoolRepo"))
 
 	path, err := GetRepoPathByName(repoName)
@@ -53,47 +64,54 @@ func TestRepos_ClearAllRepositories(t *testing.T) {
 	assert.NotEqual(t, err, nil)
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_GetRepo_NoOverrideRegistered(t *testing.T) {
 	baseRepoPath := BaseRepoPath()
+	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
-	RegisterRepository(baseRepoPath)
+	RegisterRepository(baseRepoName, baseRepoPath)
 
-	name, path, err := GetRepo("https://github.com/daedaleanai/reqtraq.git", "", false)
+	path, err := GetRepo(baseRepoName, RemotePath("https://github.com/daedaleanai/reqtraq.git"), "", false)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, name, RepoName("reqtraq"))
 	assert.Equal(t, path, RepoPath(baseRepoPath))
 }
 
+// @llr REQ-TRAQ-SWL-49
 func TestRepos_GetRepo_NoOverrideNotRegistered(t *testing.T) {
+	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
 
 	tempDirPrefix := filepath.Join(os.TempDir(), ".reqtraq")
 
-	name, path, err := GetRepo(RemotePath(BaseRepoPath()), "", false)
+	path, err := GetRepo(baseRepoName, RemotePath(BaseRepoPath()), "", false)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, name, RepoName("reqtraq"))
 
 	assert.True(t, strings.HasPrefix(string(path), tempDirPrefix))
 }
 
+// @llr REQ-TRAQ-SWL-50
 func TestRepos_GetRepo_OverrideRegistered(t *testing.T) {
+	baseRepoPath := BaseRepoPath()
+	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
-	RegisterRepository(BaseRepoPath())
+	RegisterRepository(baseRepoName, baseRepoPath)
 
 	tempDirPrefix := filepath.Join(os.TempDir(), ".reqtraq")
 
-	name, path, err := GetRepo(RemotePath(BaseRepoPath()), "", true)
+	path, err := GetRepo(baseRepoName, RemotePath(BaseRepoPath()), "", true)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, name, RepoName("reqtraq"))
 
 	assert.True(t, strings.HasPrefix(string(path), tempDirPrefix))
 }
 
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-51
 func TestRepos_FindFilesInDirectory(t *testing.T) {
+	baseRepoPath := BaseRepoPath()
+	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
-	repoName := RegisterRepository(BaseRepoPath())
+	RegisterRepository(baseRepoName, baseRepoPath)
 
-	files, err := FindFilesInDirectory(repoName, "testdata/projectB", regexp.MustCompile(".*"), []*regexp.Regexp{})
+	files, err := FindFilesInDirectory(baseRepoName, "testdata/projectB", regexp.MustCompile(".*"), []*regexp.Regexp{})
 	assert.Equal(t, err, nil)
 	assert.ElementsMatch(t, files, []string{
 		"testdata/projectB/TEST-138-SDD.md",
@@ -105,7 +123,7 @@ func TestRepos_FindFilesInDirectory(t *testing.T) {
 		"testdata/projectB/test/a/a_test.cc",
 	})
 
-	files, err = FindFilesInDirectory(repoName, "testdata/projectB", regexp.MustCompile(".*\\.(cc|hh)"), []*regexp.Regexp{})
+	files, err = FindFilesInDirectory(baseRepoName, "testdata/projectB", regexp.MustCompile(".*\\.(cc|hh)"), []*regexp.Regexp{})
 	assert.Equal(t, err, nil)
 	assert.ElementsMatch(t, files, []string{
 		"testdata/projectB/code/include/a.hh",
@@ -115,7 +133,7 @@ func TestRepos_FindFilesInDirectory(t *testing.T) {
 		"testdata/projectB/test/a/a_test.cc",
 	})
 
-	files, err = FindFilesInDirectory(repoName, "testdata/projectB", regexp.MustCompile(".*\\.(cc|hh)"), []*regexp.Regexp{regexp.MustCompile(".*_test\\.(cc|hh)$")})
+	files, err = FindFilesInDirectory(baseRepoName, "testdata/projectB", regexp.MustCompile(".*\\.(cc|hh)"), []*regexp.Regexp{regexp.MustCompile(".*_test\\.(cc|hh)$")})
 	assert.Equal(t, err, nil)
 	assert.ElementsMatch(t, files, []string{
 		"testdata/projectB/code/include/a.hh",
@@ -125,33 +143,36 @@ func TestRepos_FindFilesInDirectory(t *testing.T) {
 	})
 }
 
+// @llr REQ-TRAQ-SWL-49, REQ-TRAQ-SWL-51
 func TestRepos_PathInRepo(t *testing.T) {
+	baseRepoPath := BaseRepoPath()
+	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
-	repoName := RegisterRepository(BaseRepoPath())
+	RegisterRepository(baseRepoName, baseRepoPath)
 
-	path, err := PathInRepo(repoName, "testdata/projectB/code/a.cc")
+	path, err := PathInRepo(baseRepoName, "testdata/projectB/code/a.cc")
 	assert.Equal(t, err, nil)
-	assert.Equal(t, path, filepath.Join(BaseRepoPath(), "testdata/projectB/code/a.cc"))
+	assert.Equal(t, path, filepath.Join(string(baseRepoPath), "testdata/projectB/code/a.cc"))
 
 	// Now try a file that does not exist
-	path, err = PathInRepo(repoName, "testdata/projectB/code/b.cc")
+	path, err = PathInRepo(baseRepoName, "testdata/projectB/code/b.cc")
 	assert.NotEqual(t, err, nil)
 }
 
+// @llr REQ-TRAQ-SWL-16
 func TestRepos_AllCommits(t *testing.T) {
+	baseRepoPath := BaseRepoPath()
+	baseRepoName := BaseRepoName()
 	ClearAllRepositories()
-	repoName := RegisterRepository(BaseRepoPath())
+	RegisterRepository(baseRepoName, baseRepoPath)
 
-	commits, err := AllCommits(repoName)
+	commits, err := AllCommits(baseRepoName)
 	assert.Equal(t, err, nil)
 	assert.NotEmpty(t, commits)
 
 	commitLineMatcher := regexp.MustCompile(`[0-9a-f]{7}\s[0-9]{4}-[0-9]{2}-[0-9]{2}`)
 
-	for id, commit := range commits {
-		if id == 0 {
-			fmt.Println(commit)
-		}
+	for _, commit := range commits {
 		assert.True(t, commitLineMatcher.MatchString(commit))
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-36
 func RunValidate(t *testing.T, config *config.Config) (string, error) {
 	// prepare capture of stdout
 	rescueStdout := os.Stdout
@@ -28,8 +29,9 @@ func RunValidate(t *testing.T, config *config.Config) (string, error) {
 	return string(buf), err
 }
 
+// @llr REQ-TRAQ-SWL-36
 func TestValidateCreateReqGraphMarkdown(t *testing.T) {
-	repos.RegisterRepository(repos.BaseRepoPath())
+	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
 
 	commonAttributes := map[string]*config.Attribute{
 		"RATIONALE": {
@@ -138,6 +140,7 @@ WARNING. Validation failed`
 	checkValidateError(t, actual, expected)
 }
 
+// @llr REQ-TRAQ-SWL-36
 func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 	commonAttributes := map[string]*config.Attribute{
 		"RATIONALE": {
@@ -210,6 +213,7 @@ WARNING. Validation failed`
 	checkValidateError(t, actual, expected)
 }
 
+// @llr REQ-TRAQ-SWL-36
 func checkValidateError(t *testing.T, validate_errors string, expected string) {
 	errs := strings.Split(validate_errors, "\n")
 	for i, e := range errs {
@@ -230,4 +234,25 @@ func checkValidateError(t *testing.T, validate_errors string, expected string) {
 	}
 
 	assert.Empty(t, errs, "Got unexpected errors")
+}
+
+// @llr REQ-TRAQ-SWL-36
+func TestValidateMultipleRepos(t *testing.T) {
+	// Actually read configuration from repositories
+	repos.ClearAllRepositories()
+	repos.RegisterRepository(repos.RepoName("projectA"), repos.RepoPath("testdata/projectA"))
+	repos.RegisterRepository(repos.RepoName("projectB"), repos.RepoPath("testdata/projectB"))
+
+	// Make sure the child can reach the parent
+	config, err := config.ParseConfig("testdata/projectB")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual, err := RunValidate(t, &config)
+	assert.Empty(t, err, "Got unexpected error")
+
+	expected := `Validation passed`
+
+	checkValidateError(t, actual, expected)
 }

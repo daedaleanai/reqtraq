@@ -116,6 +116,16 @@ Reqtraq SHALL use git repositories to store and track changes to requirements do
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWH-18 Multiple repositories
+
+Reqtraq SHALL allow the user to trace code and requirements located across multiple repositories.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SYS-1
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 #### REQ-TRAQ-SWH-8 Requirement Comparison
 
 Reqtraq SHALL be capable of comparing two versions of a requirements graph and reporting differences between them.
@@ -146,15 +156,7 @@ Reqtraq SHALL allow requirements to be marked as deleted whilst retaining inform
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWH-11 Document Naming
-
-Reqtraq SHALL enforce a naming scheme for requirements documents.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SYS-3
-- Rationale: Consistency helps in the development process to know where to find various certification documents.
-- Verification: Test
-- Safety Impact: None
+#### REQ-TRAQ-SWH-11 DELETED
 
 #### REQ-TRAQ-SWH-12 Requirement Numbering
 
@@ -215,3 +217,18 @@ Reqtraq SHALL have a simple web interface that allows generation and filtering o
 - Rationale: Web interface allows for simple presentation of reports to auditors.
 - Verification: Test
 - Safety Impact: None
+
+## Appendix
+
+### Deleted requirements
+
+#### DELETED-11 Document Naming
+
+Reqtraq SHALL enforce a naming scheme for requirements documents.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SYS-3
+- Rationale: Consistency helps in the development process to know where to find various certification documents.
+- Verification: Test
+- Safety Impact: None
+

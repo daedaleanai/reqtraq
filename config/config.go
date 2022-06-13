@@ -7,17 +7,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/pkg/errors"
 )
 
 type ReqLevel string
 type ReqPrefix string
 
-/// Types exported for parsing json files
+/// Internal types for parsing json files
+
+type jsonRepoLink struct {
+	RepoName   repos.RepoName   `json:"repoName"`
+	RemotePath repos.RemotePath `json:"repoUrl"`
+}
 
 type jsonAttribute struct {
 	Name     string `json:"name"`
@@ -51,42 +59,55 @@ type jsonDoc struct {
 }
 
 type jsonConfig struct {
-	CommonAttributes []jsonAttribute    `json:"commonAttributes"`
-	ParentRepo       repos.RemotePath   `json:"parentRepository"`
-	ChildrenRepos    []repos.RemotePath `json:"childrenRepositories"`
-	Docs             []jsonDoc          `json:"documents"`
+	RepoName         repos.RepoName  `json:"repoName"`
+	CommonAttributes []jsonAttribute `json:"commonAttributes"`
+	ParentRepo       jsonRepoLink    `json:"parentRepository"`
+	ChildrenRepos    []jsonRepoLink  `json:"childrenRepositories"`
+	Docs             []jsonDoc       `json:"documents"`
 }
 
 /// Types exported for application use
 
+// A type of attribute for a requirement
 type AttributeType uint
 
+// The enumeration of possible attribute types
 const (
+	// The attribute must always be present in the requirement
 	AttributeRequired AttributeType = iota
+	// The attribute can be optionally present in the requirement
 	AttributeOptional
+	// At least one of the attributes with type any must be present in the requirement
 	AttributeAny
 )
 
+// An structure defining an attribute with the given type and value. The attribute must match the
+// regular expression in value to be valid
 type Attribute struct {
 	Type  AttributeType
 	Value *regexp.Regexp
 }
 
+// A structure describing the implementation for a given certification document.
 type Implementation struct {
 	CodeFiles []string
 	TestFiles []string
 }
 
+// The schema for requirements inside a certification document
 type Schema struct {
 	Requirements *regexp.Regexp
 	Attributes   map[string]*Attribute
 }
 
+// A requirement specification. Identifies the form of requirements in a document
 type ReqSpec struct {
 	Prefix ReqPrefix
 	Level  ReqLevel
 }
 
+// A certification document with its given requirement specification and schema, as well as its
+// implementation in terms of code and its location in the repository
 type Document struct {
 	Path           string
 	ReqSpec        ReqSpec
@@ -95,16 +116,106 @@ type Document struct {
 	Implementation Implementation
 }
 
+// A configuration for a single repository, which is made of documents.
 type RepoConfig struct {
 	Documents []Document
 }
 
+// A global configuration structure for all repositories that compose the system.
 type Config struct {
 	Repos map[repos.RepoName]RepoConfig
 }
 
-// Reads a json configuration file from the specify repository path.
+// Top level function to parse the configuration file from the given path in the current repository
+// @llr REQ-TRAQ-SWL-53
+func ParseConfig(repoPath repos.RepoPath) (Config, error) {
+	jsonConfig, err := readJsonConfigFromRepo(repoPath)
+	if err != nil {
+		return Config{}, errors.Wrapf(err, "The requested config path `%s` does not contain a valid repository", repoPath)
+	}
+
+	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
+	// Find the top level config, then start parsing them
+	topLevelConfig, err := findTopLevelConfig(jsonConfig)
+	if err != nil {
+		return Config{}, err
+	}
+
+	config := Config{
+		Repos: make(map[repos.RepoName]RepoConfig),
+	}
+
+	commonAttributes := make(map[string]*Attribute)
+
+	err = config.parseConfigFile(topLevelConfig, &commonAttributes)
+	if err != nil {
+		return Config{}, err
+	}
+
+	config.appendCommonAttributes(&commonAttributes)
+
+	return config, nil
+}
+
+// Returns true if the document has a parent
+// @llr REQ-TRAQ-SWL-55
+func (doc *Document) HasParent() bool {
+	return doc.ParentReqSpec.Level != "" && doc.ParentReqSpec.Prefix != ""
+}
+
+// Returns true if the document has associated implementation
+// @llr REQ-TRAQ-SWL-56
+func (doc *Document) HasImplementation() bool {
+	return len(doc.Implementation.CodeFiles) != 0
+}
+
+// Returns true if the document matches the given requirement spec.
+// @llr REQ-TRAQ-SWL-55
+func (doc *Document) MatchesSpec(reqSpec ReqSpec) bool {
+	return (reqSpec.Level == doc.ReqSpec.Level) && (reqSpec.Prefix == doc.ReqSpec.Prefix)
+}
+
+// Converts the requirement specification to a REQ string
+// @llr REQ-TRAQ-SWL-55
+func (rs ReqSpec) ToString() string {
+	return fmt.Sprintf("REQ-%s-%s", rs.Prefix, rs.Level)
+}
+
+// Finds the associated Document for a certdoc located at the given path or a nil document if it
+// is not found
+// @llr REQ-TRAQ-SWL-54
+func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
+	for repoName := range config.Repos {
+		for docIdx := range config.Repos[repoName].Documents {
+			if config.Repos[repoName].Documents[docIdx].Path == path {
+				return repoName, &config.Repos[repoName].Documents[docIdx]
+			}
+		}
+	}
+	return "", nil
+}
+
+// Builds a map of the linked child -> parent requirement specification to know what specs are related by a
+// parent/children relationship
+// @llr REQ-TRAQ-SWL-54
+func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
+	links := make(map[ReqSpec]ReqSpec)
+
+	for repoName := range config.Repos {
+		for docIdx := range config.Repos[repoName].Documents {
+			doc := &config.Repos[repoName].Documents[docIdx]
+			if doc.HasParent() {
+				links[doc.ReqSpec] = doc.ParentReqSpec
+			}
+		}
+	}
+
+	return links
+}
+
+// Reads a json configuration file from the specified repository path.
 // The file is always located at reqtraq_config.json
+// @llr REQ-TRAQ-SWL-53
 func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	// Read parent config and parse that
 	configPath := filepath.Join(string(repoPath), "reqtraq_config.json")
@@ -123,27 +234,34 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	return config, nil
 }
 
-// Finds the top-level configuration file, by searching all config files and its parents until it finds one
-// without a parent. It then returns the name of the repository where it was found and its json configuration
-func findTopLevelConfig(repoName repos.RepoName, config jsonConfig) (repos.RepoName, jsonConfig, error) {
-	if config.ParentRepo != "" {
-		parentRepoName, parentRepoPath, err := repos.GetRepo(config.ParentRepo, "", false)
+// Finds the top-level configuration file, by searching all config files and their parents until it finds one
+// without a parent.
+// @llr REQ-TRAQ-SWL-52
+func findTopLevelConfig(config jsonConfig) (jsonConfig, error) {
+	if config.ParentRepo.RepoName != "" {
+		parentRepoPath, err := repos.GetRepo(config.ParentRepo.RepoName, config.ParentRepo.RemotePath, "", false)
 		if err != nil {
-			return repoName, jsonConfig{}, fmt.Errorf("Error getting repository with path: %s. %s", config.ParentRepo, err)
+			return jsonConfig{}, fmt.Errorf("Error getting repository with path: %s. %s", config.ParentRepo, err)
 		}
 
 		parentConfig, err := readJsonConfigFromRepo(parentRepoPath)
 		if err != nil {
-			return repoName, jsonConfig{}, err
+			return jsonConfig{}, err
 		}
 
-		return findTopLevelConfig(parentRepoName, parentConfig)
+		if config.ParentRepo.RepoName != parentConfig.RepoName {
+			return jsonConfig{}, fmt.Errorf("Repo `%s` defines parent repository with name `%s`, but `%s` was found in url",
+				config.RepoName, config.ParentRepo.RepoName, parentConfig.RepoName)
+		}
+
+		return findTopLevelConfig(parentConfig)
 	}
 
-	return repoName, config, nil
+	return config, nil
 }
 
 // Parses an a single attribute from its json description
+// @llr REQ-TRAQ-SWL-53
 func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 	var attribute Attribute
 	switch rawAttribute.Required {
@@ -173,6 +291,7 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 }
 
 // Finds all matching files for the given query under the given repository.
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([]string, error) {
 	var matchingPattern *regexp.Regexp = nil
 	if fileQuery.MatchingPattern != "" {
@@ -207,6 +326,7 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 
 // Parses a document, appending it to the list of documents for the repoConfig instance or returning
 // an error if the document is invalid.
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
@@ -269,6 +389,7 @@ The parents attribute is implicit from the parent declaration in the document`)
 
 // Appends the common attributes to the document and exits with an error if some attribute is
 // already defined by the document's attributes.
+// @llr REQ-TRAQ-SWL-53
 func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attribute) error {
 	for attrName := range *commonAttributes {
 		if _, ok := doc.Schema.Attributes[attrName]; ok {
@@ -281,31 +402,10 @@ func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attrib
 	return nil
 }
 
-// Returns true if the document has a parent
-func (doc *Document) HasParent() bool {
-	return doc.ParentReqSpec.Level != "" && doc.ParentReqSpec.Prefix != ""
-}
-
-// Returns true if the document has associated implementation
-func (doc *Document) HasImplementation() bool {
-	return len(doc.Implementation.CodeFiles) != 0
-}
-
-// Returns true if the document matches the given requirement spec.
-func (doc *Document) MatchesSpec(reqSpec ReqSpec) bool {
-	return (reqSpec.Level == doc.ReqSpec.Level) && (reqSpec.Prefix == doc.ReqSpec.Prefix)
-}
-
-// Converts the requirement specification to a REQ string
-func (rs ReqSpec) ToString() string {
-	return fmt.Sprintf("REQ-%s-%s", rs.Prefix, rs.Level)
-}
-
-// Parses a configuration file into the config instance, recursing into each children until all
+// Parses a configuration file into the config instance, recursing into each child until all
 // configuration files have been parsed.
-func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
-
-	// Parse this config file
+// @llr REQ-TRAQ-SWL-53
+func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
 	repoConfig := RepoConfig{}
 
 	for _, commonAttr := range jsonConfig.CommonAttributes {
@@ -318,24 +418,24 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 		// Double-check that this attribute is not already defined
 		if _, ok := (*commonAttributes)[parsedName]; ok {
 			return fmt.Errorf("Common attribute with name `%s` found in config for repo `%s` is already defined elsewhere",
-				parsedName, repoName)
+				parsedName, jsonConfig.RepoName)
 		}
 
 		(*commonAttributes)[parsedName] = &parsedAttr
 	}
 
 	for _, doc := range jsonConfig.Docs {
-		err := repoConfig.parseDocument(repoName, doc)
+		err := repoConfig.parseDocument(jsonConfig.RepoName, doc)
 		if err != nil {
 			return err
 		}
 	}
 
-	config.Repos[repoName] = repoConfig
+	config.Repos[jsonConfig.RepoName] = repoConfig
 
 	// Parse any children it has
 	for _, childRepo := range jsonConfig.ChildrenRepos {
-		childRepoName, childRepoPath, err := repos.GetRepo(childRepo, "", false)
+		childRepoPath, err := repos.GetRepo(childRepo.RepoName, childRepo.RemotePath, "", false)
 		if err != nil {
 			return fmt.Errorf("Error getting child repo name from: %s", childRepo)
 		}
@@ -345,7 +445,13 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 			return err
 		}
 
-		err = config.parseConfigFile(childRepoName, childJsonConfig, commonAttributes)
+		// TODO(ja): Validate the name of the child and exit if it does not match
+		if childRepo.RepoName != childJsonConfig.RepoName {
+			return fmt.Errorf("Configuration for repo `%s` contains child with name `%s` but the url points to a repo with name `%s`",
+				jsonConfig.RepoName, childRepo.RepoName, childJsonConfig.RepoName)
+		}
+
+		err = config.parseConfigFile(childJsonConfig, commonAttributes)
 		if err != nil {
 			return err
 		}
@@ -357,6 +463,7 @@ func (config *Config) parseConfigFile(repoName repos.RepoName, jsonConfig jsonCo
 // Appends common attributes to each of the document's attributes to build a comprehensive list of
 // attributes per document. If any of the documents already contrains the attribute it will exit
 // with an error to let the user know about this duplication
+// @llr REQ-TRAQ-SWL-53
 func (config *Config) appendCommonAttributes(commonAttributes *map[string]*Attribute) error {
 	for repoName := range config.Repos {
 		for docIndex := range config.Repos[repoName].Documents {
@@ -369,68 +476,35 @@ func (config *Config) appendCommonAttributes(commonAttributes *map[string]*Attri
 	return nil
 }
 
-// Finds the associated Document for a certdoc located at the given path or an error if the
-// document is not found
-func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
-	for repoName := range config.Repos {
-		for docIdx := range config.Repos[repoName].Documents {
-			if config.Repos[repoName].Documents[docIdx].Path == path {
-				return repoName, &config.Repos[repoName].Documents[docIdx]
-			}
-		}
-	}
-	return "", nil
+// Load base repository information on init
+// @llr REQ-TRAQ-SWL-53
+func init() {
+	loadBaseRepoInfo()
 }
 
-/// Builds a map of the linked child -> parent requirement specification to know what specs are related by a
-// parent/children relationship
-func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
-	links := make(map[ReqSpec]ReqSpec)
-
-	for repoName := range config.Repos {
-		for docIdx := range config.Repos[repoName].Documents {
-			doc := &config.Repos[repoName].Documents[docIdx]
-			if doc.HasParent() {
-				links[doc.ReqSpec] = doc.ParentReqSpec
-			}
-		}
-	}
-
-	return links
-}
-
-// Top level function to parse the configuration file from the given path in the current repository
-func ParseConfig(currentRepoPath string) (Config, error) {
-	repoName := repos.GetRepoNameFromPath(currentRepoPath)
-	repoPath, err := repos.GetRepoPathByName(repoName)
+// Loads the information for the base repository from git
+// @llr REQ-TRAQ-SWL-53
+func loadBaseRepoInfo() {
+	// See details about "working directory" in https://git-scm.com/docs/githooks
+	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))
 	if err != nil {
-		return Config{}, err
+		log.Fatalf("Failed to check Git repository type. Are you running reqtraq in a Git repo?\n%s", err)
+	}
+	if bare == "true" {
+		log.Fatal("Reqtraq cannot be used in bare checkouts")
 	}
 
-	jsonConfig, err := readJsonConfigFromRepo(repoPath)
+	toplevel, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--show-toplevel"))
 	if err != nil {
-		return Config{}, err
+		log.Fatal(err)
 	}
 
-	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
-	// Find the top level config, then start parsing them
-	topLevelRepoName, topLevelConfig, err := findTopLevelConfig(repoName, jsonConfig)
+	basePath := repos.RepoPath(toplevel)
+
+	config, err := readJsonConfigFromRepo(basePath)
 	if err != nil {
-		return Config{}, err
+		log.Fatalf("Error reading configuration in path: %s, %v", basePath, err)
 	}
 
-	config := Config{
-		Repos: make(map[repos.RepoName]RepoConfig),
-	}
-
-	commonAttributes := make(map[string]*Attribute)
-
-	err = config.parseConfigFile(topLevelRepoName, topLevelConfig, &commonAttributes)
-	if err != nil {
-		return Config{}, err
-	}
-
-	config.appendCommonAttributes(&commonAttributes)
-
-	return config, nil
+	repos.SetBaseRepoInfo(basePath, config.RepoName)
 }

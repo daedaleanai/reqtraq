@@ -1,6 +1,10 @@
 {
+    "repoName": "projectA",
     "childrenRepositories": [
-        "projectB"
+        {
+            "repoName": "projectB",
+            "repoUrl": "projectB"
+        }
     ],
     "commonAttributes": [
         {
@@ -10,6 +14,9 @@
         {
             "name": "Verification",
             "value": "(Demonstration|Unit [Tt]est|[Tt]est)"
+        },
+        {
+            "name": "Safety impact"
         }
     ],
     "documents": [

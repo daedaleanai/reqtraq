@@ -1,5 +1,9 @@
 {
-    "parentRepository": "projectA",
+    "repoName": "projectB",
+    "parentRepository": {
+        "repoName": "projectA",
+        "repoUrl": "projectA"
+    },
     "documents": [
         {
             "path": "TEST-138-SDD.md",

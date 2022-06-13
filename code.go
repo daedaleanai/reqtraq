@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -34,6 +35,8 @@ type CodeFile struct {
 	Path     string
 }
 
+// Returns a string with the name of the repository and the path in it where the code file can be found
+// @llr REQ-TRAQ-SWL-38
 func (codeFile *CodeFile) String() string {
 	return fmt.Sprintf("%s: %s", codeFile.RepoName, codeFile.Path)
 }
@@ -53,8 +56,10 @@ type Code struct {
 	Document *config.Document
 }
 
-// ParseCode is the entry point for the code related functions. Given a path containing source code the code files are found, the procedures within them, along with their associated requirement IDs, discovered. The return value is a map from each discovered source code file to a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-6 REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
+// ParseCode is the entry point for the code related functions. It parses all tags found in the
+// implementation for the given document. The return value is a map from each discovered source code
+// file to a slice of Code structs representing the functions found within.
+// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
 func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)
@@ -96,7 +101,8 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 	return tags, nil
 }
 
-// URL create a URL path to a code function by concatenating the source code path and line number of the function
+// Create a URL path to a code function by concatenating the repository name, the source code path
+// and line number of the function
 // @llr REQ-TRAQ-SWL-38
 func (code *Code) URL() string {
 	return fmt.Sprintf("/code/%s/%s#L%d", code.CodeFile.RepoName, code.CodeFile.Path, code.Line)
@@ -133,12 +139,6 @@ func findCtags() string {
 		ctags = "ctags"
 	}
 	return ctags
-}
-
-// isSourceCodeDir returns true if the provided path name should be scanned for source code files
-// @llr REQ-TRAQ-SWL-7
-func isSourceCodeDir(dirPath string) bool {
-	return path.Base(dirPath) != "testdata"
 }
 
 // isSourceCodeFile returns true if the provided file name has the extension of a supported source code type
@@ -221,6 +221,10 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 			continue
 		}
 		tag := parts[0]
+		if strings.HasPrefix(tag, "__anon") {
+			// Ignore anonymous functions like lambdas
+			continue
+		}
 		p := parts[1]
 		if !isSourceCodeFile(p) {
 			continue
@@ -229,7 +233,7 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 		if err != nil {
 			return nil, err
 		}
-		relativePath, err := relativePathToRepo(p, string(repoPath))
+		relativePath, err := filepath.Rel(string(repoPath), p)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to parse path on line: %v", parts))
 		}
@@ -241,25 +245,6 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 			return nil, fmt.Errorf("failed to parse line number: %v", parts)
 		}
 		res = append(res, &Code{CodeFile: CodeFile{RepoName: repoName, Path: relativePath}, Tag: tag, Line: line})
-	}
-	return res, nil
-}
-
-// relativePathToRepo returns filePath relative to repoPath by
-// removing the path to the repository from filePath
-// @llr REQ-TRAQ-SWL-6
-func relativePathToRepo(filePath, repoPath string) (string, error) {
-	if filePath[:1] != "/" {
-		// Already a relative path.
-		return filePath, nil
-	}
-	fields := strings.SplitN(filePath, repoPath, 2)
-	if len(fields) < 2 {
-		return "", fmt.Errorf("malformed code file path: %s not in %s", filePath, repoPath)
-	}
-	res := fields[1]
-	if res[:1] == "/" {
-		res = res[1:]
 	}
 	return res, nil
 }

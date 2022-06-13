@@ -125,7 +125,7 @@ func main() {
 
 	// Register BaseRepository so that it is always accessible afterwards
 	baseRepoPath := repos.BaseRepoPath()
-	repos.RegisterRepository(baseRepoPath)
+	repos.RegisterRepository(repos.BaseRepoName(), baseRepoPath)
 
 	reqtraqConfig, err := config.ParseConfig(baseRepoPath)
 	if err != nil {
@@ -163,15 +163,14 @@ func main() {
 }
 
 // buildGraph returns the requirements graph at the specified commit, or the graph for the current files if commit
-// is empty. In case the commit is specified, a temporary clone of the repository is created and the path to it is
-// returned.
+// is empty. In case the commit is specified, a temporary clone of the repository is created
 // @llr REQ-TRAQ-SWL-17
 func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
 	if commit != "" {
 		// Override the current repository to get a different revision. This will create a clone
 		// of the repo with the specified revision and it will be always used after this call for
 		// the base repo
-		_, _, err := repos.GetRepo(repos.RemotePath(repos.BaseRepoPath()), commit, true)
+		_, err := repos.GetRepo(repos.BaseRepoName(), repos.RemotePath(repos.BaseRepoPath()), commit, true)
 		if err != nil {
 			return nil, err
 		}

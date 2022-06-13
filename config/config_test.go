@@ -8,13 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-52, REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func TestConfig_ParseConfig(t *testing.T) {
 	repos.ClearAllRepositories()
-	projectA := repos.RegisterRepository("../testdata/projectA")
-	assert.Equal(t, projectA, repos.RepoName("projectA"))
-
-	projectB := repos.RegisterRepository("../testdata/projectB")
-	assert.Equal(t, projectB, repos.RepoName("projectB"))
+	repos.RegisterRepository(repos.RepoName("projectA"), repos.RepoPath("../testdata/projectA"))
+	repos.RegisterRepository(repos.RepoName("projectB"), repos.RepoPath("../testdata/projectB"))
 
 	// Make sure the child can reach the parent
 	config, err := ParseConfig("../testdata/projectB")
@@ -30,6 +28,10 @@ func TestConfig_ParseConfig(t *testing.T) {
 		"VERIFICATION": {
 			Type:  AttributeRequired,
 			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
+		},
+		"SAFETY IMPACT": {
+			Type:  AttributeRequired,
+			Value: regexp.MustCompile(".*"),
 		},
 	}
 
@@ -47,8 +49,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SYS-(\d+)`),
 				Attributes: map[string]*Attribute{
-					"RATIONALE":    commonAttributes["RATIONALE"],
-					"VERIFICATION": commonAttributes["VERIFICATION"],
+					"RATIONALE":     commonAttributes["RATIONALE"],
+					"VERIFICATION":  commonAttributes["VERIFICATION"],
+					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 				},
 			},
 			Implementation: Implementation{
@@ -69,8 +72,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SWH-(\d+)`),
 				Attributes: map[string]*Attribute{
-					"RATIONALE":    commonAttributes["RATIONALE"],
-					"VERIFICATION": commonAttributes["VERIFICATION"],
+					"RATIONALE":     commonAttributes["RATIONALE"],
+					"VERIFICATION":  commonAttributes["VERIFICATION"],
+					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 					"PARENTS": {
 						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 						Type:  AttributeAny,
@@ -90,7 +94,15 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TEST-SWL-(\d+)`))
-	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Schema.Attributes), 3)
+	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Attributes, map[string]*Attribute{
+		"RATIONALE":     commonAttributes["RATIONALE"],
+		"VERIFICATION":  commonAttributes["VERIFICATION"],
+		"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+		"PARENTS": {
+			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+			Type:  AttributeAny,
+		},
+	})
 	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.Attributes["PARENTS"],
 		Attribute{
 			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// @llr REQ-TRAQ-SWL-45
 func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
@@ -61,6 +62,7 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 	assert.Equal(t, "REQ-TEST-SYS-1", reqs[1].ID)
 }
 
+// @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21
 func TestReq_Significant(t *testing.T) {
 	tests := []struct {
 		filter ReqFilter
@@ -85,8 +87,11 @@ func TestReq_Significant(t *testing.T) {
 	}
 }
 
+// @llr REQ-TRAQ-SWL-27
 func TestParsing(t *testing.T) {
-	repoName := repos.RegisterRepository(filepath.Join(repos.BaseRepoPath(), "testdata"))
+	repoPath := repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata"))
+	repoName := repos.RepoName("testdata")
+	repos.RegisterRepository(repoName, repoPath)
 	document := config.Document{
 		Path: "valid_system_requirement/TEST-100-ORD.md",
 		ReqSpec: config.ReqSpec{
@@ -192,6 +197,7 @@ func TestParsing(t *testing.T) {
 	assert.Contains(t, rg.Errors[2].Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-3, is duplicate.")
 }
 
+// @llr REQ-TRAQ-SWL-23
 func TestReq_IsDeleted(t *testing.T) {
 	req := Req{ID: "REQ-TEST-SYS-2", Title: "DELETED"}
 	assert.True(t, req.IsDeleted(), "Requirement with title %s should have status DELETED", req.Title)

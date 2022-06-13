@@ -209,11 +209,11 @@ func formatBodyAsHTML(txt string) template.HTML {
 
 var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString}).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
 func codeFileToString(CodeFile CodeFile) string {
 	return CodeFile.String()
 }
 
-// FIXME(ja): Fix oncer hack that used the level to link requirements...
 var reportTmplText = `
 {{ define "REQUIREMENT" }}
 	{{if ne .Document nil }}
