@@ -382,9 +382,9 @@ var reportTmplText = `
 	<h1>Issues</h1>
 
 	<ul>
-	{{ range .Reqs.Errors }}
+	{{ range .Reqs.Issues }}
 		<li>
-			{{ . }}
+			{{ .Error }}
 		</li>
 	{{ else }}
 		<li class="text-success">No basic errors found.</li>
@@ -453,9 +453,9 @@ var reportTmplText = `
 
 	<h3><em>Filter Criteria: {{ .PrintFilter }} </em></h3>
 	<ul>
-	{{ range .Reqs.Errors }}
+	{{ range .Reqs.Issues }}
 		<li>
-			{{ . }}
+			{{ .Error }}
 		</li>
 	{{ end }}
 	</ul>

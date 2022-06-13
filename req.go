@@ -22,6 +22,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Issue struct {
+	RepoName repos.RepoName
+	Path     string
+	Line     int
+	Error    error
+}
+
 // ReqGraph holds the complete information about a set of requirements and associated code tags.
 type ReqGraph struct {
 	// Reqs contains the requirements by ID.
@@ -29,9 +36,9 @@ type ReqGraph struct {
 	// CodeTags contains the source code functions per file.
 	// The keys are paths relative to the git repo path.
 	CodeTags map[CodeFile][]*Code
-	// Errors which have been found while analyzing the graph.
+	// Issues which have been found while analyzing the graph.
 	// This is extended in multiple places.
-	Errors []error
+	Issues []Issue
 	// Holds configuration of reqtraq for all associated repositories
 	ReqtraqConfig *config.Config
 }
@@ -77,7 +84,7 @@ func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) 
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
 func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
-	rg := &ReqGraph{make(map[string]*Req, 0), make(map[CodeFile][]*Code), make([]error, 0), reqtraqConfig}
+	rg := &ReqGraph{make(map[string]*Req, 0), make(map[CodeFile][]*Code), make([]Issue, 0), reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them
 	for repoName := range reqtraqConfig.Repos {
@@ -96,7 +103,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	}
 
 	// Call resolve to check links between requirements and code
-	rg.Errors = append(rg.Errors, rg.resolve()...)
+	rg.Issues = append(rg.Issues, rg.resolve()...)
 
 	return rg, nil
 }
@@ -132,16 +139,16 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextAsmId := 1
 
 	for i, r := range reqs {
-		var newErrs []error
+		var newIssues []Issue
 		if r.Variant == ReqVariantRequirement {
-			newErrs = r.checkID(documentConfig, nextReqId, isReqPresent)
+			newIssues = r.checkID(documentConfig, nextReqId, isReqPresent)
 			nextReqId = r.IDNumber + 1
 		} else if r.Variant == ReqVariantAssumption {
-			newErrs = r.checkID(documentConfig, nextAsmId, isAsmPresent)
+			newIssues = r.checkID(documentConfig, nextAsmId, isAsmPresent)
 			nextAsmId = r.IDNumber + 1
 		}
-		if len(newErrs) != 0 {
-			rg.Errors = append(rg.Errors, newErrs...)
+		if len(newIssues) != 0 {
+			rg.Issues = append(rg.Issues, newIssues...)
 			continue
 		}
 		r.Position = i
@@ -157,8 +164,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 // of attributes against the schema for their document. Any errors encountered such as links to
 // non-existent requirements are returned.
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11
-func (rg *ReqGraph) resolve() []error {
-	errs := make([]error, 0)
+func (rg *ReqGraph) resolve() []Issue {
+	issues := make([]Issue, 0)
 
 	// Walk the requirements, resolving links and looking for errors
 	for _, req := range rg.Reqs {
@@ -168,23 +175,41 @@ func (rg *ReqGraph) resolve() []error {
 
 		// Validate requirement Id
 		if !req.Document.Schema.Requirements.MatchString(req.ID) {
-			errs = append(errs, fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements))
+			issue := Issue{
+				Line:     req.Position,
+				Path:     req.Document.Path,
+				RepoName: req.RepoName,
+				Error:    fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements),
+			}
+			issues = append(issues, issue)
 		}
 
 		// Validate attributes
-		errs = append(errs, req.checkAttributes()...)
+		issues = append(issues, req.checkAttributes()...)
 
 		// Validate parent links of requirements
 		for _, parentID := range req.ParentIds {
 			parent := rg.Reqs[parentID]
 			if parent != nil {
 				if parent.IsDeleted() {
-					errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" is deleted."))
+					issue := Issue{
+						Line:     req.Position,
+						Path:     req.Document.Path,
+						RepoName: req.RepoName,
+						Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted."),
+					}
+					issues = append(issues, issue)
 				}
 				parent.Children = append(parent.Children, req)
 				req.Parents = append(req.Parents, parent)
 			} else {
-				errs = append(errs, errors.New("Invalid parent of requirement "+req.ID+": "+parentID+" does not exist."))
+				issue := Issue{
+					Line:     req.Position,
+					Path:     req.Document.Path,
+					RepoName: req.RepoName,
+					Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " does not exist."),
+				}
+				issues = append(issues, issue)
 			}
 		}
 		// Validate references to requirements in body text
@@ -193,9 +218,21 @@ func (rg *ReqGraph) resolve() []error {
 			reqID := req.Body[ids[0]:ids[1]]
 			v, reqFound := rg.Reqs[reqID]
 			if !reqFound {
-				errs = append(errs, fmt.Errorf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID))
+				issue := Issue{
+					Line:     req.Position,
+					Path:     req.Document.Path,
+					RepoName: req.RepoName,
+					Error:    fmt.Errorf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID),
+				}
+				issues = append(issues, issue)
 			} else if v.IsDeleted() {
-				errs = append(errs, fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID))
+				issue := Issue{
+					Line:     req.Position,
+					Path:     req.Document.Path,
+					RepoName: req.RepoName,
+					Error:    fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID),
+				}
+				issues = append(issues, issue)
 			}
 		}
 
@@ -206,33 +243,57 @@ func (rg *ReqGraph) resolve() []error {
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
 			if len(code.ParentIds) == 0 {
-				errs = append(errs, fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line))
+				issue := Issue{
+					Line:     code.Line,
+					Path:     code.CodeFile.Path,
+					RepoName: code.CodeFile.RepoName,
+					Error:    fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line),
+				}
+				issues = append(issues, issue)
 			}
 			for _, parentID := range code.ParentIds {
 				if !code.Document.Schema.Requirements.MatchString(parentID) {
-					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
-						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path))
+					issue := Issue{
+						Line:     code.Line,
+						Path:     code.CodeFile.Path,
+						RepoName: code.CodeFile.RepoName,
+						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
+							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path),
+					}
+					issues = append(issues, issue)
 				}
 
 				parent := rg.Reqs[parentID]
 				if parent != nil {
 					if parent.IsDeleted() {
-						errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
-							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
+						issue := Issue{
+							Line:     code.Line,
+							Path:     code.CodeFile.Path,
+							RepoName: code.CodeFile.RepoName,
+							Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
+								code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
+						}
+						issues = append(issues, issue)
 					}
 
 					parent.Tags = append(parent.Tags, code)
 					code.Parents = append(code.Parents, parent)
 				} else {
-					errs = append(errs, fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
-						code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID))
+					issue := Issue{
+						Line:     code.Line,
+						Path:     code.CodeFile.Path,
+						RepoName: code.CodeFile.RepoName,
+						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
+							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
+					}
+					issues = append(issues, issue)
 				}
 			}
 		}
 	}
 
-	if len(errs) > 0 {
-		return errs
+	if len(issues) > 0 {
+		return issues
 	}
 
 	for _, req := range rg.Reqs {
@@ -290,7 +351,7 @@ func (r *Req) IsDeleted() bool {
 // checkAttributes validates the requirement attributes against the schema from its document,
 // returns a list of errors found.
 // @llr REQ-TRAQ-SWL-10
-func (r *Req) checkAttributes() []error {
+func (r *Req) checkAttributes() []Issue {
 	var schemaAttributes map[string]*config.Attribute
 	switch r.Variant {
 	case ReqVariantRequirement:
@@ -299,7 +360,7 @@ func (r *Req) checkAttributes() []error {
 		schemaAttributes = r.Document.Schema.AsmAttributes
 	}
 
-	var errs []error
+	var issues []Issue
 	var anyAttributes []string
 	anyCount := 0
 
@@ -313,68 +374,134 @@ func (r *Req) checkAttributes() []error {
 		reqValuePresent = reqValuePresent && reqValue != ""
 
 		if !reqValuePresent && attribute.Type == config.AttributeRequired {
-			errs = append(errs, fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, name))
+			issue := Issue{
+				Line:     r.Position,
+				Path:     r.Document.Path,
+				RepoName: r.RepoName,
+				Error:    fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, name),
+			}
+			issues = append(issues, issue)
 		} else if reqValuePresent {
 			if attribute.Type == config.AttributeAny {
 				anyCount++
 			}
 
 			if !attribute.Value.MatchString(reqValue) {
-				errs = append(errs, fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name))
+				issue := Issue{
+					Line:     r.Position,
+					Path:     r.Document.Path,
+					RepoName: r.RepoName,
+					Error:    fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name),
+				}
+				issues = append(issues, issue)
 			}
 		}
 	}
 
 	if len(anyAttributes) > 0 && anyCount == 0 {
 		sort.Strings(anyAttributes)
-		errs = append(errs, fmt.Errorf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")))
+		issue := Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")),
+		}
+		issues = append(issues, issue)
 	}
 
 	// Iterate the requirement attributes to check for unknown ones
 	for name := range r.Attributes {
 		if _, present := schemaAttributes[strings.ToUpper(name)]; !present {
-			errs = append(errs, fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name))
+			issue := Issue{
+				Line:     r.Position,
+				Path:     r.Document.Path,
+				RepoName: r.RepoName,
+				Error:    fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name),
+			}
+			issues = append(issues, issue)
 		}
 	}
 
-	return errs
+	return issues
 }
 
 // checkID verifies that the requirement is not duplicated
 // @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26, REQ-TRAQ-SWL-28
-func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPresent []bool) []error {
-	var errs []error
+func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPresent []bool) []Issue {
+	var issues []Issue
 	reqIDComps := strings.Split(r.ID, "-") // results in an array such as [REQ PROJECT REQTYPE 1234]
 	// check requirement name, no need to check prefix because it would not have been parsed otherwise
 	if reqIDComps[1] != string(document.ReqSpec.Prefix) {
-		errs = append(errs, fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]))
+		issue := Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]),
+		}
+		issues = append(issues, issue)
 	}
 	if reqIDComps[2] != string(document.ReqSpec.Level) {
-		errs = append(errs, fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]))
+		issue := Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]),
+		}
+		issues = append(issues, issue)
 	}
 	if reqIDComps[3][0] == '0' {
-		errs = append(errs, fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]))
+		issue := Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]),
+		}
+		issues = append(issues, issue)
 	}
 
 	currentID, err2 := strconv.Atoi(reqIDComps[3])
 	if err2 != nil {
-		errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]))
+		issue := Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]),
+		}
+		issues = append(issues, issue)
 	} else {
 		if currentID < 1 {
-			errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID))
+			issue := Issue{
+				Line:     r.Position,
+				Path:     r.Document.Path,
+				RepoName: r.RepoName,
+				Error:    fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID),
+			}
+			issues = append(issues, issue)
 		} else {
 			if isReqPresent[currentID-1] {
-				errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID))
+				issue := Issue{
+					Line:     r.Position,
+					Path:     r.Document.Path,
+					RepoName: r.RepoName,
+					Error:    fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID),
+				}
+				issues = append(issues, issue)
 			} else {
 				if currentID != expectedIDNumber {
-					errs = append(errs, fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber))
+					issue := Issue{
+						Line:     r.Position,
+						Path:     r.Document.Path,
+						RepoName: r.RepoName,
+						Error:    fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber),
+					}
+					issues = append(issues, issue)
 				}
 			}
 			isReqPresent[currentID-1] = true
 		}
 	}
 
-	return errs
+	return issues
 }
 
 type AttributeRule struct {
