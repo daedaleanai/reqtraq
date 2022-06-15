@@ -64,7 +64,13 @@ Documents (markdown and source code) are discovered and parsed from the current 
 Various actions, such as comparison or filtering, are then performed on the `ReqGraph` object, depending on the type of output requested. The requested output is then generated.
 
 ReqGraph source code is arranged as follows:
-- main.go: The main entry point to the program, deals with parsing command line arguments and acting accordingly
+- main.go: The main entry point to the program, defines the top level command handler and invokes one of the commands defined in:
+    - `completion_cmd.go`: Defines a `completion` subcommand that prints completion scripts for multiple shells (bash, zsh and fish).
+    - `list_cmd.go`: Defines a `list` subcommand that lists all requirements in the given certdoc.
+    - `nextid_cmd.go`: Defines a `nextid` subcommand that prints the next requirement id for the given certdoc.
+    - `report_cmd.go`: Defines a `report` subcommand that creates HTM reports.
+    - `validate_cmd.go`: Defines a `validate` subcommand that runs the validation checks on all certification documents.
+    - `web_cmd.go`: Defines a `web` subcommand that runs the web application.
 - req.go: The top-level functions dealing with finding and discovering markdown and source code files
     - parsing.go: Reading and parsing markdown files
     - code.go: Reading and parsing source code files
@@ -235,56 +241,6 @@ Reqtraq SHALL provide a command line option to show tool usage.
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-33 CLI list requirements
-
-Reqtraq SHALL provide a command line option to list the requirements within a given requirements document.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-16
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWL-34 CLI next ID
-
-Reqtraq SHALL provide a command line option to provide the user with the next available ID in a given requirements document.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-12, REQ-TRAQ-SWH-16
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWL-35 CLI reports
-
-Reqtraq SHALL provide a command line options to generate reports showing top-down or bottom-up views on the requirements graph.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-16
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWL-36 CLI validate
-
-Reqtraq SHALL provide a command line options to validate a requirements graph and output to the terminal or to a report.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-14, REQ-TRAQ-SWH-16
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWL-17 Checkout alternative version
-
-Reqtraq SHALL create a temporary version of an old version of the requirements documents to allow them to be loaded.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-8
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
 ### matrices.go
 
 Functions which generate trace matrix tables between different levels of requirements and source code.
@@ -336,6 +292,27 @@ Where a column contains source code Reqtraq SHALL sort alphabetically by source 
 ##### Attributes:
 - Parents:
 - Rationale: It just makes sense to order this way.
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-59 CLI entry point
+
+reqtraq SHALL implement a root command which will act as a CLI entrypoint and which will contain all other subcommands.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-60 Setup configuration
+
+reqtraq SHALL implement a configuration setup that ensures the global configuration is configured 
+before any command tries to access it.
+
+##### Attributes:
+- Parents:
+- Rationale: To ensure that the configuration is loaded for all commands.
 - Verification: Test
 - Safety Impact: None
 
@@ -749,6 +726,16 @@ Reqtraq SHALL include functions to sort a requirements list by filname tag.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-17 Checkout alternative version
+
+Reqtraq SHALL create a temporary version of an old version of the requirements documents to allow them to be loaded.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-8
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 ### webapp.go
 
 Functions for creating and servicing a web interface.
@@ -908,6 +895,91 @@ positive and negative filtering criteria for the files within those folders.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-18
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### completion_cmd.go
+
+The completion command takes advantage of the underlying cobra infrastructure to print completion 
+scripts for different shells. Supported shells are `bash`, `zsh` and `fish`.
+
+#### REQ-TRAQ-SWL-57 Generate shell completions
+
+Reqtraq SHALL provide a subcommand to generate shell completions.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### list_cmd.go
+
+The list command implements the CLI for listing all requirements in a given certification document
+
+#### REQ-TRAQ-SWL-33 CLI list requirements
+
+Reqtraq SHALL provide a command line option to list the requirements within a given requirements document.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### nextid_cmd.go
+
+The nextid command implements the CLI for displaying the next requirement ID in a given certification document.
+
+#### REQ-TRAQ-SWL-34 CLI next ID
+
+Reqtraq SHALL provide a command line option to provide the user with the next available ID in a given requirements document.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-12, REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### report_cmd.go
+
+The report command implements the CLI for creating HTML reports with requirement trees or issues.
+
+#### REQ-TRAQ-SWL-35 CLI reports
+
+Reqtraq SHALL provide a command line options to generate reports showing top-down or bottom-up views on the requirements graph.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### validate_cmd.go
+
+The validate command implements the CLI for validating requirement graphs.
+
+#### REQ-TRAQ-SWL-36 CLI validate
+
+Reqtraq SHALL provide a command line option to validate a requirements graph and output to the terminal or to a report.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-14, REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### web_cmd.go
+
+The validate command implements the CLI for validating requirement graphs.
+
+#### REQ-TRAQ-SWL-58 CLI web
+
+Reqtraq SHALL provide a command line option to start a local web sever to generate reports, and list issues.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-14, REQ-TRAQ-SWH-16
 - Rationale:
 - Verification: Test
 - Safety Impact: None

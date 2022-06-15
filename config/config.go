@@ -213,6 +213,33 @@ func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
 	return links
 }
 
+// Loads the information for the base repository from git
+// @llr REQ-TRAQ-SWL-53
+func LoadBaseRepoInfo() {
+	// See details about "working directory" in https://git-scm.com/docs/githooks
+	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))
+	if err != nil {
+		log.Fatalf("Failed to check Git repository type. Are you running reqtraq in a Git repo?\n%s", err)
+	}
+	if bare == "true" {
+		log.Fatal("Reqtraq cannot be used in bare checkouts")
+	}
+
+	toplevel, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--show-toplevel"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	basePath := repos.RepoPath(toplevel)
+
+	config, err := readJsonConfigFromRepo(basePath)
+	if err != nil {
+		log.Fatalf("Error reading configuration in path: %s, %v", basePath, err)
+	}
+
+	repos.SetBaseRepoInfo(basePath, config.RepoName)
+}
+
 // Reads a json configuration file from the specified repository path.
 // The file is always located at reqtraq_config.json
 // @llr REQ-TRAQ-SWL-53
@@ -474,37 +501,4 @@ func (config *Config) appendCommonAttributes(commonAttributes *map[string]*Attri
 		}
 	}
 	return nil
-}
-
-// Load base repository information on init
-// @llr REQ-TRAQ-SWL-53
-func init() {
-	loadBaseRepoInfo()
-}
-
-// Loads the information for the base repository from git
-// @llr REQ-TRAQ-SWL-53
-func loadBaseRepoInfo() {
-	// See details about "working directory" in https://git-scm.com/docs/githooks
-	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))
-	if err != nil {
-		log.Fatalf("Failed to check Git repository type. Are you running reqtraq in a Git repo?\n%s", err)
-	}
-	if bare == "true" {
-		log.Fatal("Reqtraq cannot be used in bare checkouts")
-	}
-
-	toplevel, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--show-toplevel"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	basePath := repos.RepoPath(toplevel)
-
-	config, err := readJsonConfigFromRepo(basePath)
-	if err != nil {
-		log.Fatalf("Error reading configuration in path: %s, %v", basePath, err)
-	}
-
-	repos.SetBaseRepoInfo(basePath, config.RepoName)
 }

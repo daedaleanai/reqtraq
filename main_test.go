@@ -19,7 +19,7 @@ func RunValidate(t *testing.T, config *config.Config) (string, error) {
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 	// run the command
-	err := validate(config)
+	err := validate(config, "", false)
 	assert.Empty(t, err, "Got unexpected error")
 	// save stdout data and reset
 	w.Close()

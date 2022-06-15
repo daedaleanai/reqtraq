@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,6 +13,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+// Setup the configuration when init runs
+// @llr REQ-TRAQ-SWL-8
+func init() {
+	if err := setupConfiguration(); err != nil {
+		log.Fatalf("Unable to setup configuration: %s", err.Error())
+	}
+}
 
 // @llr REQ-TRAQ-SWL-8
 func TestCheckCtagsAvailable(t *testing.T) {
@@ -55,6 +64,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 
 // @llr REQ-TRAQ-SWL-8
 func TestTagCode(t *testing.T) {
+
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
@@ -65,6 +75,9 @@ func TestTagCode(t *testing.T) {
 	assert.Equal(t, 1, len(tags))
 
 	expectedTags := []TagMatch{
+		{"SeparateCommentsForLLrs",
+			41,
+			""},
 		{"operator []",
 			37,
 			""},
@@ -106,6 +119,9 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 
 	expectedTags := []TagMatch{
+		{"SeparateCommentsForLLrs",
+			41,
+			"REQ-TEST-SWL-15,REQ-TEST-SWL-13"},
 		{"operator []",
 			37,
 			"REQ-TEST-SWL-13,REQ-TEST-SWL-14"},
@@ -123,6 +139,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 
 	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc}
 	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc}
+	rg.Reqs["REQ-TEST-SWL-15"] = &Req{ID: "REQ-TEST-SWL-15", Document: &doc}
 
 	errs := rg.resolve()
 	assert.ElementsMatch(t,

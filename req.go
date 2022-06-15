@@ -36,6 +36,42 @@ type ReqGraph struct {
 	ReqtraqConfig *config.Config
 }
 
+// buildGraph returns the requirements graph at the specified commit, or the graph for the current files if commit
+// is empty. In case the commit is specified, a temporary clone of the repository is created and the path to it is
+// returned.
+// @llr REQ-TRAQ-SWL-17
+func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
+	if commit != "" {
+		// Override the current repository to get a different revision. This will create a clone
+		// of the repo with the specified revision and it will be always used after this call for
+		// the base repo
+		_, err := repos.GetRepo(repos.BaseRepoName(), repos.RemotePath(repos.BaseRepoPath()), commit, true)
+		if err != nil {
+			return nil, err
+		}
+
+		// Also override reqtraq configuration... as they are different repos
+		overridenConfig, err := config.ParseConfig(repos.BaseRepoPath())
+		if err != nil {
+			return nil, err
+		}
+
+		// Create the req graph with the new repository
+		rg, err := CreateReqGraph(&overridenConfig)
+		if err != nil {
+			return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
+		}
+		return rg, nil
+	}
+
+	// Create the req graph with the new repository
+	rg, err := CreateReqGraph(reqtraqConfig)
+	if err != nil {
+		return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
+	}
+	return rg, nil
+}
+
 // CreateReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
 // errors found while walking the requirements, code, or resolving the graph.
 // The separate returned error indicates if reading the certdocs and code failed.
