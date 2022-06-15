@@ -172,14 +172,7 @@ func (rg *ReqGraph) resolve() []error {
 		}
 
 		// Validate attributes
-		var attributes map[string]*config.Attribute
-		switch req.Variant {
-		case ReqVariantRequirement:
-			attributes = req.Document.Schema.Attributes
-		case ReqVariantAssumption:
-			attributes = req.Document.Schema.AsmAttributes
-		}
-		errs = append(errs, req.checkAttributes(attributes)...)
+		errs = append(errs, req.checkAttributes()...)
 
 		// Validate parent links of requirements
 		for _, parentID := range req.ParentIds {
@@ -297,7 +290,15 @@ func (r *Req) IsDeleted() bool {
 // checkAttributes validates the requirement attributes against the schema from its document,
 // returns a list of errors found.
 // @llr REQ-TRAQ-SWL-10
-func (r *Req) checkAttributes(schemaAttributes map[string]*config.Attribute) []error {
+func (r *Req) checkAttributes() []error {
+	var schemaAttributes map[string]*config.Attribute
+	switch r.Variant {
+	case ReqVariantRequirement:
+		schemaAttributes = r.Document.Schema.Attributes
+	case ReqVariantAssumption:
+		schemaAttributes = r.Document.Schema.AsmAttributes
+	}
+
 	var errs []error
 	var anyAttributes []string
 	anyCount := 0
