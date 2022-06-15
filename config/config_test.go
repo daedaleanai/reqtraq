@@ -53,6 +53,12 @@ func TestConfig_ParseConfig(t *testing.T) {
 					"VERIFICATION":  commonAttributes["VERIFICATION"],
 					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 				},
+				AsmAttributes: map[string]*Attribute{
+					"PARENTS": {
+						Value: regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+						Type:  AttributeRequired,
+					},
+				},
 			},
 			Implementation: Implementation{
 				CodeFiles: []string{},
@@ -78,6 +84,16 @@ func TestConfig_ParseConfig(t *testing.T) {
 					"PARENTS": {
 						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 						Type:  AttributeAny,
+					},
+				},
+				AsmAttributes: map[string]*Attribute{
+					"PARENTS": {
+						Value: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+						Type:  AttributeRequired,
+					},
+					"VALIDATION": {
+						Value: regexp.MustCompile(".*"),
+						Type:  AttributeRequired,
 					},
 				},
 			},
@@ -107,6 +123,12 @@ func TestConfig_ParseConfig(t *testing.T) {
 		Attribute{
 			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 			Type:  AttributeAny,
+		},
+	)
+	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.AsmAttributes["PARENTS"],
+		Attribute{
+			Value: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+			Type:  AttributeRequired,
 		},
 	)
 	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation.CodeFiles,

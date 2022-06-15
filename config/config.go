@@ -55,6 +55,7 @@ type jsonDoc struct {
 	Level          ReqLevel           `json:"level"`
 	Parent         jsonParent         `json:"parent"`
 	Attributes     []jsonAttribute    `json:"attributes"`
+	AsmAttributes  []jsonAttribute    `json:"asmAttributes"`
 	Implementation jsonImplementation `json:"implementation"`
 }
 
@@ -96,8 +97,9 @@ type Implementation struct {
 
 // The schema for requirements inside a certification document
 type Schema struct {
-	Requirements *regexp.Regexp
-	Attributes   map[string]*Attribute
+	Requirements  *regexp.Regexp
+	Attributes    map[string]*Attribute
+	AsmAttributes map[string]*Attribute
 }
 
 // A requirement specification. Identifies the form of requirements in a document
@@ -359,8 +361,9 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 	parsedDoc := Document{
 		Path: doc.Path,
 		Schema: Schema{
-			Requirements: nil,
-			Attributes:   make(map[string]*Attribute),
+			Requirements:  nil,
+			Attributes:    make(map[string]*Attribute),
+			AsmAttributes: make(map[string]*Attribute),
 		},
 	}
 
@@ -392,11 +395,31 @@ The parents attribute is implicit from the parent declaration in the document`)
 	parsedDoc.ParentReqSpec.Level = doc.Parent.Level
 	parsedDoc.ParentReqSpec.Prefix = doc.Parent.Prefix
 	if doc.Parent.Level != "" && doc.Parent.Prefix != "" {
-		// Add the parent attribute
+		// Add the parents attribute
 		parsedDoc.Schema.Attributes["PARENTS"] = &Attribute{
 			Type:  AttributeAny,
 			Value: regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parsedDoc.ParentReqSpec.Prefix, parsedDoc.ParentReqSpec.Level)),
 		}
+	}
+
+	for _, rawAttribute := range doc.AsmAttributes {
+		parsedName, parsedAttr, err := parseAttribute(rawAttribute)
+		if err != nil {
+			return err
+		}
+
+		if parsedName == "PARENTS" {
+			return fmt.Errorf(`Invalid attribute Parents specified in reqtraq_config.json for assumptions.
+The parents attribute for assumptions is implicit and refers to requirements in the same document`)
+		}
+
+		parsedDoc.Schema.AsmAttributes[parsedName] = &parsedAttr
+	}
+
+	// Add parents attribute for assumptions
+	parsedDoc.Schema.AsmAttributes["PARENTS"] = &Attribute{
+		Type:  AttributeRequired,
+		Value: regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parsedDoc.ReqSpec.Prefix, parsedDoc.ReqSpec.Level)),
 	}
 
 	parsedDoc.Implementation.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName)

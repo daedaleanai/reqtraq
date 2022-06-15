@@ -291,12 +291,20 @@ func (r *Req) IsDeleted() bool {
 // returns a list of errors found.
 // @llr REQ-TRAQ-SWL-10
 func (r *Req) checkAttributes() []error {
+	var schemaAttributes map[string]*config.Attribute
+	switch r.Variant {
+	case ReqVariantRequirement:
+		schemaAttributes = r.Document.Schema.Attributes
+	case ReqVariantAssumption:
+		schemaAttributes = r.Document.Schema.AsmAttributes
+	}
+
 	var errs []error
 	var anyAttributes []string
 	anyCount := 0
 
 	// Iterate the attribute rules
-	for name, attribute := range r.Document.Schema.Attributes {
+	for name, attribute := range schemaAttributes {
 		if attribute.Type == config.AttributeAny {
 			anyAttributes = append(anyAttributes, name)
 		}
@@ -324,7 +332,7 @@ func (r *Req) checkAttributes() []error {
 
 	// Iterate the requirement attributes to check for unknown ones
 	for name := range r.Attributes {
-		if _, present := r.Document.Schema.Attributes[strings.ToUpper(name)]; !present {
+		if _, present := schemaAttributes[strings.ToUpper(name)]; !present {
 			errs = append(errs, fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name))
 		}
 	}

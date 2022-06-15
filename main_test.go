@@ -252,7 +252,10 @@ func TestValidateMultipleRepos(t *testing.T) {
 	actual, err := RunValidate(t, &config)
 	assert.Empty(t, err, "Got unexpected error")
 
-	expected := `Validation passed`
+	expected := `Requirement 'ASM-TEST-SWH-3' is missing attribute 'VALIDATION'.
+Requirement 'ASM-TEST-SWH-3' has unknown attribute 'VERIFICATION'.
+Requirement 'ASM-TEST-SWH-2' has invalid value 'REQ-TEST-SYS-2' in attribute 'PARENTS'.
+WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)
 }
