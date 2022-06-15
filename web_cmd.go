@@ -14,7 +14,7 @@ var webCmd = &cobra.Command{
 }
 
 // Starts the web server listening on the supplied address:port
-// @llr REQ-TRAQ-SWL-37
+// @llr REQ-TRAQ-SWL-58
 func runWebCmd(command *cobra.Command, args []string) error {
 	if err := setupConfiguration(); err != nil {
 		return err
@@ -24,7 +24,7 @@ func runWebCmd(command *cobra.Command, args []string) error {
 }
 
 // Registers the web command
-// @llr REQ-TRAQ-SWL-37
+// @llr REQ-TRAQ-SWL-58
 func init() {
 	webAddr = webCmd.PersistentFlags().String("addr", ":8080", "The ip:port where to serve.")
 	rootCmd.AddCommand(webCmd)

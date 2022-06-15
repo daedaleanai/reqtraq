@@ -29,7 +29,8 @@ and the source code for references to them.`,
 
 var reqtraqConfig *config.Config
 
-// @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-34, REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
+// Runs the root command and defers the cleanup of the temporary directories until it exits
+// @llr REQ-TRAQ-SWL-59
 func Execute() error {
 	defer repos.CleanupTemporaryDirectories()
 
@@ -38,14 +39,16 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
-// @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-34, REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
+// Runs the program
+// @llr REQ-TRAQ-SWL-59
 func main() {
 	if Execute() != nil {
 		os.Exit(1)
 	}
 }
 
-// @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-34, REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
+// Sets up the global reqtraqConfig variable and registers the base repository
+// @llr REQ-TRAQ-SWL-60
 func setupConfiguration() error {
 	config.LoadBaseRepoInfo()
 
@@ -62,6 +65,7 @@ func setupConfiguration() error {
 	return nil
 }
 
+// Provides completions for certdocs
 // @llr REQ-TRAQ-SWL-57
 func completeCertdocFilename(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	possibleCompletions := []string{}

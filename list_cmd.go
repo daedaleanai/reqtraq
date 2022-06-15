@@ -7,13 +7,12 @@ import (
 	"github.com/daedaleanai/cobra"
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
-	"github.com/pkg/errors"
 )
 
 var listCmd = &cobra.Command{
-	Use:               "list",
+	Use:               "list [CertdocPath]",
 	Short:             "Parses and lists the requirements found in certification documents",
-	Long:              `Parses and lists the requirements found in certification documents`,
+	Long:              `Parses and lists the requirements found in certification documents. Takes a certdoc path as a single argument`,
 	Args:              cobra.ExactValidArgs(1),
 	ValidArgsFunction: completeCertdocFilename,
 	RunE:              runListCmd,
@@ -23,10 +22,6 @@ var listCmd = &cobra.Command{
 // @llr REQ-TRAQ-SWL-33
 func runListCmd(command *cobra.Command, args []string) error {
 	filename := args[0]
-	if filename == "" {
-		return errors.New("Missing file name")
-	}
-
 	if err := setupConfiguration(); err != nil {
 		return err
 	}
