@@ -43,9 +43,38 @@ func buildJsonIssues(issues []Issue, jsonWriter *json.Encoder) {
 			continue
 		}
 
+		var name string
+		var code string
+		switch issue.Type {
+		case IssueTypeInvalidRequirementId:
+			name = "Invalid requirement ID"
+			code = "REQ1"
+		case IssueTypeInvalidParent:
+			name = "Invalid parent requirement"
+			code = "REQ2"
+		case IssueTypeInvalidRequirementReference:
+			name = "Invalid requirement reference"
+			code = "REQ3"
+		case IssueTypeInvalidRequirementInCode:
+			name = "Invalid requirement"
+			code = "REQ4"
+		case IssueTypeMissingRequirementInCode:
+			name = "Code without requirements"
+			code = "REQ5"
+		case IssueTypeMissingAttribute:
+			name = "Missing attribute"
+			code = "REQ6"
+		case IssueTypeUnknownAttribute:
+			name = "Unknown attribute"
+			code = "REQ7"
+		case IssueTypeInvalidAttributeValue:
+			name = "Invalid attribute"
+			code = "REQ8"
+		}
+
 		jsonWriter.Encode(LintMessage{
-			Name:        "Reqtraq",
-			Code:        "Reqtraq",
+			Name:        name,
+			Code:        code,
 			Severity:    "error",
 			Path:        issue.Path,
 			Line:        issue.Line,

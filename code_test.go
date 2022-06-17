@@ -151,24 +151,28 @@ func TestReqGraph_ParseCode(t *testing.T) {
 				RepoName: "cproject1",
 				Line:     13,
 				Error:    fmt.Errorf("Invalid reference in function getNumberOfSegments@a.cc:13 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`."),
+				Type:     IssueTypeInvalidRequirementInCode,
 			},
 			{
 				Path:     "a.cc",
 				RepoName: "cproject1",
 				Line:     17,
 				Error:    fmt.Errorf("Invalid reference in function getSegment@a.cc:17 in repo `cproject1`, REQ-TEST-SWL-12 does not exist."),
+				Type:     IssueTypeInvalidRequirementInCode,
 			},
 			{
 				Path:     "path/to/doc.md",
 				RepoName: "cproject1",
 				Line:     0,
 				Error:    fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
+				Type:     IssueTypeInvalidRequirementId,
 			},
 			{
 				Path:     "a.cc",
 				RepoName: "cproject1",
 				Line:     37,
 				Error:    fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
+				Type:     IssueTypeInvalidRequirementInCode,
 			},
 		})
 }
