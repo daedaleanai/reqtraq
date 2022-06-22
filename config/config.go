@@ -40,8 +40,11 @@ type jsonFileQuery struct {
 }
 
 type jsonImplementation struct {
-	Code  jsonFileQuery `json:"code"`
-	Tests jsonFileQuery `json:"tests"`
+	Code                jsonFileQuery `json:"code"`
+	Tests               jsonFileQuery `json:"tests"`
+	CodeParser          string        `json:"codeParser"`
+	CompilationDatabase string        `json:"compilationDatabase"`
+	CompilerArguments   []string      `json:"compilerArguments"`
 }
 
 type jsonParent struct {
@@ -91,8 +94,11 @@ type Attribute struct {
 
 // A structure describing the implementation for a given certification document.
 type Implementation struct {
-	CodeFiles []string
-	TestFiles []string
+	CodeFiles           []string
+	TestFiles           []string
+	CodeParser          string
+	CompilationDatabase string
+	CompilerArguments   []string
 }
 
 // The schema for requirements inside a certification document
@@ -355,7 +361,7 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 
 // Parses a document, appending it to the list of documents for the repoConfig instance or returning
 // an error if the document is invalid.
-// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56, REQ-TRAQ-SWL-64
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
@@ -430,6 +436,16 @@ The parents attribute for assumptions is implicit and refers to requirements in 
 	parsedDoc.Implementation.TestFiles, err = doc.Implementation.Tests.findAllMatchingFiles(repoName)
 	if err != nil {
 		return err
+	}
+	parsedDoc.Implementation.CompilationDatabase = doc.Implementation.CompilationDatabase
+	parsedDoc.Implementation.CompilerArguments = doc.Implementation.CompilerArguments
+	if parsedDoc.Implementation.CompilerArguments == nil {
+		parsedDoc.Implementation.CompilerArguments = []string{}
+	}
+	parsedDoc.Implementation.CodeParser = doc.Implementation.CodeParser
+	if parsedDoc.Implementation.CodeParser == "" {
+		// Default to ctags parser, which is always built-in
+		parsedDoc.Implementation.CodeParser = "ctags"
 	}
 
 	rc.Documents = append(rc.Documents, parsedDoc)

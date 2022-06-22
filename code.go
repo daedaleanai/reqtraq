@@ -28,7 +28,34 @@ var (
 	reLLRReferences = regexp.MustCompile(`(REQ-\w+-\w+-\d+)`)
 	// Blank line to stop search
 	reBlankLine = regexp.MustCompile(`^\s*$`)
+	// List of supported code parsers. ctags is always built-in. Other parsers will be registered
+	// during runtime by calling registerCodeParser
+	codeParsers = map[string]CodeParser{"ctags": CtagsCodeParser{}}
 )
+
+// An interface for a code parser.
+type CodeParser interface {
+	tagCode(repoName repos.RepoName,
+		codeFiles []CodeFile,
+		compilationDatabase string,
+		CompilerArguments []string) (map[CodeFile][]*Code, error)
+}
+
+// Registers a code parser with the given name
+// @llr REQ-TRAQ-SWL-65
+func registerCodeParser(name string, codeParser CodeParser) {
+	codeParsers[name] = codeParser
+}
+
+// Lists all available code parsers by name (key)
+// @llr REQ-TRAQ-SWL-65
+func availableCodeParsers() []string {
+	list := []string{}
+	for name := range codeParsers {
+		list = append(list, name)
+	}
+	return list
+}
 
 type CodeFile struct {
 	RepoName repos.RepoName
@@ -59,7 +86,7 @@ type Code struct {
 // ParseCode is the entry point for the code related functions. It parses all tags found in the
 // implementation for the given document. The return value is a map from each discovered source code
 // file to a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
+// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-61
 func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)
@@ -82,7 +109,17 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 	// TODO(ja): Distinguish between code and tests so that we can get the test coverage and the
 	// source coverage separately
 
-	tags, err := tagCode(repoName, codeFilePaths)
+	var tags map[CodeFile][]*Code
+	var err error
+
+	codeParser, ok := codeParsers[document.Implementation.CodeParser]
+	if !ok {
+		return nil, fmt.Errorf("Code parser not found: `%s`\n\tAvailable parsers: %v", document.Implementation.CodeParser, availableCodeParsers())
+	}
+
+	tags, err = codeParser.tagCode(repoName, codeFiles,
+		document.Implementation.CompilationDatabase, document.Implementation.CompilerArguments)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to tag code")
 	}
@@ -249,14 +286,16 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 	return res, nil
 }
 
+type CtagsCodeParser struct{}
+
 // tagCode runs ctags over the specified code files and parses the generated tags file.
 // @llr REQ-TRAQ-SWL-8
-func tagCode(repoName repos.RepoName, codePaths []string) (map[CodeFile][]*Code, error) {
+func (CtagsCodeParser) tagCode(repoName repos.RepoName, codeFiles []CodeFile, compilationDatabase string, compilerArguments []string) (map[CodeFile][]*Code, error) {
 	r, w := io.Pipe()
 	errChannel := make(chan error)
 	go func(errChannel chan error) {
-		for _, f := range codePaths {
-			codePath, err := repos.PathInRepo(repoName, f)
+		for _, codeFile := range codeFiles {
+			codePath, err := repos.PathInRepo(repoName, codeFile.Path)
 			if err != nil {
 				errChannel <- err
 				return

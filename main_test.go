@@ -66,6 +66,9 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 							},
 						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
@@ -85,6 +88,9 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 								},
 							},
 						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
@@ -103,6 +109,9 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 								},
 							},
+						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
 						},
 					},
 				},
@@ -175,6 +184,9 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 							},
 						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
 					},
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-137-SRD.md",
@@ -193,6 +205,9 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 								},
 							},
+						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
 						},
 					},
 				},

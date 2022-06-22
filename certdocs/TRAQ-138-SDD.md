@@ -73,7 +73,8 @@ ReqGraph source code is arranged as follows:
     - `web_cmd.go`: Defines a `web` subcommand that runs the web application.
 - req.go: The top-level functions dealing with finding and discovering markdown and source code files
     - parsing.go: Reading and parsing markdown files
-    - code.go: Reading and parsing source code files
+    - code.go: Reading and parsing source code files. Reqtraq can use ctags or optionally libclang to obtain code references.
+    - clang.go: Parsing the AST using libclang and collecting references to implementation and tests.
 - diff.go: Comparison of ReqGraph objects
 - report.go: Generating html reports to save to disk or provide to a web server
 - matrices.go: Generating traceability tables to provide to a web server
@@ -128,6 +129,17 @@ Reqtraq SHALL include links to source code within the reports.
 ##### Attributes:
 - Parents:
 - Rationale: Allows quick navigation from requirements to code.
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-65 Code parsers
+
+Reqtraq SHALL provide functionality to register code parsers during runtime. Ctags is built-in, 
+but other parsers can optionally be compiled-in and registered during initialization.
+
+##### Attributes:
+- Parents: 
+- Rationale: To avoid dependencies on libclang for users that don't need libclang.
 - Verification: Test
 - Safety Impact: None
 
@@ -825,9 +837,12 @@ A sample configuration file is shown below:
                     "paths": ["test"],
                     "matchingPattern": ".*_test\\.(cc|hh)$"
                 }
+                "codeParser": "clang",
+                "compilationDatabase": "path/to/compile_commands.json",
+                "compilerArguments": ["-Os", "-Iinclude"]
             }
         }
-    ]
+    ],
 }
 ```
 
@@ -843,7 +858,15 @@ requirements of the form `REQ-TEST-SWL-1`.
 specification of the parent so that requirements can be linked from children to parent. The parent also
 implies a `Parents` attribute with a filter for the requirement specification of the parent will be 
 added to the schema of the document.
-- An implementation, which consists of separated matchers for both code and tests.
+- An implementation, which consists of separated matchers for both code and tests. It accepts the 
+following parameters:
+  - `codeParser`: The selected code parser. Defaults to `ctags`. Available values are `ctags` and `clang`.
+  - `compilationDatabase`: A path to a clang compilation database where the compiler invokation for 
+  each translation unit can be found.
+  - `compilerArguments`: If the source file is not found in the compilation database (which can happen for 
+  header files, since they are not a translation unit), it will fall back to the arguments specified 
+  in this list.
+  each translation unit can be found.
 - Any attributes for its requirements and assumptions.
 
 Common attributes are appended to the attribute schema in each document to fully define the schema 
@@ -909,6 +932,18 @@ positive and negative filtering criteria for the files within those folders.
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-18
 - Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-64 Libclang arguments
+
+Reqtraq SHALL provide options in its configuration file to obtain a compilation database and clang 
+arguments required for parsing code using libclang.
+
+##### Attributes:
+- Parents: 
+- Rationale: In order to effectively parse code where the AST construction depends on the build 
+arguments and included files.
 - Verification: Test
 - Safety Impact: None
 
@@ -994,6 +1029,47 @@ Reqtraq SHALL provide a command line option to start a local web sever to genera
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-14, REQ-TRAQ-SWH-16
 - Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### clang.go
+
+Reqtraq can use libclang to parse the ast of any linked code and obtain code references. This option
+is preferred for a fine-grained code parsing, while ctags is preferred for compatibility with other 
+languages like Go.
+
+#### REQ-TRAQ-SWL-61 Support for libclang backend to parse code
+
+Reqtraq SHALL provide libclang as a backend to parse code and find public functions/methods and type 
+aliases.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-62 Skip anonymous and detail namespaces
+
+Reqtraq SHALL ensure that code inside anonymous and detail namespaces is not reported for 
+requirements tracking.
+
+##### Attributes:
+- Parents: 
+- Rationale: It belongs only as an implementation detail that is needed, but not functionally directly related 
+to requirements.
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-63 Skip private methods
+
+Reqtraq SHALL ensure that code inside a non-public path is not reported for requiremenstr tracking.
+requirements tracking.
+
+##### Attributes:
+- Parents: 
+- Rationale: It belongs only as an implementation detail that is needed, but not functionally directly related 
+to requirements.
 - Verification: Test
 - Safety Impact: None
 

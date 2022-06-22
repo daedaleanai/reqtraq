@@ -48,7 +48,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 	for _, tag := range tags {
 		found := false
 		for _, e := range expectedTags {
-			if e.tag == tag.Tag {
+			if e.tag == tag.Tag && tag.Line == e.line {
 				found = true
 				assert.Equal(t, e.line, tag.Line)
 				assert.Equal(t, e.tag, tag.Tag)
@@ -68,7 +68,7 @@ func TestTagCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
-	tags, err := tagCode(repoName, []string{"a.cc"})
+	tags, err := CtagsCodeParser{}.tagCode(repoName, []CodeFile{{Path: "a.cc", RepoName: repoName}}, "", []string{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -107,8 +107,9 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 		},
 		Implementation: config.Implementation{
-			CodeFiles: []string{"a.cc"},
-			TestFiles: []string{},
+			CodeFiles:  []string{"a.cc"},
+			TestFiles:  []string{},
+			CodeParser: "ctags",
 		},
 	}
 

@@ -1,0 +1,13 @@
+[
+{
+  "directory": "testdata/libclangtest",
+  "command": "clang++   -Icode/include    -Os -std=gnu++2a -o build/CMakeFiles/myexec_tests.dir/test/a/a_test.cc.o -c test/a/a_test.cc",
+  "file": "testdata/libclangtest/test/a/a_test.cc"
+},
+
+{
+  "directory": "testdata/libclangtest",
+  "command": "clang++   -Icode/include    -Os -std=gnu++2a -o build/CMakeFiles/myexec.dir/code/a.cc.o -c code/a.cc",
+  "file": "testdata/libclangtest/code/a.cc"
+}
+]

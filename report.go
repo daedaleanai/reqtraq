@@ -5,6 +5,7 @@ Functions for generating HTML reports showing trace data.
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -113,6 +114,31 @@ func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
 		return ok
 	}
 	return true
+}
+
+// Prints a filter in a nicely formatted manner to be shown in the report
+// @llr REQ-TRAQ-SWL-19
+func (report reportData) PrintFilter() string {
+	if report.Filter != nil {
+		filterString := ""
+		if report.Filter.TitleRegexp != nil {
+			filterString = fmt.Sprintf("%s (Title: \"%s\")", filterString, report.Filter.TitleRegexp)
+		}
+		if report.Filter.IDRegexp != nil {
+			filterString = fmt.Sprintf("%s (ID: \"%s\")", filterString, report.Filter.IDRegexp)
+		}
+		if report.Filter.BodyRegexp != nil {
+			filterString = fmt.Sprintf("%s (Body: \"%s\")", filterString, report.Filter.BodyRegexp)
+		}
+		if report.Filter.AnyAttributeRegexp != nil {
+			filterString = fmt.Sprintf("%s (Any Attribute: \"%s\")", filterString, report.Filter.AnyAttributeRegexp)
+		}
+		if report.Filter.TitleRegexp != nil {
+			filterString = fmt.Sprintf("%s (Attributes: \"%v\")", filterString, report.Filter.AttributeRegexp)
+		}
+		return filterString
+	}
+	return "No filter"
 }
 
 type Oncer map[string]bool
@@ -371,7 +397,7 @@ var reportTmplText = `
 	{{template "HEADER"}}
 	<h1>Top Down Tracing</h1>
 
-	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
+	<h3><em>Filter Criteria: {{ .PrintFilter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.OrdsByPosition }}
 			{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
@@ -396,7 +422,7 @@ var reportTmplText = `
 	{{template "HEADER" }}
 	<h1>Bottom Up Tracing</h1>
 
-	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
+	<h3><em>Filter Criteria: {{ .PrintFilter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
@@ -425,7 +451,7 @@ var reportTmplText = `
 	{{template "HEADER"}}
 	<h1>Issues</h1>
 
-	<h3><em>Filter Criteria: {{ $.Filter }} </em></h3>
+	<h3><em>Filter Criteria: {{ .PrintFilter }} </em></h3>
 	<ul>
 	{{ range .Reqs.Errors }}
 		<li>
