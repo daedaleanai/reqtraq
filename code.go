@@ -59,7 +59,7 @@ type Code struct {
 // ParseCode is the entry point for the code related functions. It parses all tags found in the
 // implementation for the given document. The return value is a map from each discovered source code
 // file to a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9
+// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-61
 func ParseCode(repoName repos.RepoName, document *config.Document, useLibClang bool) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)

@@ -46,6 +46,7 @@
                     "paths": ["test"],
                     "matchingPattern": ".*_test\\.(cc|hh)$"
                 },
+                "compilationDatabase": "compile_commands.json",
                 "clangArguments": [
                     "-std=c++20",
                     "-Icode/include"

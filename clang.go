@@ -1,3 +1,7 @@
+/*
+Parses the libclang AST and collects functions which are a target for requirements tracking.
+*/
+
 package main
 
 import (
@@ -32,7 +36,7 @@ func findMatchingCommand(pathInRepo string, commands clang.CompileCommands) *cla
 }
 
 // Returns true if the cursor is pointing to a possibly public entity
-// @llr REQ-TRAQ-SWL-61
+// @llr REQ-TRAQ-SWL-63
 func IsPublic(cursor clang.Cursor) bool {
 	if cursor.IsNull() {
 		return true
@@ -46,7 +50,7 @@ func IsPublic(cursor clang.Cursor) bool {
 }
 
 // Returns true if the cursor is part of an anonymous (or detail) namespace or class
-// @llr REQ-TRAQ-SWL-61
+// @llr REQ-TRAQ-SWL-62
 func IsInAnonymousOrDetailNamespaceOrClass(cursor clang.Cursor) bool {
 	if cursor.IsNull() {
 		return false
@@ -74,7 +78,7 @@ func IsDeleted(cursor clang.Cursor) bool {
 }
 
 // Traverses the AST obtained from libclang to find any code and returns a map of files to a map of lines to code tags
-// @llr REQ-TRAQ-SWL-61
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
 func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string, path string, fileMap map[string]struct{}) map[string]map[uint]*Code {
 	code := map[string]map[uint]*Code{}
 
@@ -153,8 +157,8 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 }
 
 // Parses a single file as a translation unit, providing tags from all included files that are listed in the file map
-// @llr REQ-TRAQ-SWL-61
-func parseSingleFile(index *clang.Index, codeFile CodeFile, db *clang.CompilationDatabase, clangArgs []string, fileMap map[string]struct{}) (map[string]map[uint]*Code, error) {
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
+func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.CompileCommands, clangArgs []string, fileMap map[string]struct{}) (map[string]map[uint]*Code, error) {
 	repoPath, err := repos.GetRepoPathByName(codeFile.RepoName)
 	if err != nil {
 		return map[string]map[uint]*Code{}, err
@@ -174,8 +178,6 @@ func parseSingleFile(index *clang.Index, codeFile CodeFile, db *clang.Compilatio
 		return map[string]map[uint]*Code{}, err
 	}
 
-	commands := db.AllCompileCommands()
-	defer commands.Dispose()
 	cmdline := []string{}
 	command := findMatchingCommand(pathInRepo, commands)
 	buildDir := absRepoPath
@@ -221,7 +223,7 @@ func parseSingleFile(index *clang.Index, codeFile CodeFile, db *clang.Compilatio
 // and used to provide libclang as much information as possible when parsing the code. This function will parse each file individually,
 // but collect tagged data from all included files. This helps to tag code from header files that normally is
 // not found in the compilation database (because it is only part of a translation unit as a result of being included from other files)
-// @llr REQ-TRAQ-SWL-61
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
 func tagCodeLibClang(repoName repos.RepoName, codeFiles []CodeFile, compilationDatabase string, clangArgs []string) (map[CodeFile][]*Code, error) {
 	codeMap := make(map[string]map[uint]*Code)
 	code := make(map[CodeFile][]*Code)
@@ -233,17 +235,20 @@ func tagCodeLibClang(repoName repos.RepoName, codeFiles []CodeFile, compilationD
 	if compilationDatabase != "" {
 		pathInRepo, err := repos.PathInRepo(repoName, compilationDatabase)
 		if err != nil {
-			fmt.Printf("Error opening compilation database in path `%s`: `%v`", compilationDatabase, err)
+			fmt.Printf("Warning: compilation database not found in path `%s`: `%v`\n", compilationDatabase, err)
 		} else {
 			var dbErr clang.CompilationDatabase_Error
 			dbErr, compDb = clang.FromDirectory(filepath.Dir(pathInRepo))
 			if dbErr != clang.CompilationDatabase_NoError {
-				fmt.Printf("Error obtaining compilation database in path `%s`: `%v`", compilationDatabase, dbErr)
+				fmt.Printf("Warning: could not parse compilation database in path `%s`: `%v`\n", compilationDatabase, dbErr)
 			} else {
 				defer compDb.Dispose()
 			}
 		}
 	}
+
+	commands := compDb.AllCompileCommands()
+	defer commands.Dispose()
 
 	fileMap := make(map[string]struct{})
 	for _, codeFile := range codeFiles {
@@ -251,7 +256,7 @@ func tagCodeLibClang(repoName repos.RepoName, codeFiles []CodeFile, compilationD
 	}
 
 	for _, codeFile := range codeFiles {
-		codeFromFile, err := parseSingleFile(&index, codeFile, &compDb, clangArgs, fileMap)
+		codeFromFile, err := parseSingleFile(&index, codeFile, commands, clangArgs, fileMap)
 		if err != nil {
 			return code, err
 		}

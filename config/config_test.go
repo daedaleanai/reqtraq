@@ -65,6 +65,7 @@ func TestConfig_ParseConfig(t *testing.T) {
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
 				CompilationDatabase: "",
+				ClangArguments:      []string{},
 			},
 		},
 		{
@@ -103,6 +104,7 @@ func TestConfig_ParseConfig(t *testing.T) {
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
 				CompilationDatabase: "",
+				ClangArguments:      []string{},
 			},
 		},
 	})
@@ -148,12 +150,11 @@ func TestConfig_ParseConfig(t *testing.T) {
 	)
 }
 
-// @llr REQ-TRAQ-SWL-52, REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
+// @llr REQ-TRAQ-SWL-52, REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56, REQ-TRAQ-SWL-64
 func TestConfig_ParseConfigLibClang(t *testing.T) {
 	repos.ClearAllRepositories()
 	repos.RegisterRepository(repos.RepoName("libclangtest"), repos.RepoPath("../testdata/libclangtest"))
 
-	// Make sure the child can reach the parent
 	config, err := ParseConfig("../testdata/libclangtest")
 	if err != nil {
 		t.Fatal(err)
@@ -203,6 +204,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
 				CompilationDatabase: "",
+				ClangArguments:      []string{},
 			},
 		})
 
@@ -239,6 +241,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
 				CompilationDatabase: "",
+				ClangArguments:      []string{},
 			},
 		})
 
@@ -270,7 +273,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			"test/a/a_test.cc",
 		},
 	)
-	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CompilationDatabase, "")
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CompilationDatabase, "compile_commands.json")
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.ClangArguments, []string{
 		"-std=c++20",
 		"-Icode/include",

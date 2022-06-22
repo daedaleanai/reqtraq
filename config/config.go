@@ -361,7 +361,7 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 
 // Parses a document, appending it to the list of documents for the repoConfig instance or returning
 // an error if the document is invalid.
-// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56, REQ-TRAQ-SWL-64
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
@@ -439,6 +439,9 @@ The parents attribute for assumptions is implicit and refers to requirements in 
 	}
 	parsedDoc.Implementation.CompilationDatabase = doc.Implementation.CompilationDatabase
 	parsedDoc.Implementation.ClangArguments = doc.Implementation.ClangArguments
+	if parsedDoc.Implementation.ClangArguments == nil {
+		parsedDoc.Implementation.ClangArguments = []string{}
+	}
 
 	rc.Documents = append(rc.Documents, parsedDoc)
 

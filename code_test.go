@@ -152,7 +152,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 		})
 }
 
-// @llr REQ-TRAQ-SWL-8
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
 func TestTagCodeLibClang(t *testing.T) {
 
 	repoName := repos.RepoName("libclangtest")
