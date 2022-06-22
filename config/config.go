@@ -42,8 +42,9 @@ type jsonFileQuery struct {
 type jsonImplementation struct {
 	Code                jsonFileQuery `json:"code"`
 	Tests               jsonFileQuery `json:"tests"`
+	CodeParser          string        `json:"codeParser"`
 	CompilationDatabase string        `json:"compilationDatabase"`
-	ClangArguments      []string      `json:"clangArguments"`
+	CompilerArguments   []string      `json:"compilerArguments"`
 }
 
 type jsonParent struct {
@@ -67,7 +68,6 @@ type jsonConfig struct {
 	ParentRepo       jsonRepoLink    `json:"parentRepository"`
 	ChildrenRepos    []jsonRepoLink  `json:"childrenRepositories"`
 	Docs             []jsonDoc       `json:"documents"`
-	PreferLibClang   bool            `json:"preferLibClang"`
 }
 
 /// Types exported for application use
@@ -96,8 +96,9 @@ type Attribute struct {
 type Implementation struct {
 	CodeFiles           []string
 	TestFiles           []string
+	CodeParser          string
 	CompilationDatabase string
-	ClangArguments      []string
+	CompilerArguments   []string
 }
 
 // The schema for requirements inside a certification document
@@ -130,8 +131,7 @@ type RepoConfig struct {
 
 // A global configuration structure for all repositories that compose the system.
 type Config struct {
-	Repos          map[repos.RepoName]RepoConfig
-	PreferLibClang bool
+	Repos map[repos.RepoName]RepoConfig
 }
 
 // Top level function to parse the configuration file from the given path in the current repository
@@ -438,9 +438,14 @@ The parents attribute for assumptions is implicit and refers to requirements in 
 		return err
 	}
 	parsedDoc.Implementation.CompilationDatabase = doc.Implementation.CompilationDatabase
-	parsedDoc.Implementation.ClangArguments = doc.Implementation.ClangArguments
-	if parsedDoc.Implementation.ClangArguments == nil {
-		parsedDoc.Implementation.ClangArguments = []string{}
+	parsedDoc.Implementation.CompilerArguments = doc.Implementation.CompilerArguments
+	if parsedDoc.Implementation.CompilerArguments == nil {
+		parsedDoc.Implementation.CompilerArguments = []string{}
+	}
+	parsedDoc.Implementation.CodeParser = doc.Implementation.CodeParser
+	if parsedDoc.Implementation.CodeParser == "" {
+		// Default to ctags parser, which is always built-in
+		parsedDoc.Implementation.CodeParser = "ctags"
 	}
 
 	rc.Documents = append(rc.Documents, parsedDoc)
@@ -516,10 +521,6 @@ func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *m
 		if err != nil {
 			return err
 		}
-	}
-
-	if jsonConfig.PreferLibClang {
-		config.PreferLibClang = true
 	}
 
 	return nil

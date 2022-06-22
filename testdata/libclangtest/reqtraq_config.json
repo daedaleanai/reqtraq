@@ -46,13 +46,13 @@
                     "paths": ["test"],
                     "matchingPattern": ".*_test\\.(cc|hh)$"
                 },
+                "codeParser": "clang",
                 "compilationDatabase": "compile_commands.json",
-                "clangArguments": [
+                "compilerArguments": [
                     "-std=c++20",
                     "-Icode/include"
                 ]
             }
         }
-    ],
-    "preferLibClang": true
+    ]
 }

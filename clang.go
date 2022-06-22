@@ -1,3 +1,5 @@
+//go:build clang
+
 /*
 Parses the libclang AST and collects functions which are a target for requirements tracking.
 */
@@ -158,7 +160,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 
 // Parses a single file as a translation unit, providing tags from all included files that are listed in the file map
 // @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
-func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.CompileCommands, clangArgs []string, fileMap map[string]struct{}) (map[string]map[uint]*Code, error) {
+func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.CompileCommands, compilerArgs []string, fileMap map[string]struct{}) (map[string]map[uint]*Code, error) {
 	repoPath, err := repos.GetRepoPathByName(codeFile.RepoName)
 	if err != nil {
 		return map[string]map[uint]*Code{}, err
@@ -204,7 +206,7 @@ func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.Compi
 	if len(cmdline) != 0 {
 		clangErr = index.ParseTranslationUnit2FullArgv("", cmdline, nil, 0, &tu)
 	} else {
-		clangErr = index.ParseTranslationUnit2(pathInRepo, clangArgs, nil, 0, &tu)
+		clangErr = index.ParseTranslationUnit2(pathInRepo, compilerArgs, nil, 0, &tu)
 	}
 	if clangErr != clang.Error_Success {
 		return map[string]map[uint]*Code{}, fmt.Errorf("Error parsing translation unit `%s`, %v\n", codeFile.Path, clangErr)
@@ -219,12 +221,15 @@ func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.Compi
 
 }
 
+// Code parser that uses Clang to parse code
+type ClangCodeParser struct{}
+
 // Tags the code in the given repository using libclang. The compilationDatabase path and clang arguments are optional
 // and used to provide libclang as much information as possible when parsing the code. This function will parse each file individually,
 // but collect tagged data from all included files. This helps to tag code from header files that normally is
 // not found in the compilation database (because it is only part of a translation unit as a result of being included from other files)
 // @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
-func tagCodeLibClang(repoName repos.RepoName, codeFiles []CodeFile, compilationDatabase string, clangArgs []string) (map[CodeFile][]*Code, error) {
+func (ClangCodeParser) tagCode(repoName repos.RepoName, codeFiles []CodeFile, compilationDatabase string, compilerArgs []string) (map[CodeFile][]*Code, error) {
 	codeMap := make(map[string]map[uint]*Code)
 	code := make(map[CodeFile][]*Code)
 
@@ -256,7 +261,7 @@ func tagCodeLibClang(repoName repos.RepoName, codeFiles []CodeFile, compilationD
 	}
 
 	for _, codeFile := range codeFiles {
-		codeFromFile, err := parseSingleFile(&index, codeFile, commands, clangArgs, fileMap)
+		codeFromFile, err := parseSingleFile(&index, codeFile, commands, compilerArgs, fileMap)
 		if err != nil {
 			return code, err
 		}
@@ -288,4 +293,10 @@ func tagCodeLibClang(repoName repos.RepoName, codeFiles []CodeFile, compilationD
 	}
 
 	return code, nil
+}
+
+// Registers libclang as a code parser
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-65
+func init() {
+	registerCodeParser("clang", ClangCodeParser{})
 }

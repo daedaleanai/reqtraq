@@ -25,16 +25,22 @@ Reqtraq has two main use-cases:
   * [go 1.8+](https://golang.org/doc/install)
   * [pandoc](https://pandoc.org/installing.html)
   * [universal-ctags](https://github.com/universal-ctags/ctags/blob/master/README.md#the-latest-build-and-package) *Note there is also the unmaintained exuberant-ctags which should be avoided.*
-  * [llvm-14](https://github.com/llvm/llvm-project/releases/tag/llvmorg-14.0.0)
+  * [llvm-14](https://github.com/llvm/llvm-project/releases/tag/llvmorg-14.0.0) *Note this is only needed if reqtraq is built with support for libclang.*
 
 ### Installation
 ```
-$ export CGO_LDFLAGS="-L${PATH_TO_LLVM_LIB} -Wl,-rpath=${PATH_TO_LLVM_LIB}"
-$ go get github.com/daedaleanai/reqtraq
+$ go install github.com/daedaleanai/reqtraq@latest 
 $ export PATH=$PATH:$GOPATH/bin
 ```
 
-Before running the installation, make sure to download llvm-14 and replace `${PATH_TO_LLVM_LIB}` with the path to the `lib` folder inside the llvm release where `libclang.so` can be found.
+If you would like to build reqtraq with support for libclang, you can instead use:
+```
+$ export CGO_LDFLAGS="-L${PATH_TO_LLVM_LIB} -Wl,-rpath=${PATH_TO_LLVM_LIB}"
+$ go install --tags clang github.com/daedaleanai/reqtraq@latest 
+$ export PATH=$PATH:$GOPATH/bin
+```
+Before running the installation, make sure to download llvm-14 and replace `${PATH_TO_LLVM_LIB}` with
+the path to the `lib` folder inside the llvm release where `libclang.so` can be found.
 
 ## Using Reqtraq
 Reqtraq is tightly integrated with Git. See the certification documents in the `certdocs` directory for some good examples.

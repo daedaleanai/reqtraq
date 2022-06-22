@@ -66,6 +66,9 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 							},
 						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
@@ -85,6 +88,9 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 								},
 							},
 						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
@@ -103,6 +109,9 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 								},
 							},
+						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
 						},
 					},
 				},
@@ -175,6 +184,9 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 							},
 						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
 					},
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-137-SRD.md",
@@ -193,6 +205,9 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
 								},
 							},
+						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
 						},
 					},
 				},
@@ -255,27 +270,6 @@ func TestValidateMultipleRepos(t *testing.T) {
 	expected := `Requirement 'ASM-TEST-SWH-3' is missing attribute 'VALIDATION'.
 Requirement 'ASM-TEST-SWH-3' has unknown attribute 'VERIFICATION'.
 Requirement 'ASM-TEST-SWH-2' has invalid value 'REQ-TEST-SYS-2' in attribute 'PARENTS'.
-WARNING. Validation failed`
-
-	checkValidateError(t, actual, expected)
-}
-
-// @llr REQ-TRAQ-SWL-36
-func TestValidateUsingLibClang(t *testing.T) {
-	// Actually read configuration from repositories
-	repos.ClearAllRepositories()
-	repos.RegisterRepository(repos.RepoName("libclangtest"), repos.RepoPath("testdata/libclangtest"))
-
-	// Make sure the child can reach the parent
-	config, err := config.ParseConfig("testdata/libclangtest")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	actual, err := RunValidate(t, &config)
-	assert.Empty(t, err, "Got unexpected error")
-
-	expected := `Invalid reference in function operator[]@code/include/a.hh:45 in repo ` + "`" + `libclangtest` + "`" + `, REQ-TEST-SWL-12 does not exist.
 WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)

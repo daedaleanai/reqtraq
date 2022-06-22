@@ -37,7 +37,6 @@ func TestConfig_ParseConfig(t *testing.T) {
 
 	assert.Contains(t, config.Repos, repos.RepoName("projectA"))
 	assert.Contains(t, config.Repos, repos.RepoName("projectB"))
-	assert.Equal(t, config.PreferLibClang, false)
 	assert.Equal(t, len(config.Repos), 2)
 
 	assert.ElementsMatch(t, config.Repos["projectA"].Documents, []Document{
@@ -64,8 +63,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Implementation: Implementation{
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
+				CodeParser:          "ctags",
 				CompilationDatabase: "",
-				ClangArguments:      []string{},
+				CompilerArguments:   []string{},
 			},
 		},
 		{
@@ -103,8 +103,9 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Implementation: Implementation{
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
+				CodeParser:          "ctags",
 				CompilationDatabase: "",
-				ClangArguments:      []string{},
+				CompilerArguments:   []string{},
 			},
 		},
 	})
@@ -177,7 +178,6 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 
 	assert.Contains(t, config.Repos, repos.RepoName("libclangtest"))
 	assert.Equal(t, len(config.Repos), 1)
-	assert.Equal(t, config.PreferLibClang, true)
 
 	assert.Contains(t, config.Repos["libclangtest"].Documents,
 		Document{
@@ -203,8 +203,9 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			Implementation: Implementation{
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
+				CodeParser:          "ctags",
 				CompilationDatabase: "",
-				ClangArguments:      []string{},
+				CompilerArguments:   []string{},
 			},
 		})
 
@@ -240,8 +241,9 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			Implementation: Implementation{
 				CodeFiles:           []string{},
 				TestFiles:           []string{},
+				CodeParser:          "ctags",
 				CompilationDatabase: "",
-				ClangArguments:      []string{},
+				CompilerArguments:   []string{},
 			},
 		})
 
@@ -273,8 +275,9 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			"test/a/a_test.cc",
 		},
 	)
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CodeParser, "clang")
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CompilationDatabase, "compile_commands.json")
-	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.ClangArguments, []string{
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CompilerArguments, []string{
 		"-std=c++20",
 		"-Icode/include",
 	})

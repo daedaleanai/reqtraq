@@ -132,6 +132,17 @@ Reqtraq SHALL include links to source code within the reports.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-65 Code parsers
+
+Reqtraq SHALL provide functionality to register code parsers during runtime. Ctags is built-in, 
+but other parsers can optionally be compiled-in and registered during initialization.
+
+##### Attributes:
+- Parents: 
+- Rationale: To avoid dependencies on libclang for users that don't need libclang.
+- Verification: Test
+- Safety Impact: None
+
 ### diff.go
 
 Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.
@@ -826,12 +837,12 @@ A sample configuration file is shown below:
                     "paths": ["test"],
                     "matchingPattern": ".*_test\\.(cc|hh)$"
                 }
+                "codeParser": "clang",
                 "compilationDatabase": "path/to/compile_commands.json",
-                "clangArguments": ["-Os", "-Iinclude"],
+                "compilerArguments": ["-Os", "-Iinclude"]
             }
         }
     ],
-    "preferLibClang": false
 }
 ```
 
@@ -847,21 +858,19 @@ requirements of the form `REQ-TEST-SWL-1`.
 specification of the parent so that requirements can be linked from children to parent. The parent also
 implies a `Parents` attribute with a filter for the requirement specification of the parent will be 
 added to the schema of the document.
-- An implementation, which consists of separated matchers for both code and tests. If using libclang 
-it accepts the following parameters:
+- An implementation, which consists of separated matchers for both code and tests. It accepts the 
+following parameters:
+  - `codeParser`: The selected code parser. Defaults to `ctags`. Available values are `ctags` and `clang`.
   - `compilationDatabase`: A path to a clang compilation database where the compiler invokation for 
   each translation unit can be found.
-  - `clangArguments`: If the source file is not found in the compilation database (which can happen for 
+  - `compilerArguments`: If the source file is not found in the compilation database (which can happen for 
   header files, since they are not a translation unit), it will fall back to the arguments specified 
-  in this list
+  in this list.
   each translation unit can be found.
 - Any attributes for its requirements and assumptions.
 
 Common attributes are appended to the attribute schema in each document to fully define the schema 
 of the attributes in the requirements that belong to the document.
-
-C and C++ code can be parsed using libclang. `preferLibClang` can be set to either true or false to 
-use libclang or ctags when obtaining code references. By default, false is selected and ctags is used.
 
 Parsing the configuration is an involved process that requires:
 - Finding the top-level repository that does not have any parents.
