@@ -38,24 +38,28 @@ Assumption body
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "##### Heading part of a req",
+			Position:   3,
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-6",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   6,
 			Title:      "Content mentioning REQ-TEST-SYS-1",
 			Body:       "REQ-TEST-SYS-2",
+			Position:   5,
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-7",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   7,
 			Title:      "My Last Requirement",
 			Body:       "Some more content",
+			Position:   9,
 			Attributes: map[string]string{}},
 		&Req{ID: "ASM-TEST-SYS-1",
 			Variant:    ReqVariantAssumption,
 			IDNumber:   1,
 			Title:      "An assumption, not a requirement",
 			Body:       "Assumption body",
+			Position:   11,
 			Attributes: map[string]string{}})
 
 	checkParse(t, `# REQ-TEST-SYS-5 REQ-TEST-SYS-6`, `malformed requirement title: too many IDs on line 1:`)
@@ -90,24 +94,28 @@ Assumption body
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "Heading part of a req",
+			Position:   3,
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-6",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   6,
 			Title:      "Content mentioning REQ-TEST-SYS-1",
 			Body:       "REQ-TEST-SYS-2",
+			Position:   4,
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-7",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   7,
 			Title:      "My Last Requirement",
 			Body:       "Some more content",
+			Position:   5,
 			Attributes: map[string]string{}},
 		&Req{ID: "ASM-TEST-SYS-1",
 			Variant:    ReqVariantAssumption,
 			IDNumber:   1,
 			Title:      "An assumption, not a requirement",
 			Body:       "Assumption body",
+			Position:   6,
 			Attributes: map[string]string{}})
 
 	// Mixed style requirements
@@ -125,18 +133,21 @@ Assumption body
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "##### Heading part of a req",
+			Position:   3,
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-6",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   6,
 			Title:      "Content mentioning REQ-TEST-SYS-1",
 			Body:       "REQ-TEST-SYS-2",
+			Position:   6,
 			Attributes: map[string]string{}},
 		&Req{ID: "REQ-TEST-SYS-7",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   7,
 			Title:      "My Last Requirement",
 			Body:       "Some more content",
+			Position:   7,
 			Attributes: map[string]string{}})
 }
 
@@ -327,12 +338,13 @@ body
 
 // @llr REQ-TRAQ-SWL-5
 func TestParseReqTable(t *testing.T) {
+	tableOffset := 127
 	reqs, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact | Parents |
 | ----- | ----- | ----- | ----- | ----- | ----- |
 | REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 | |
 | REQ-TEST-SYS-2 | Section 2 | Body of requirement 2. | Rationale 2 | Test 2 | Impact 2 | |
 | REQ-TEST-SYS-3 | Section 3 | Body of requirement 3. | Rationale 3 | Test 3 | Impact 3 | REQ-TEST-SYS-1 |
-| REQ-TEST-SYS-4 | Section 4 | Body of requirement 4. | Rationale 4 | Test 4 | Impact 4 | REQ-TEST-SYS-1, REQ-TEST-SYS-2 |`, nil)
+| REQ-TEST-SYS-4 | Section 4 | Body of requirement 4. | Rationale 4 | Test 4 | Impact 4 | REQ-TEST-SYS-1, REQ-TEST-SYS-2 |`, tableOffset, nil)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 4, len(reqs))
@@ -344,6 +356,7 @@ func TestParseReqTable(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("Rationale %d", i+1), r.Attributes["RATIONALE"])
 		assert.Equal(t, fmt.Sprintf("Test %d", i+1), r.Attributes["VERIFICATION"])
 		assert.Equal(t, fmt.Sprintf("Impact %d", i+1), r.Attributes["SAFETY IMPACT"])
+		assert.Equal(t, tableOffset+i+2, r.Position)
 	}
 }
 
@@ -351,7 +364,7 @@ func TestParseReqTable(t *testing.T) {
 func TestParseReqTable_NoIDCol(t *testing.T) {
 	_, err := parseReqTable(`| Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- |
-| Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+| Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, 0, nil)
 
 	assert.EqualError(t, err, "requirement table must have at least 2 columns, first column head must be \"ID\"")
 }
@@ -360,7 +373,7 @@ func TestParseReqTable_NoIDCol(t *testing.T) {
 func TestParseReqTable_OneCol(t *testing.T) {
 	_, err := parseReqTable(`| ID |
 | ----- |
-| REQ-TEST-SYS-1 |`, nil)
+| REQ-TEST-SYS-1 |`, 0, nil)
 
 	assert.EqualError(t, err, "requirement table must have at least 2 columns, first column head must be \"ID\"")
 }
@@ -369,7 +382,7 @@ func TestParseReqTable_OneCol(t *testing.T) {
 func TestParseReqTable_MissingCell(t *testing.T) {
 	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- | ----- |
-| REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 |`, nil)
+| REQ-TEST-SYS-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 |`, 0, nil)
 
 	assert.EqualError(t, err, "too few cells on row 3 of requirement table")
 }
@@ -378,7 +391,7 @@ func TestParseReqTable_MissingCell(t *testing.T) {
 func TestParseReqTable_BadID(t *testing.T) {
 	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- | ----- |
-| REQ-TEST-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+| REQ-TEST-1 | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, 0, nil)
 
 	assert.EqualError(t, err, "malformed requirement: found only malformed ID: \"REQ-TEST-1\" (doesn't match \"(REQ|ASM)-(\\\\w+)-(\\\\w+)-(\\\\d+)\")")
 }
@@ -387,7 +400,7 @@ func TestParseReqTable_BadID(t *testing.T) {
 func TestParseReqTable_MissingID(t *testing.T) {
 	_, err := parseReqTable(`| ID | Title | Body | Rationale | Verification | Safety impact |
 | ----- | ----- | ----- | ----- | ----- | ----- |
-|  | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, nil)
+|  | Section 1 | Body of requirement 1. | Rationale 1 | Test 1 | Impact 1 |`, 0, nil)
 
 	assert.EqualError(t, err, "malformed requirement: missing ID in first 40 characters: \"\"")
 }

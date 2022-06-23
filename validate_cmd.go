@@ -118,7 +118,7 @@ func runValidate(command *cobra.Command, args []string) error {
 	if *fValidateJson != "" {
 		file, fileErr := os.Create(*fValidateJson)
 		if fileErr != nil {
-			log.Fatalf("Could not create json file %v\n", err)
+			log.Fatalf("Could not create json file %v\n", fileErr)
 		}
 		defer file.Close()
 

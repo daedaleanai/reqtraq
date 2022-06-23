@@ -109,19 +109,17 @@ func TestParsing(t *testing.T) {
 	}
 	assert.Empty(t, rg.Issues, "Unexpected errors while parsing "+document.Path)
 
+	// The last  index is -1 because OrdsByPosition does not return assumptions. If it did,
+	// it should not match
+	requirementPositions := []int{7, 16, 32, 41, 51, 65, 66, 67, 68, 73, 82, 96, 97, 98, -1}
 	var systemReqs [15]Req
 	for i := 0; i < 15; i++ {
 		reqNo := strconv.Itoa(i + 1)
-		reqPos := i
-		if i > 0 {
-			// Assumptions are not returned in the OrdsByPosition list
-			reqPos = i + 1
-		}
 		systemReqs[i] = Req{ID: "REQ-TEST-SYS-" + reqNo,
 			Variant:  ReqVariantRequirement,
 			Document: &document,
 			RepoName: repoName,
-			Position: reqPos,
+			Position: requirementPositions[i],
 			Attributes: map[string]string{
 				"SAFETY IMPACT": "Impact " + reqNo,
 				"RATIONALE":     "Rationale " + reqNo,

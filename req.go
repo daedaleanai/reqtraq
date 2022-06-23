@@ -152,7 +152,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextReqId := 1
 	nextAsmId := 1
 
-	for i, r := range reqs {
+	for _, r := range reqs {
 		var newIssues []Issue
 		if r.Variant == ReqVariantRequirement {
 			newIssues = r.checkID(documentConfig, nextReqId, isReqPresent)
@@ -165,7 +165,6 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 			rg.Issues = append(rg.Issues, newIssues...)
 			continue
 		}
-		r.Position = i
 		r.RepoName = repoName
 		r.Document = documentConfig
 		rg.Reqs[r.ID] = r
@@ -372,7 +371,7 @@ func (r *Req) IsDeleted() bool {
 }
 
 // checkAttributes validates the requirement attributes against the schema from its document,
-// returns a list of errors found.
+// returns a list of issues found.
 // @llr REQ-TRAQ-SWL-10
 func (r *Req) checkAttributes() []Issue {
 	var schemaAttributes map[string]*config.Attribute
