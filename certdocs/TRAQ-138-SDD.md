@@ -1018,6 +1018,17 @@ Reqtraq SHALL provide a command line option to validate a requirements graph and
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-66 CLI validate json output
+
+Reqtraq SHALL allow the user to obtain a json file with the list of issues in the base repository 
+compatible with Phabricator.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 ### web_cmd.go
 
 The validate command implements the CLI for validating requirement graphs.

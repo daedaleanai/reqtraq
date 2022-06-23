@@ -126,7 +126,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 
 			// If we're currently parsing a requirement, and just read the start of a new requirement (cf rules for ending a requirement), close it
 			if (inReq != None) && (headingHasReqID || level < reqLevel) {
-				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqs)
+				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
 				inReq = None
 			}
 
@@ -146,13 +146,14 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 			// It's a requirements table
 			// If we're currently parsing a requirement close it
 			if inReq != None {
-				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqs)
+				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
 				if err != nil {
 					return nil, err
 				}
 			}
 			// Start a new requirement table
 			inReq = Table
+			reqLine = lno
 			reqBuf.Reset()
 		}
 
@@ -167,7 +168,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 
 	if inReq != None {
 		// Close the current requirement, we're at the end.
-		reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqs)
+		reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +185,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 // parseMarkdownFragment accepts a string containing either an ATX requirement or a requirements table and calls the
 // appropriate parsing function
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
-func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, error) {
+func parseMarkdownFragment(reqType ReqType, txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 
 	if reqType == Heading {
 		// An ATX requirement
@@ -192,10 +193,11 @@ func parseMarkdownFragment(reqType ReqType, txt string, reqs []*Req) ([]*Req, er
 		if err != nil {
 			return reqs, err
 		}
+		newReq.Position = reqLine
 		reqs = append(reqs, newReq)
 	} else {
 		// A requirements table
-		newReqs, err := parseReqTable(txt, reqs)
+		newReqs, err := parseReqTable(txt, reqLine, reqs)
 		if err != nil {
 			return reqs, err
 		}
@@ -310,7 +312,7 @@ func parseReq(txt string) (*Req, error) {
 // The first column must be "ID" and each row must contain a valid ReqID. Other columns are optional.
 //
 // @llr REQ-TRAQ-SWL-5
-func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
+func parseReqTable(txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 
 	var attributes []string
 
@@ -377,6 +379,7 @@ func parseReqTable(txt string, reqs []*Req) ([]*Req, error) {
 				return reqs, err
 			}
 
+			r.Position = index + reqLine
 			reqs = append(reqs, r)
 		}
 	}

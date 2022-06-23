@@ -138,17 +138,41 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 	LookFor(t, repoName, "a.cc", rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc}
-	rg.Reqs["REQ-TEST-SWL-15"] = &Req{ID: "REQ-TEST-SWL-15", Document: &doc}
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc, RepoName: "cproject1"}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc, RepoName: "cproject1"}
+	rg.Reqs["REQ-TEST-SWL-15"] = &Req{ID: "REQ-TEST-SWL-15", Document: &doc, RepoName: "cproject1"}
 
 	errs := rg.resolve()
 	assert.ElementsMatch(t,
 		errs,
-		[]error{
-			fmt.Errorf("Invalid reference in function getNumberOfSegments@a.cc:13 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`."),
-			fmt.Errorf("Invalid reference in function getSegment@a.cc:17 in repo `cproject1`, REQ-TEST-SWL-12 does not exist."),
-			fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
-			fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
+		[]Issue{
+			{
+				Path:     "a.cc",
+				RepoName: "cproject1",
+				Line:     13,
+				Error:    fmt.Errorf("Invalid reference in function getNumberOfSegments@a.cc:13 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`."),
+				Type:     IssueTypeInvalidRequirementInCode,
+			},
+			{
+				Path:     "a.cc",
+				RepoName: "cproject1",
+				Line:     17,
+				Error:    fmt.Errorf("Invalid reference in function getSegment@a.cc:17 in repo `cproject1`, REQ-TEST-SWL-12 does not exist."),
+				Type:     IssueTypeInvalidRequirementInCode,
+			},
+			{
+				Path:     "path/to/doc.md",
+				RepoName: "cproject1",
+				Line:     0,
+				Error:    fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
+				Type:     IssueTypeInvalidRequirementId,
+			},
+			{
+				Path:     "a.cc",
+				RepoName: "cproject1",
+				Line:     37,
+				Error:    fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
+				Type:     IssueTypeInvalidRequirementInCode,
+			},
 		})
 }
