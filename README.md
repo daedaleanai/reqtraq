@@ -22,7 +22,7 @@ Reqtraq has two main use-cases:
 
 ## How to install Reqtraq
 ### Dependencies
-  * [go 1.8+](https://golang.org/doc/install)
+  * [go 1.17+](https://golang.org/doc/install)
   * [pandoc](https://pandoc.org/installing.html)
   * [universal-ctags](https://github.com/universal-ctags/ctags/blob/master/README.md#the-latest-build-and-package) *Note there is also the unmaintained exuberant-ctags which should be avoided.*
   * [llvm-14](https://github.com/llvm/llvm-project/releases/tag/llvmorg-14.0.0) *Note this is only needed if reqtraq is built with support for libclang.*
