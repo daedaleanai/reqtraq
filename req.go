@@ -277,6 +277,10 @@ func (rg *ReqGraph) resolve() []Issue {
 				continue
 			}
 
+			if code.Symbol == "" {
+				continue
+			}
+
 			idsPrev := map[string]bool{}
 			idsCur := map[string]bool{}
 
@@ -317,7 +321,10 @@ func (rg *ReqGraph) resolve() []Issue {
 
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
-			parentIds := knownSymbols[code.Symbol]
+			parentIds := code.ParentIds
+			if code.Symbol != "" {
+				parentIds = knownSymbols[code.Symbol]
+			}
 
 			if len(parentIds) == 0 {
 				issue := Issue{
