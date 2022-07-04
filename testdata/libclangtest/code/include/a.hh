@@ -116,4 +116,6 @@ class B final {
     B() = delete;
 };
 
+void JustAFreeFunction();
+
 }  // namespace na::nb::nc

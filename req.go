@@ -12,6 +12,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -269,43 +270,19 @@ func (rg *ReqGraph) resolve() []Issue {
 				continue
 			}
 
-			if len(parentIds) == 0 {
-				knownSymbols[code.Symbol] = code.ParentIds
-				if code.Symbol != "" {
-					llrLoc[code.Symbol] = code
-				}
-				continue
-			}
-
 			if code.Symbol == "" {
 				continue
 			}
 
-			idsPrev := map[string]bool{}
-			idsCur := map[string]bool{}
-
-			for _, id := range parentIds {
-				idsPrev[id] = true
-			}
-
-			same := true
-
-			for _, id := range code.ParentIds {
-				if idsPrev[id] != true {
-					same = false
-				}
-				idsCur[id] = true
-			}
-
-			for _, id := range parentIds {
-				if idsCur[id] != true {
-					same = false
-				}
+			if len(parentIds) == 0 {
+				knownSymbols[code.Symbol] = code.ParentIds
+				llrLoc[code.Symbol] = code
+				continue
 			}
 
 			prevLoc := llrLoc[code.Symbol]
 
-			if !same {
+			if !reflect.DeepEqual(parentIds, code.ParentIds) {
 				issue := Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,

@@ -45,6 +45,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"sort", 95, ""},
 		{"sort", 89, ""},
 		{"cool", 113, ""},
+		{"JustAFreeFunction", 119, ""},
 	}
 	LookFor(t, repoName, "code/include/a.hh", tags, expectedTags)
 
