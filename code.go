@@ -74,6 +74,8 @@ type Code struct {
 	CodeFile CodeFile
 	// Tag is the name of the function.
 	Tag string
+	// Unique symbol identifier
+	Symbol string
 	// Line number where the function starts.
 	Line int
 	// Requirement IDs found in the comment above the function.

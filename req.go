@@ -257,10 +257,69 @@ func (rg *ReqGraph) resolve() []Issue {
 		// TODO check for references to missing or deleted requirements in attribute text
 	}
 
+	knownSymbols := map[string][]string{}
+	llrLoc := map[string]*Code{}
+
 	// Walk the code tags, resolving links and looking for errors
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
+			parentIds := knownSymbols[code.Symbol]
+
 			if len(code.ParentIds) == 0 {
+				continue
+			}
+
+			if len(parentIds) == 0 {
+				knownSymbols[code.Symbol] = code.ParentIds
+				if code.Symbol != "" {
+					llrLoc[code.Symbol] = code
+				}
+				continue
+			}
+
+			idsPrev := map[string]bool{}
+			idsCur := map[string]bool{}
+
+			for _, id := range parentIds {
+				idsPrev[id] = true
+			}
+
+			same := true
+
+			for _, id := range code.ParentIds {
+				if idsPrev[id] != true {
+					same = false
+				}
+				idsCur[id] = true
+			}
+
+			for _, id := range parentIds {
+				if idsCur[id] != true {
+					same = false
+				}
+			}
+
+			prevLoc := llrLoc[code.Symbol]
+
+			if !same {
+				issue := Issue{
+					Line:     code.Line,
+					Path:     code.CodeFile.Path,
+					RepoName: code.CodeFile.RepoName,
+					Error: fmt.Errorf("LLR declarations differs in %s@%s:%d and %s@%s:%d`.",
+						code.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line),
+					Type: IssueTypeInvalidRequirementInCode,
+				}
+				issues = append(issues, issue)
+			}
+		}
+	}
+
+	for _, tags := range rg.CodeTags {
+		for _, code := range tags {
+			parentIds := knownSymbols[code.Symbol]
+
+			if len(parentIds) == 0 {
 				issue := Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
@@ -270,7 +329,7 @@ func (rg *ReqGraph) resolve() []Issue {
 				}
 				issues = append(issues, issue)
 			}
-			for _, parentID := range code.ParentIds {
+			for _, parentID := range parentIds {
 				if !code.Document.Schema.Requirements.MatchString(parentID) {
 					issue := Issue{
 						Line:     code.Line,
