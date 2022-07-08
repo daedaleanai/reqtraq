@@ -109,6 +109,13 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 	// TODO(ja): Distinguish between code and tests so that we can get the test coverage and the
 	// source coverage separately
 
+	if len(codeFiles) == 0 {
+		// In order to avoid calling tagCode and having the default ctags parser
+		// check that ctags is installed we can simply return here.
+		// That way, those users that don't need ctags don't have to install it.
+		return make(map[CodeFile][]*Code), nil
+	}
+
 	var tags map[CodeFile][]*Code
 	var err error
 
