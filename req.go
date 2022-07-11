@@ -177,7 +177,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema for their document. Any errors encountered such as links to
 // non-existent requirements are returned.
-// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11
+// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67
 func (rg *ReqGraph) resolve() []Issue {
 	issues := make([]Issue, 0)
 
