@@ -108,8 +108,9 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 				RepoName: repoName,
 				Path:     relativePath,
 			},
-			Tag:  cursor.Spelling(),
-			Line: int(line),
+			Tag:    cursor.Spelling(),
+			Symbol: cursor.USR(),
+			Line:   int(line),
 		}
 	}
 

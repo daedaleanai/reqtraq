@@ -1084,6 +1084,17 @@ to requirements.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-67 Handle multiple symbol declaration
+
+Reqtraq SHALL use same parent links for all declarations and definitions of the same C++ symbol and 
+raise an error if multiple different parent links declaration present.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 ## Appendix
 
 ### Deleted Requirements

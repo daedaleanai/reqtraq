@@ -12,6 +12,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -176,7 +177,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema for their document. Any errors encountered such as links to
 // non-existent requirements are returned.
-// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11
+// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67
 func (rg *ReqGraph) resolve() []Issue {
 	issues := make([]Issue, 0)
 
@@ -257,10 +258,52 @@ func (rg *ReqGraph) resolve() []Issue {
 		// TODO check for references to missing or deleted requirements in attribute text
 	}
 
+	knownSymbols := map[string][]string{}
+	llrLoc := map[string]*Code{}
+
 	// Walk the code tags, resolving links and looking for errors
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
+			parentIds := knownSymbols[code.Symbol]
+
 			if len(code.ParentIds) == 0 {
+				continue
+			}
+
+			if code.Symbol == "" {
+				continue
+			}
+
+			if len(parentIds) == 0 {
+				knownSymbols[code.Symbol] = code.ParentIds
+				llrLoc[code.Symbol] = code
+				continue
+			}
+
+			prevLoc := llrLoc[code.Symbol]
+
+			if !reflect.DeepEqual(parentIds, code.ParentIds) {
+				issue := Issue{
+					Line:     code.Line,
+					Path:     code.CodeFile.Path,
+					RepoName: code.CodeFile.RepoName,
+					Error: fmt.Errorf("LLR declarations differs in %s@%s:%d and %s@%s:%d`.",
+						code.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line),
+					Type: IssueTypeInvalidRequirementInCode,
+				}
+				issues = append(issues, issue)
+			}
+		}
+	}
+
+	for _, tags := range rg.CodeTags {
+		for _, code := range tags {
+			parentIds := code.ParentIds
+			if code.Symbol != "" {
+				parentIds = knownSymbols[code.Symbol]
+			}
+
+			if len(parentIds) == 0 {
 				issue := Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
@@ -270,7 +313,7 @@ func (rg *ReqGraph) resolve() []Issue {
 				}
 				issues = append(issues, issue)
 			}
-			for _, parentID := range code.ParentIds {
+			for _, parentID := range parentIds {
 				if !code.Document.Schema.Requirements.MatchString(parentID) {
 					issue := Issue{
 						Line:     code.Line,
