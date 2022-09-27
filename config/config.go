@@ -134,6 +134,10 @@ type Config struct {
 	Repos map[repos.RepoName]RepoConfig
 }
 
+// Selects whether all children of the parent repositories should be traversed as part of the
+// configuration or only parents are traversed
+var DirectDependenciesOnly bool = false
+
 // Top level function to parse the configuration file from the given path in the current repository
 // @llr REQ-TRAQ-SWL-53
 func ParseConfig(repoPath repos.RepoPath) (Config, error) {
@@ -142,20 +146,13 @@ func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 		return Config{}, errors.Wrapf(err, "The requested config path `%s` does not contain a valid repository", repoPath)
 	}
 
-	// If this is not the top level configuration we need to clone the parent repo and handle requirements from there
-	// Find the top level config, then start parsing them
-	topLevelConfig, err := findTopLevelConfig(jsonConfig)
-	if err != nil {
-		return Config{}, err
-	}
-
 	config := Config{
 		Repos: make(map[repos.RepoName]RepoConfig),
 	}
 
 	commonAttributes := make(map[string]*Attribute)
 
-	err = config.parseConfigFile(topLevelConfig, &commonAttributes)
+	err = config.parseConfigFile(jsonConfig, &commonAttributes)
 	if err != nil {
 		return Config{}, err
 	}
@@ -266,32 +263,6 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	if err := decoder.Decode(&config); err != nil {
 		return jsonConfig{}, fmt.Errorf("Error while parsing configuration file `%s`: %s", configPath, err)
 	}
-	return config, nil
-}
-
-// Finds the top-level configuration file, by searching all config files and their parents until it finds one
-// without a parent.
-// @llr REQ-TRAQ-SWL-52
-func findTopLevelConfig(config jsonConfig) (jsonConfig, error) {
-	if config.ParentRepo.RepoName != "" {
-		parentRepoPath, err := repos.GetRepo(config.ParentRepo.RepoName, config.ParentRepo.RemotePath, "", false)
-		if err != nil {
-			return jsonConfig{}, fmt.Errorf("Error getting repository with path: %s. %s", config.ParentRepo, err)
-		}
-
-		parentConfig, err := readJsonConfigFromRepo(parentRepoPath)
-		if err != nil {
-			return jsonConfig{}, err
-		}
-
-		if config.ParentRepo.RepoName != parentConfig.RepoName {
-			return jsonConfig{}, fmt.Errorf("Repo `%s` defines parent repository with name `%s`, but `%s` was found in url",
-				config.RepoName, config.ParentRepo.RepoName, parentConfig.RepoName)
-		}
-
-		return findTopLevelConfig(parentConfig)
-	}
-
 	return config, nil
 }
 
@@ -468,11 +439,17 @@ func (doc *Document) appendCommonAttributes(commonAttributes *map[string]*Attrib
 	return nil
 }
 
-// Parses a configuration file into the config instance, recursing into each child until all
-// configuration files have been parsed.
-// @llr REQ-TRAQ-SWL-53
+// Parses a configuration file into the config instance, recursing into each child (if `DirectDependenciesOnly` is not selected)
+// until all configuration files have been parsed. It also parses parent repositories (if any).
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-52, REQ-TRAQ-SWL-68
 func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *map[string]*Attribute) error {
 	repoConfig := RepoConfig{}
+
+	// Check if this repo has already been parsed and ignore it
+	if _, ok := config.Repos[jsonConfig.RepoName]; ok {
+		// Already exists, not parsing it
+		return nil
+	}
 
 	for _, commonAttr := range jsonConfig.CommonAttributes {
 		// Add these to the list in our config
@@ -499,31 +476,53 @@ func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *m
 
 	config.Repos[jsonConfig.RepoName] = repoConfig
 
-	// Parse any children it has
-	for _, childRepo := range jsonConfig.ChildrenRepos {
-		childRepoPath, err := repos.GetRepo(childRepo.RepoName, childRepo.RemotePath, "", false)
-		if err != nil {
-			return fmt.Errorf("Error getting child repo name from: %s", childRepo)
-		}
+	// Parse any children it has if we are not just checking direct dependencies
+	if !DirectDependenciesOnly {
+		for _, childRepo := range jsonConfig.ChildrenRepos {
+			childRepoPath, err := repos.GetRepo(childRepo.RepoName, childRepo.RemotePath, "", false)
+			if err != nil {
+				return fmt.Errorf("Error getting child repo name from: %s", childRepo)
+			}
 
-		childJsonConfig, err := readJsonConfigFromRepo(childRepoPath)
-		if err != nil {
-			return err
-		}
+			childJsonConfig, err := readJsonConfigFromRepo(childRepoPath)
+			if err != nil {
+				return err
+			}
 
-		// TODO(ja): Validate the name of the child and exit if it does not match
-		if childRepo.RepoName != childJsonConfig.RepoName {
-			return fmt.Errorf("Configuration for repo `%s` contains child with name `%s` but the url points to a repo with name `%s`",
-				jsonConfig.RepoName, childRepo.RepoName, childJsonConfig.RepoName)
-		}
+			// TODO(ja): Validate the name of the child and exit if it does not match
+			if childRepo.RepoName != childJsonConfig.RepoName {
+				return fmt.Errorf("Configuration for repo `%s` contains child with name `%s` but the url points to a repo with name `%s`",
+					jsonConfig.RepoName, childRepo.RepoName, childJsonConfig.RepoName)
+			}
 
-		err = config.parseConfigFile(childJsonConfig, commonAttributes)
-		if err != nil {
-			return err
+			err = config.parseConfigFile(childJsonConfig, commonAttributes)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
-	return nil
+	// Parse the parent if there is one
+	if jsonConfig.ParentRepo.RepoName == "" {
+		return nil
+	}
+
+	parentRepoPath, err := repos.GetRepo(jsonConfig.ParentRepo.RepoName, jsonConfig.ParentRepo.RemotePath, "", false)
+	if err != nil {
+		return fmt.Errorf("Error getting repository with path: %s. %s", jsonConfig.ParentRepo, err)
+	}
+
+	parentConfig, err := readJsonConfigFromRepo(parentRepoPath)
+	if err != nil {
+		return err
+	}
+
+	if jsonConfig.ParentRepo.RepoName != parentConfig.RepoName {
+		return fmt.Errorf("Repo `%s` defines parent repository with name `%s`, but `%s` was found in url",
+			jsonConfig.RepoName, jsonConfig.ParentRepo.RepoName, parentConfig.RepoName)
+	}
+
+	return config.parseConfigFile(parentConfig, commonAttributes)
 }
 
 // Appends common attributes to each of the document's attributes to build a comprehensive list of

@@ -35,6 +35,7 @@ func Execute() error {
 	defer repos.CleanupTemporaryDirectories()
 
 	rootCmd.PersistentFlags().BoolVarP(&linepipes.Verbose, "verbose", "v", false, "Enable verbose logs.")
+	rootCmd.PersistentFlags().BoolVarP(&config.DirectDependenciesOnly, "direct-deps", "d", false, "Only checks the current repository and parents")
 
 	return rootCmd.Execute()
 }
