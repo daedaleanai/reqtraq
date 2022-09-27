@@ -4,6 +4,10 @@
         {
             "repoName": "projectB",
             "repoUrl": "projectB"
+        },
+        {
+            "repoName": "projectC",
+            "repoUrl": "projectC"
         }
     ],
     "commonAttributes": [

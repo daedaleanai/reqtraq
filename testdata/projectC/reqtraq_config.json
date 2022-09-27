@@ -1,0 +1,29 @@
+{
+    "repoName": "projectC",
+    "parentRepository": {
+        "repoName": "projectA",
+        "repoUrl": "projectA"
+    },
+    "documents": [
+        {
+            "path": "TST-138-SDD.md",
+            "prefix": "TST",
+            "level": "SWL",
+            "parent": {
+                "prefix": "TEST",
+                "level": "SWH"
+            },
+            "implementation": {
+                "code": {
+                    "paths": ["code"],
+                    "matchingPattern": ".*\\.(cc|hh)$",
+                    "ignoredPatterns": [".*_ignored\\.(cc|hh)$"]
+                },
+                "tests": {
+                    "paths": ["test"],
+                    "matchingPattern": ".*_test\\.(cc|hh)$"
+                }
+            }
+        }
+    ]
+}

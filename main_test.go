@@ -257,6 +257,7 @@ func TestValidateMultipleRepos(t *testing.T) {
 	repos.ClearAllRepositories()
 	repos.RegisterRepository(repos.RepoName("projectA"), repos.RepoPath("testdata/projectA"))
 	repos.RegisterRepository(repos.RepoName("projectB"), repos.RepoPath("testdata/projectB"))
+	repos.RegisterRepository(repos.RepoName("projectC"), repos.RepoPath("testdata/projectC"))
 
 	// Make sure the child can reach the parent
 	config, err := config.ParseConfig("testdata/projectB")
