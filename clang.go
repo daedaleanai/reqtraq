@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/go-clang/clang-v14/clang"
@@ -147,6 +148,10 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 
 		case clang.Cursor_CXXMethod, clang.Cursor_FunctionDecl, clang.Cursor_FunctionTemplate, clang.Cursor_Constructor, clang.Cursor_ConversionFunction:
 			if !IsPublic(cursor) || IsInAnonymousOrDetailNamespaceOrClass(cursor) || IsDeleted(cursor) || cursor.CXXMethod_IsPureVirtual() {
+				return clang.ChildVisit_Continue
+			}
+
+			if strings.HasPrefix(cursor.Spelling(), "<deduction guide for ") {
 				return clang.ChildVisit_Continue
 			}
 
