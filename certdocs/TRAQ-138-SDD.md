@@ -947,6 +947,21 @@ arguments and included files.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-68 Direct dependencies
+
+Reqtraq SHALL provide a command-line argument to determine whether it will check direct dependencies only 
+or traverse all repositories (all parents and children).
+
+If the direct dependencies command-line argument is chosen, reqtraq MUST only traverse parent repositories 
+but ignore children repositories.
+
+##### Attributes:
+- Parents: 
+- Rationale: Allows to check only the necessary dependencies for validation of a single repository.
+- Verification: Test
+- Safety Impact: None
+
+
 ### completion_cmd.go
 
 The completion command takes advantage of the underlying cobra infrastructure to print completion 
