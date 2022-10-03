@@ -143,6 +143,19 @@ but other parsers can optionally be compiled-in and registered during initializa
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-69 Optional links to requirements
+
+Reqtraq SHALL provide functionality to optionally link code to requirements as determined by the
+code parser. If the code parser determines that the link is optional and no link is found, validation
+MUST pass. If the link is not optional and no link is found, validation MUST fail.
+
+##### Attributes:
+- Parents: 
+- Rationale: To allow adding requriements on type aliases without forcing all type aliases to have 
+linked requirements.
+- Verification: Test
+- Safety Impact: None
+
 ### diff.go
 
 Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.

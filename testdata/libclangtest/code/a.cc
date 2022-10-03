@@ -23,4 +23,7 @@ void doMoreThings() {}
 // @llr REQ-TEST-SWL-3
 void allReqsCovered() {}
 
+// @llr REQ-TEST-SWL-3
+using MyType = int;
+
 }  // namespace na::nb::nc

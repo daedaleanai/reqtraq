@@ -81,11 +81,11 @@ func IsDeleted(cursor clang.Cursor) bool {
 }
 
 // Traverses the AST obtained from libclang to find any code and returns a map of files to a map of lines to code tags
-// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63, REQ-TRAQ-SWL-69
 func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string, path string, fileMap map[string]struct{}) map[string]map[uint]*Code {
 	code := map[string]map[uint]*Code{}
 
-	storeTag := func(cursor clang.Cursor) {
+	storeTag := func(cursor clang.Cursor, optional bool) {
 		file, line, _, _ := cursor.Location().FileLocation()
 
 		// Try to get relative path to the repo
@@ -109,9 +109,10 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 				RepoName: repoName,
 				Path:     relativePath,
 			},
-			Tag:    cursor.Spelling(),
-			Symbol: cursor.USR(),
-			Line:   int(line),
+			Tag:      cursor.Spelling(),
+			Symbol:   cursor.USR(),
+			Line:     int(line),
+			Optional: optional,
 		}
 	}
 
@@ -138,13 +139,13 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			}
 			return clang.ChildVisit_Recurse
 
-		// TODO(ja): clarify if type aliases need requirements. For now we have been assuming that they do.
 		case clang.Cursor_TypeAliasDecl, clang.Cursor_TypeAliasTemplateDecl:
 			if !IsPublic(cursor) || IsInAnonymousOrDetailNamespaceOrClass(cursor) {
 				return clang.ChildVisit_Continue
 			}
 
-			storeTag(cursor)
+			// type alias CAN have parent requirements but DO NOT HAVE TO.
+			storeTag(cursor, true)
 
 		case clang.Cursor_CXXMethod, clang.Cursor_FunctionDecl, clang.Cursor_FunctionTemplate, clang.Cursor_Constructor, clang.Cursor_ConversionFunction:
 			if !IsPublic(cursor) || IsInAnonymousOrDetailNamespaceOrClass(cursor) || IsDeleted(cursor) || cursor.CXXMethod_IsPureVirtual() {
@@ -155,7 +156,8 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 				return clang.ChildVisit_Continue
 			}
 
-			storeTag(cursor)
+			// Regular functions are never optional
+			storeTag(cursor, false)
 		}
 
 		return clang.ChildVisit_Continue
