@@ -33,6 +33,7 @@ type TagMatch struct {
 	tag       string
 	line      int
 	parentIds string
+	optional  bool
 }
 
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
@@ -52,6 +53,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 				found = true
 				assert.Equal(t, e.line, tag.Line)
 				assert.Equal(t, e.tag, tag.Tag)
+				assert.Equal(t, e.optional, tag.Optional)
 				if e.parentIds != "" {
 					assert.Equal(t, e.parentIds, strings.Join(tag.ParentIds, ","))
 				}
@@ -77,19 +79,19 @@ func TestTagCode(t *testing.T) {
 	expectedTags := []TagMatch{
 		{"SeparateCommentsForLLrs",
 			41,
-			""},
+			"", false},
 		{"operator []",
 			37,
-			""},
+			"", false},
 		{"enumerateObjects",
 			27,
-			""},
+			"", false},
 		{"getSegment",
 			17,
-			""},
+			"", false},
 		{"getNumberOfSegments",
 			13,
-			""},
+			"", false},
 	}
 	LookFor(t, repoName, "a.cc", tags, expectedTags)
 }
@@ -122,19 +124,19 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	expectedTags := []TagMatch{
 		{"SeparateCommentsForLLrs",
 			41,
-			"REQ-TEST-SWL-15,REQ-TEST-SWL-13"},
+			"REQ-TEST-SWL-15,REQ-TEST-SWL-13", false},
 		{"operator []",
 			37,
-			"REQ-TEST-SWL-13,REQ-TEST-SWL-14"},
+			"REQ-TEST-SWL-13,REQ-TEST-SWL-14", false},
 		{"enumerateObjects",
 			27,
-			`REQ-TEST-SWL-13`},
+			`REQ-TEST-SWL-13`, false},
 		{"getSegment",
 			17,
-			`REQ-TEST-SWL-12`},
+			`REQ-TEST-SWL-12`, false},
 		{"getNumberOfSegments",
 			13,
-			`REQ-TEST-SWH-11`},
+			`REQ-TEST-SWH-11`, false},
 	}
 	LookFor(t, repoName, "a.cc", rg.CodeTags, expectedTags)
 

@@ -83,12 +83,14 @@ type Code struct {
 	Parents   []*Req
 	// Link back to its parent document. Used to validate the requirements belong to this document
 	Document *config.Document
+	// Whether the code MUST link to a requirement or simply CAN link to a requirement
+	Optional bool
 }
 
 // ParseCode is the entry point for the code related functions. It parses all tags found in the
 // implementation for the given document. The return value is a map from each discovered source code
 // file to a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-61
+// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-69
 func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)

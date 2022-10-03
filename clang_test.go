@@ -35,32 +35,33 @@ func TestTagCodeLibClang(t *testing.T) {
 	assert.Equal(t, 3, len(tags))
 
 	expectedTags := []TagMatch{
-		{"doThings", 17, ""},
-		{"doMoreThings", 23, ""},
-		{"Array<T, N>", 38, ""},
-		{"operator[]", 45, ""},
-		{"ButThisIsPublic", 59, ""},
-		{"StructMethodsArePublicByDefault", 66, ""},
-		{"JustAFreeFunction", 75, ""},
-		{"sort", 95, ""},
-		{"sort", 89, ""},
-		{"cool", 113, ""},
-		{"JustAFreeFunction", 119, ""},
+		{"doThings", 17, "", false},
+		{"doMoreThings", 23, "", false},
+		{"Array<T, N>", 38, "", false},
+		{"operator[]", 45, "", false},
+		{"ButThisIsPublic", 59, "", false},
+		{"StructMethodsArePublicByDefault", 66, "", false},
+		{"JustAFreeFunction", 75, "", false},
+		{"sort", 95, "", false},
+		{"sort", 89, "", false},
+		{"cool", 113, "", false},
+		{"JustAFreeFunction", 119, "", false},
 	}
 	LookFor(t, repoName, "code/include/a.hh", tags, expectedTags)
 
 	expectedTags = []TagMatch{
-		{"hiddenFunction", 9, ""},
-		{"doThings", 15, ""},
-		{"doMoreThings", 21, ""},
-		{"allReqsCovered", 24, ""},
+		{"hiddenFunction", 9, "", false},
+		{"doThings", 15, "", false},
+		{"doMoreThings", 21, "", false},
+		{"allReqsCovered", 24, "", false},
+		{"MyType", 27, "", true},
 	}
 	LookFor(t, repoName, "code/a.cc", tags, expectedTags)
 
 	expectedTags = []TagMatch{
-		{"TestDoThings", 9, ""},
-		{"TestDoMoreThings", 15, ""},
-		{"TestAllReqsCovered", 21, ""},
+		{"TestDoThings", 9, "", false},
+		{"TestDoMoreThings", 15, "", false},
+		{"TestAllReqsCovered", 21, "", false},
 	}
 	LookFor(t, repoName, "test/a/a_test.cc", tags, expectedTags)
 }

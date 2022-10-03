@@ -176,8 +176,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 // resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema for their document. Any errors encountered such as links to
-// non-existent requirements are returned.
-// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67
+// non-existent requirements are returned in a list of issues.
+// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67, REQ-TRAQ-SWL-69
 func (rg *ReqGraph) resolve() []Issue {
 	issues := make([]Issue, 0)
 
@@ -303,7 +303,7 @@ func (rg *ReqGraph) resolve() []Issue {
 				parentIds = knownSymbols[code.Symbol]
 			}
 
-			if len(parentIds) == 0 {
+			if len(parentIds) == 0 && !code.Optional {
 				issue := Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
