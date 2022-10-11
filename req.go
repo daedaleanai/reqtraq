@@ -34,6 +34,7 @@ const (
 	IssueTypeMissingAttribute
 	IssueTypeUnknownAttribute
 	IssueTypeInvalidAttributeValue
+	IssueTypeReqTestedButNotImplemented
 )
 
 type Issue struct {
@@ -354,6 +355,35 @@ func (rg *ReqGraph) resolve() []Issue {
 					issues = append(issues, issue)
 				}
 			}
+		}
+	}
+
+	// Walk through the requirements one last time to ensure that if they are tested they are also implemented.
+	// We need to do it at this point, since now the links to the Tags are all set
+	for _, req := range rg.Reqs {
+		implemented := false
+		tested := false
+		for _, tag := range req.Tags {
+			if tag.CodeFile.Type.Matches(CodeTypeImplementation) {
+				implemented = true
+			}
+			if tag.CodeFile.Type.Matches(CodeTypeTests) {
+				tested = true
+			}
+			if implemented && tested {
+				continue
+			}
+		}
+
+		if !implemented && tested {
+			issue := Issue{
+				Line:     req.Position,
+				Path:     req.Document.Path,
+				RepoName: req.RepoName,
+				Error:    errors.New("Requirement " + req.ID + " is tested, but it is not implemented."),
+				Type:     IssueTypeReqTestedButNotImplemented,
+			}
+			issues = append(issues, issue)
 		}
 	}
 

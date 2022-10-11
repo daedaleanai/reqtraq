@@ -82,7 +82,7 @@ func IsDeleted(cursor clang.Cursor) bool {
 
 // Traverses the AST obtained from libclang to find any code and returns a map of files to a map of lines to code tags
 // @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63, REQ-TRAQ-SWL-69
-func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string, path string, fileMap map[string]struct{}) map[string]map[uint]*Code {
+func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string, path string, fileMap map[string]CodeFile) map[string]map[uint]*Code {
 	code := map[string]map[uint]*Code{}
 
 	storeTag := func(cursor clang.Cursor, optional bool) {
@@ -95,8 +95,11 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			return
 		}
 
-		// Only save it if we are interested in data from this file (appears in fileMap)
-		if _, ok := fileMap[relativePath]; !ok {
+		var codeFile CodeFile
+		if file, ok := fileMap[relativePath]; ok {
+			codeFile = file
+		} else {
+			// file is not in fileMap, therefore it shall be ignored
 			return
 		}
 
@@ -105,10 +108,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 		}
 
 		code[relativePath][uint(line)] = &Code{
-			CodeFile: CodeFile{
-				RepoName: repoName,
-				Path:     relativePath,
-			},
+			CodeFile: codeFile,
 			Tag:      cursor.Spelling(),
 			Symbol:   cursor.USR(),
 			Line:     int(line),
@@ -168,7 +168,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 
 // Parses a single file as a translation unit, providing tags from all included files that are listed in the file map
 // @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
-func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.CompileCommands, compilerArgs []string, fileMap map[string]struct{}) (map[string]map[uint]*Code, error) {
+func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.CompileCommands, compilerArgs []string, fileMap map[string]CodeFile) (map[string]map[uint]*Code, error) {
 	repoPath, err := repos.GetRepoPathByName(codeFile.RepoName)
 	if err != nil {
 		return map[string]map[uint]*Code{}, err
@@ -263,9 +263,9 @@ func (ClangCodeParser) tagCode(repoName repos.RepoName, codeFiles []CodeFile, co
 	commands := compDb.AllCompileCommands()
 	defer commands.Dispose()
 
-	fileMap := make(map[string]struct{})
+	fileMap := make(map[string]CodeFile)
 	for _, codeFile := range codeFiles {
-		fileMap[codeFile.Path] = struct{}{}
+		fileMap[codeFile.Path] = codeFile
 	}
 
 	for _, codeFile := range codeFiles {
@@ -288,10 +288,7 @@ func (ClangCodeParser) tagCode(repoName repos.RepoName, codeFiles []CodeFile, co
 
 	// Turn the map into an array now that we cannot have duplicates
 	for filePath := range codeMap {
-		codeFile := CodeFile{
-			Path:     filePath,
-			RepoName: repoName,
-		}
+		codeFile := fileMap[filePath]
 
 		codeForCurrentPath := []*Code{}
 		for _, tag := range codeMap[filePath] {

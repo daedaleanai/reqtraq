@@ -37,10 +37,11 @@ type TagMatch struct {
 }
 
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
-func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFile map[CodeFile][]*Code, expectedTags []TagMatch) {
+func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, codeType CodeType, tagsPerFile map[CodeFile][]*Code, expectedTags []TagMatch) {
 	codeFile := CodeFile{
 		Path:     sourceFile,
 		RepoName: repoName,
+		Type:     codeType,
 	}
 	tags, ok := tagsPerFile[codeFile]
 	assert.True(t, ok)
@@ -54,6 +55,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, tagsPerFi
 				assert.Equal(t, e.line, tag.Line)
 				assert.Equal(t, e.tag, tag.Tag)
 				assert.Equal(t, e.optional, tag.Optional)
+				assert.Equal(t, codeFile, tag.CodeFile)
 				if e.parentIds != "" {
 					assert.Equal(t, e.parentIds, strings.Join(tag.ParentIds, ","))
 				}
@@ -70,7 +72,7 @@ func TestTagCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
-	tags, err := CtagsCodeParser{}.tagCode(repoName, []CodeFile{{Path: "a.cc", RepoName: repoName}}, "", []string{})
+	tags, err := CtagsCodeParser{}.tagCode(repoName, []CodeFile{{Path: "a.cc", RepoName: repoName, Type: CodeTypeTests}}, "", []string{})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -93,7 +95,7 @@ func TestTagCode(t *testing.T) {
 			13,
 			"", false},
 	}
-	LookFor(t, repoName, "a.cc", tags, expectedTags)
+	LookFor(t, repoName, "a.cc", CodeTypeTests, tags, expectedTags)
 }
 
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
@@ -138,7 +140,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			13,
 			`REQ-TEST-SWH-11`, false},
 	}
-	LookFor(t, repoName, "a.cc", rg.CodeTags, expectedTags)
+	LookFor(t, repoName, "a.cc", CodeTypeImplementation, rg.CodeTags, expectedTags)
 
 	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc, RepoName: "cproject1"}
 	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc, RepoName: "cproject1"}
