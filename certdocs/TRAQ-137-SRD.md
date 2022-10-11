@@ -218,6 +218,17 @@ Reqtraq SHALL have a simple web interface that allows generation and filtering o
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWH-19 Differentiate between tests and implementation
+
+Reqtraq SHALL differentiate between tests and implementation.
+
+##### Attributes:
+- Parents:
+- Rationale: This information is useful in order to detect issues with tested requirements that 
+are not implemented and to compute the test coverage of requirements.
+- Verification: Test
+- Safety Impact: None
+
 ## Appendix
 
 ### Deleted requirements

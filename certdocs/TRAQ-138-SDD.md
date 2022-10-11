@@ -156,6 +156,16 @@ linked requirements.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-70 Distinguish code and tests
+
+Reqtraq SHALL tag all code links with its type (implementation or tests) after parsing it.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-19
+- Rationale: 
+- Verification: Test
+- Safety Impact: None
+
 ### diff.go
 
 Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.
@@ -287,6 +297,28 @@ Reqtraq SHALL generate tables which map between source code functions (source fi
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-5
 - Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-71 Implementation Code traceablility tables
+
+Reqtraq SHALL generate tables which map between implementation in the form of source code functions 
+(source file + function name) and low-level software requirements.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-5, REQ-TRAQ-SWH-19
+- Rationale: 
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-72 Test Code traceablility tables
+
+Reqtraq SHALL generate tables which map between tests in the form of source code functions 
+(source file + function name) and low-level software requirements.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-5, REQ-TRAQ-SWH-19
+- Rationale: 
 - Verification: Test
 - Safety Impact: None
 

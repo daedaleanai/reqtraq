@@ -233,11 +233,21 @@ func formatBodyAsHTML(txt string) template.HTML {
 	return template.HTML(out)
 }
 
-var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString}).Parse(headerFooterTmplText)).Parse(reportTmplText))
+var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString, "isImpl": isImpl, "isTest": isTest}).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
 func codeFileToString(CodeFile CodeFile) string {
 	return CodeFile.String()
+}
+
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
+func isImpl(CodeFile CodeFile) bool {
+	return CodeFile.Type.Matches(CodeTypeImplementation)
+}
+
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
+func isTest(CodeFile CodeFile) bool {
+	return CodeFile.Type.Matches(CodeTypeTests)
 }
 
 var reportTmplText = `
@@ -261,9 +271,18 @@ var reportTmplText = `
 
 {{ define "CODETAGS"}}
 	{{ if . }}
-		<p>Code:
+		<p>Code Implementation:
 		{{ range . }}
-			<a href="{{ .URL }}" target="_blank">{{ codeFileToString .CodeFile }} - {{ .Tag }}</a>
+			{{ if isImpl .CodeFile }}
+				<a href="{{ .URL }}" target="_blank">{{ codeFileToString .CodeFile }} - {{ .Tag }}</a>
+			{{ end }}
+		{{ end }}
+		</p>
+		<p>Code Tests:
+		{{ range . }}
+			{{ if isTest .CodeFile }}
+				<a href="{{ .URL }}" target="_blank">{{ codeFileToString .CodeFile }} - {{ .Tag }}</a>
+			{{ end }}
 		{{ end }}
 		</p>
 	{{ end }}
@@ -327,7 +346,11 @@ var reportTmplText = `
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
 			<li>
-				<h3><a href="{{ .URL }}" target="_blank">{{ codeFileToString .CodeFile }} - {{ .Tag }}</a></h3>
+				{{ if isImpl .CodeFile }}
+					<h3><a href="{{ .URL }}" target="_blank">Impl: {{ codeFileToString .CodeFile }} - {{ .Tag }}</a></h3>
+				{{ else }}
+					<h3><a href="{{ .URL }}" target="_blank">Test: {{ codeFileToString .CodeFile }} - {{ .Tag }}</a></h3>
+				{{ end }}
 
 				<!-- LLRs -->
 				<ul>

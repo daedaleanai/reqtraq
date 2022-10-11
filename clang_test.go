@@ -18,9 +18,9 @@ func TestTagCodeLibClang(t *testing.T) {
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/libclangtest")))
 
 	codeFiles := []CodeFile{
-		{RepoName: repoName, Path: "code/a.cc"},
-		{RepoName: repoName, Path: "code/include/a.hh"},
-		{RepoName: repoName, Path: "test/a/a_test.cc"},
+		{RepoName: repoName, Path: "code/a.cc", Type: CodeTypeImplementation},
+		{RepoName: repoName, Path: "code/include/a.hh", Type: CodeTypeImplementation},
+		{RepoName: repoName, Path: "test/a/a_test.cc", Type: CodeTypeTests},
 	}
 
 	compilerArgs := []string{
@@ -47,7 +47,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"cool", 113, "", false},
 		{"JustAFreeFunction", 119, "", false},
 	}
-	LookFor(t, repoName, "code/include/a.hh", tags, expectedTags)
+	LookFor(t, repoName, "code/include/a.hh", CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
 		{"hiddenFunction", 9, "", false},
@@ -56,14 +56,14 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"allReqsCovered", 24, "", false},
 		{"MyType", 27, "", true},
 	}
-	LookFor(t, repoName, "code/a.cc", tags, expectedTags)
+	LookFor(t, repoName, "code/a.cc", CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
 		{"TestDoThings", 9, "", false},
 		{"TestDoMoreThings", 15, "", false},
 		{"TestAllReqsCovered", 21, "", false},
 	}
-	LookFor(t, repoName, "test/a/a_test.cc", tags, expectedTags)
+	LookFor(t, repoName, "test/a/a_test.cc", CodeTypeTests, tags, expectedTags)
 }
 
 // @llr REQ-TRAQ-SWL-36

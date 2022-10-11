@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -41,6 +42,34 @@ type CodeParser interface {
 		CompilerArguments []string) (map[CodeFile][]*Code, error)
 }
 
+// The type of code
+type CodeType uint
+
+const (
+	CodeTypeImplementation CodeType = iota
+	CodeTypeTests
+	CodeTypeAny
+)
+
+// @llr REQ-TRAQ-SWL-70
+func (codeType CodeType) String() string {
+	switch codeType {
+	case CodeTypeImplementation:
+		return "Implementation"
+	case CodeTypeTests:
+		return "Tests"
+	case CodeTypeAny:
+		return "Implementation and tests"
+	}
+	log.Fatal("Unknown code type!")
+	return "Unknown"
+}
+
+// @llr REQ-TRAQ-SWL-70
+func (codeType CodeType) Matches(requested CodeType) bool {
+	return (requested == CodeTypeAny) || (codeType == requested)
+}
+
 // Registers a code parser with the given name
 // @llr REQ-TRAQ-SWL-65
 func registerCodeParser(name string, codeParser CodeParser) {
@@ -60,6 +89,7 @@ func availableCodeParsers() []string {
 type CodeFile struct {
 	RepoName repos.RepoName
 	Path     string
+	Type     CodeType
 }
 
 // Returns a string with the name of the repository and the path in it where the code file can be found
@@ -95,23 +125,22 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 	// Create a list with all the files to parse
 	codeFiles := make([]CodeFile, 0)
 	codeFilePaths := make([]string, 0)
-	for _, codeFile := range document.Implementation.CodeFiles {
+	for _, implFile := range document.Implementation.CodeFiles {
 		codeFiles = append(codeFiles, CodeFile{
 			RepoName: repoName,
-			Path:     codeFile,
+			Path:     implFile,
+			Type:     CodeTypeImplementation,
 		})
-		codeFilePaths = append(codeFilePaths, codeFile)
+		codeFilePaths = append(codeFilePaths, implFile)
 	}
 	for _, testFile := range document.Implementation.TestFiles {
 		codeFiles = append(codeFiles, CodeFile{
 			RepoName: repoName,
 			Path:     testFile,
+			Type:     CodeTypeTests,
 		})
 		codeFilePaths = append(codeFilePaths, testFile)
 	}
-
-	// TODO(ja): Distinguish between code and tests so that we can get the test coverage and the
-	// source coverage separately
 
 	if len(codeFiles) == 0 {
 		// In order to avoid calling tagCode and having the default ctags parser
@@ -130,7 +159,6 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 
 	tags, err = codeParser.tagCode(repoName, codeFiles,
 		document.Implementation.CompilationDatabase, document.Implementation.CompilerArguments)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to tag code")
 	}
@@ -259,7 +287,12 @@ func parseFileComments(absolutePath string, tags []*Code) error {
 
 // parseTags takes the raw output from Universal Ctags and parses into Code structs.
 // @llr REQ-TRAQ-SWL-8
-func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
+func parseTags(repoName repos.RepoName, lines chan string, codeFiles []CodeFile) ([]*Code, error) {
+	codeFilesMap := map[string]CodeFile{}
+	for _, codeFile := range codeFiles {
+		codeFilesMap[codeFile.Path] = codeFile
+	}
+
 	res := make([]*Code, 0)
 	for line := range lines {
 		parts := strings.Split(line, "\t")
@@ -292,7 +325,7 @@ func parseTags(repoName repos.RepoName, lines chan string) ([]*Code, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse line number: %v", parts)
 		}
-		res = append(res, &Code{CodeFile: CodeFile{RepoName: repoName, Path: relativePath}, Tag: tag, Line: line})
+		res = append(res, &Code{CodeFile: codeFilesMap[relativePath], Tag: tag, Line: line})
 	}
 	return res, nil
 }
@@ -346,7 +379,7 @@ func (CtagsCodeParser) tagCode(repoName repos.RepoName, codeFiles []CodeFile, co
 	default:
 	}
 
-	tags, err := parseTags(repoName, lines)
+	tags, err := parseTags(repoName, lines, codeFiles)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse ctags output")
 	}

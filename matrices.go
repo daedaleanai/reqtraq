@@ -33,18 +33,18 @@ func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.
 
 // GenerateCodeTraceTables generates HTML for inspecting the gaps in the mappings between the specified
 // node type and code
-// @llr REQ-TRAQ-SWL-15
-func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec) error {
+// @llr REQ-TRAQ-SWL-15, REQ-TRAQ-SWL-71, REQ-TRAQ-SWL-72
+func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec, codeType CodeType) error {
 	data := struct {
 		From, To         string
 		ItemsAB, ItemsBA []TableRow
 	}{
 		From: reqSpec.ToString(),
-		To:   "CODE",
+		To:   codeType.String(),
 	}
 
-	data.ItemsAB = rg.createSWLCodeMatrix(reqSpec)
-	data.ItemsBA = rg.createCodeSWLMatrix(reqSpec)
+	data.ItemsAB = rg.createSWLCodeMatrix(reqSpec, codeType)
+	data.ItemsBA = rg.createCodeSWLMatrix(reqSpec, codeType)
 
 	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
 	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
@@ -150,11 +150,15 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 }
 
 // createCodeSWLMatrix creates an upstream matrix mapping code procedures to low level requirements.
-// @llr REQ-TRAQ-SWL-15
-func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec) []TableRow {
+// @llr REQ-TRAQ-SWL-15, REQ-TRAQ-SWL-71, REQ-TRAQ-SWL-72,
+func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec, codeType CodeType) []TableRow {
 	items := make([]TableRow, 0)
 	for _, tags := range rg.CodeTags {
 		for _, codeTag := range tags {
+			if !codeTag.CodeFile.Type.Matches(codeType) {
+				continue
+			}
+
 			count := 0
 			for _, parentReq := range codeTag.Parents {
 				if parentReq.Document.MatchesSpec(reqSpec) {
@@ -195,14 +199,18 @@ func (rg ReqGraph) createDownstreamMatrix(from, to config.ReqSpec) []TableRow {
 }
 
 // createSWLCodeMatrix creates a downstream matrix mapping low level requirements to code procedures.
-// @llr REQ-TRAQ-SWL-15
-func (rg *ReqGraph) createSWLCodeMatrix(reqSpec config.ReqSpec) []TableRow {
+// @llr REQ-TRAQ-SWL-15, REQ-TRAQ-SWL-71, REQ-TRAQ-SWL-72,
+func (rg *ReqGraph) createSWLCodeMatrix(reqSpec config.ReqSpec, codeType CodeType) []TableRow {
 	reqs := rg.reqsWithSpec(reqSpec)
 
 	items := make([]TableRow, 0, len(reqs))
 	for _, r := range reqs {
 		count := 0
 		for _, codeTag := range r.Tags {
+			if !codeTag.CodeFile.Type.Matches(codeType) {
+				continue
+			}
+
 			row := TableRow{newReqTableCell(r), newCodeTableCell(codeTag)}
 			items = append(items, row)
 			count++

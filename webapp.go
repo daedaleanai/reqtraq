@@ -162,6 +162,20 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 				</a>
 			</div>
 		</div>
+		<div>
+			<div>
+				<a href="/matrix?from=REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }}&to=CODE&code-type=impl">
+					REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }} -> IMPLEMENTATION
+				</a>
+			</div>
+		</div>
+		<div>
+			<div>
+				<a href="/matrix?from=REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }}&to=CODE&code-type=test">
+					REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }} -> TESTS
+				</a>
+			</div>
+		</div>
 	{{ end }}
 	</div>
 </div>
@@ -191,6 +205,21 @@ func parseReqSpecFromRequest(specString string) (config.ReqSpec, error) {
 		Prefix: config.ReqPrefix(parts[0]),
 		Level:  config.ReqLevel(parts[1]),
 	}, nil
+}
+
+// @llr REQ-TRAQ-SWL-37
+func getCodeType(request *http.Request) CodeType {
+	formValue := request.FormValue("code-type")
+	switch formValue {
+	case "any":
+		return CodeTypeAny
+	case "impl":
+		return CodeTypeImplementation
+	case "test":
+		return CodeTypeTests
+	}
+
+	return CodeTypeAny
 }
 
 // get provides the page information for a given request
@@ -302,7 +331,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 
 		to := r.FormValue("to")
 		if to == "CODE" {
-			return rg.GenerateCodeTraceTables(w, fromSpec)
+			return rg.GenerateCodeTraceTables(w, fromSpec, getCodeType(r))
 		}
 
 		toSpec, err := parseReqSpecFromRequest(to)
