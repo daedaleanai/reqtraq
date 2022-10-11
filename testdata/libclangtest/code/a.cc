@@ -1,4 +1,5 @@
 #include <a.hh>
+#include <type_traits>
 
 namespace na::nb::nc {
 
@@ -25,5 +26,11 @@ void allReqsCovered() {}
 
 // @llr REQ-TEST-SWL-3
 using MyType = int;
+
+// @llr REQ-TEST-SWL-3
+template <typename T>
+concept MyConcept = requires(T t) {
+    { t++ } -> std::same_as<int>;
+};
 
 }  // namespace na::nb::nc
