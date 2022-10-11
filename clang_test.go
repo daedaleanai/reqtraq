@@ -50,11 +50,12 @@ func TestTagCodeLibClang(t *testing.T) {
 	LookFor(t, repoName, "code/include/a.hh", CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
-		{"hiddenFunction", 9, "", false},
-		{"doThings", 15, "", false},
-		{"doMoreThings", 21, "", false},
-		{"allReqsCovered", 24, "", false},
-		{"MyType", 27, "", true},
+		{"hiddenFunction", 10, "", false},
+		{"doThings", 16, "", false},
+		{"doMoreThings", 22, "", false},
+		{"allReqsCovered", 25, "", false},
+		{"MyType", 28, "", true},
+		{"MyConcept", 32, "", true},
 	}
 	LookFor(t, repoName, "code/a.cc", CodeTypeImplementation, tags, expectedTags)
 

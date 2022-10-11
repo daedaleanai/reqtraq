@@ -122,6 +122,13 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 		}
 
 		switch cursor.Kind() {
+		case clang.Cursor_UnexposedDecl:
+			// libclang exposes concepts via Cursor_UnexposedDecl
+			// concepts CAN have parent requirements but DO NOT HAVE TO.
+			storeTag(cursor, true)
+
+			return clang.ChildVisit_Continue
+
 		case clang.Cursor_ClassDecl, clang.Cursor_EnumDecl, clang.Cursor_StructDecl, clang.Cursor_ClassTemplate, clang.Cursor_ClassTemplatePartialSpecialization:
 			if !IsPublic(cursor) {
 				return clang.ChildVisit_Continue
