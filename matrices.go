@@ -135,6 +135,10 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 	for file, tags := range rg.CodeTags {
 		files = append(files, file.String())
 		for _, codeTag := range tags {
+			if codeTag.Optional && len(codeTag.Parents) == 0 {
+				// Ignore optional tags with no linked requirements
+				continue
+			}
 			if info.fileIndexFactor < codeTag.Line {
 				info.fileIndexFactor = codeTag.Line
 			}
@@ -167,7 +171,8 @@ func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec, codeType CodeTyp
 					count++
 				}
 			}
-			if count == 0 {
+			// Ignore optional tags with no linked requirements
+			if count == 0 && !codeTag.Optional {
 				row := TableRow{newCodeTableCell(codeTag), nil}
 				items = append(items, row)
 			}

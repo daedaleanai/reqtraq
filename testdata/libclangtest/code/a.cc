@@ -33,4 +33,9 @@ concept MyConcept = requires(T t) {
     { t++ } -> std::same_as<int>;
 };
 
+template <typename T>
+concept AnotherMyConcept = requires(T t) {
+    { t++ } -> std::same_as<int>;
+};
+
 }  // namespace na::nb::nc

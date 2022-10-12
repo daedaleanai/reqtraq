@@ -56,6 +56,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"allReqsCovered", 25, "", false},
 		{"MyType", 28, "", true},
 		{"MyConcept", 32, "", true},
+		{"AnotherMyConcept", 37, "", true},
 	}
 	LookFor(t, repoName, "code/a.cc", CodeTypeImplementation, tags, expectedTags)
 

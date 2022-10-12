@@ -233,7 +233,7 @@ func formatBodyAsHTML(txt string) template.HTML {
 	return template.HTML(out)
 }
 
-var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString, "isImpl": isImpl, "isTest": isTest}).Parse(headerFooterTmplText)).Parse(reportTmplText))
+var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString, "isImpl": isImpl, "isTest": isTest, "shouldShowTag": shouldShowTag}).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
 func codeFileToString(CodeFile CodeFile) string {
@@ -248,6 +248,11 @@ func isImpl(CodeFile CodeFile) bool {
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
 func isTest(CodeFile CodeFile) bool {
 	return CodeFile.Type.Matches(CodeTypeTests)
+}
+
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
+func shouldShowTag(code *Code) bool {
+	return !code.Optional || (len(code.Parents) != 0)
 }
 
 var reportTmplText = `
@@ -345,6 +350,7 @@ var reportTmplText = `
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
+		{{ if shouldShowTag . }}
 			<li>
 				{{ if isImpl .CodeFile }}
 					<h3><a href="{{ .URL }}" target="_blank">Impl: {{ codeFileToString .CodeFile }} - {{ .Tag }}</a></h3>
@@ -392,6 +398,7 @@ var reportTmplText = `
 					{{ end }}
 				</ul>
 			</li>
+		{{ end }}
 		{{ end }}
 		{{ else }}
 			<li class="text-danger">Empty graph</li>
@@ -449,6 +456,7 @@ var reportTmplText = `
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
+		{{ if shouldShowTag . }}
 			{{ range .Parents }}
 				{{ if .Matches $.Filter $.Diffs }}
 					{{ with ($.Once.Once .) }}
@@ -464,6 +472,7 @@ var reportTmplText = `
 						{{ end }}
 				{{ end }}
 			{{ end }}
+		{{ end }}
 		{{ end }}
 		{{ end }}
 	</ul>
