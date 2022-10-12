@@ -177,7 +177,7 @@ var headerFooterTmplText = `
 			}
 			body {
 				font-family: Roboto, Arial, sans-serif;
-				max-width: 1200px;
+				max-width: 3000px;
 				margin-left: 5%;
 				margin-right: 5%;
 			}
