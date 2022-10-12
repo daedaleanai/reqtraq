@@ -142,9 +142,9 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	}
 	LookFor(t, repoName, "a.cc", CodeTypeImplementation, rg.CodeTags, expectedTags)
 
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc, RepoName: "cproject1"}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc, RepoName: "cproject1"}
-	rg.Reqs["REQ-TEST-SWL-15"] = &Req{ID: "REQ-TEST-SWL-15", Document: &doc, RepoName: "cproject1"}
+	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc, RepoName: "cproject1", Position: 12}
+	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc, RepoName: "cproject1", Position: 13}
+	rg.Reqs["REQ-TEST-SWL-15"] = &Req{ID: "REQ-TEST-SWL-15", Document: &doc, RepoName: "cproject1", Position: 14}
 
 	errs := rg.resolve()
 	assert.ElementsMatch(t,
@@ -155,6 +155,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 				RepoName: "cproject1",
 				Line:     13,
 				Error:    fmt.Errorf("Invalid reference in function getNumberOfSegments@a.cc:13 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`."),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementInCode,
 			},
 			{
@@ -162,13 +163,15 @@ func TestReqGraph_ParseCode(t *testing.T) {
 				RepoName: "cproject1",
 				Line:     17,
 				Error:    fmt.Errorf("Invalid reference in function getSegment@a.cc:17 in repo `cproject1`, REQ-TEST-SWL-12 does not exist."),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementInCode,
 			},
 			{
 				Path:     "path/to/doc.md",
 				RepoName: "cproject1",
-				Line:     0,
+				Line:     13,
 				Error:    fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementId,
 			},
 			{
@@ -176,7 +179,32 @@ func TestReqGraph_ParseCode(t *testing.T) {
 				RepoName: "cproject1",
 				Line:     37,
 				Error:    fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementInCode,
+			},
+			{
+				Path:     "path/to/doc.md",
+				RepoName: "cproject1",
+				Line:     12,
+				Error:    fmt.Errorf("Requirement REQ-TEST-SWL-13 is not tested."),
+				Severity: IssueSeverityNote,
+				Type:     IssueTypeReqNotTested,
+			},
+			{
+				Path:     "path/to/doc.md",
+				RepoName: "cproject1",
+				Line:     13,
+				Error:    fmt.Errorf("Requirement REQ-TEST-SWH-11 is not tested."),
+				Severity: IssueSeverityNote,
+				Type:     IssueTypeReqNotTested,
+			},
+			{
+				Path:     "path/to/doc.md",
+				RepoName: "cproject1",
+				Line:     14,
+				Error:    fmt.Errorf("Requirement REQ-TEST-SWL-15 is not tested."),
+				Severity: IssueSeverityNote,
+				Type:     IssueTypeReqNotTested,
 			},
 		})
 }

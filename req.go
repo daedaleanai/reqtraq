@@ -35,6 +35,16 @@ const (
 	IssueTypeUnknownAttribute
 	IssueTypeInvalidAttributeValue
 	IssueTypeReqTestedButNotImplemented
+	IssueTypeReqNotImplemented
+	IssueTypeReqNotTested
+)
+
+type IssueSeverity uint
+
+const (
+	IssueSeverityMajor IssueSeverity = iota
+	IssueSeverityMinor
+	IssueSeverityNote
 )
 
 type Issue struct {
@@ -42,6 +52,7 @@ type Issue struct {
 	Path     string
 	Line     int
 	Error    error
+	Severity IssueSeverity
 	Type     IssueType
 }
 
@@ -195,6 +206,7 @@ func (rg *ReqGraph) resolve() []Issue {
 				Path:     req.Document.Path,
 				RepoName: req.RepoName,
 				Error:    fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementId,
 			}
 			issues = append(issues, issue)
@@ -213,6 +225,7 @@ func (rg *ReqGraph) resolve() []Issue {
 						Path:     req.Document.Path,
 						RepoName: req.RepoName,
 						Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted."),
+						Severity: IssueSeverityMajor,
 						Type:     IssueTypeInvalidParent,
 					}
 					issues = append(issues, issue)
@@ -225,6 +238,7 @@ func (rg *ReqGraph) resolve() []Issue {
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " does not exist."),
+					Severity: IssueSeverityMajor,
 					Type:     IssueTypeInvalidParent,
 				}
 				issues = append(issues, issue)
@@ -241,6 +255,7 @@ func (rg *ReqGraph) resolve() []Issue {
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    fmt.Errorf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID),
+					Severity: IssueSeverityMajor,
 					Type:     IssueTypeInvalidRequirementReference,
 				}
 				issues = append(issues, issue)
@@ -250,6 +265,7 @@ func (rg *ReqGraph) resolve() []Issue {
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID),
+					Severity: IssueSeverityMajor,
 					Type:     IssueTypeInvalidRequirementReference,
 				}
 				issues = append(issues, issue)
@@ -290,7 +306,8 @@ func (rg *ReqGraph) resolve() []Issue {
 					RepoName: code.CodeFile.RepoName,
 					Error: fmt.Errorf("LLR declarations differs in %s@%s:%d and %s@%s:%d`.",
 						code.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line),
-					Type: IssueTypeInvalidRequirementInCode,
+					Severity: IssueSeverityMajor,
+					Type:     IssueTypeInvalidRequirementInCode,
 				}
 				issues = append(issues, issue)
 			}
@@ -310,6 +327,7 @@ func (rg *ReqGraph) resolve() []Issue {
 					Path:     code.CodeFile.Path,
 					RepoName: code.CodeFile.RepoName,
 					Error:    fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line),
+					Severity: IssueSeverityMajor,
 					Type:     IssueTypeMissingRequirementInCode,
 				}
 				issues = append(issues, issue)
@@ -322,7 +340,8 @@ func (rg *ReqGraph) resolve() []Issue {
 						RepoName: code.CodeFile.RepoName,
 						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path),
-						Type: IssueTypeInvalidRequirementInCode,
+						Severity: IssueSeverityMajor,
+						Type:     IssueTypeInvalidRequirementInCode,
 					}
 					issues = append(issues, issue)
 				}
@@ -336,7 +355,8 @@ func (rg *ReqGraph) resolve() []Issue {
 							RepoName: code.CodeFile.RepoName,
 							Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
 								code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
-							Type: IssueTypeInvalidRequirementInCode,
+							Severity: IssueSeverityMajor,
+							Type:     IssueTypeInvalidRequirementInCode,
 						}
 						issues = append(issues, issue)
 					}
@@ -350,7 +370,8 @@ func (rg *ReqGraph) resolve() []Issue {
 						RepoName: code.CodeFile.RepoName,
 						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
-						Type: IssueTypeInvalidRequirementInCode,
+						Severity: IssueSeverityMajor,
+						Type:     IssueTypeInvalidRequirementInCode,
 					}
 					issues = append(issues, issue)
 				}
@@ -361,6 +382,10 @@ func (rg *ReqGraph) resolve() []Issue {
 	// Walk through the requirements one last time to ensure that if they are tested they are also implemented.
 	// We need to do it at this point, since now the links to the Tags are all set
 	for _, req := range rg.Reqs {
+		if !req.Document.HasImplementation() || req.IsDeleted() {
+			continue
+		}
+
 		implemented := false
 		tested := false
 		for _, tag := range req.Tags {
@@ -375,13 +400,37 @@ func (rg *ReqGraph) resolve() []Issue {
 			}
 		}
 
-		if !implemented && tested {
+		if !implemented {
+			if tested {
+				issue := Issue{
+					Line:     req.Position,
+					Path:     req.Document.Path,
+					RepoName: req.RepoName,
+					Error:    fmt.Errorf("Requirement %s is tested, but it is not implemented.", req.ID),
+					Severity: IssueSeverityMajor,
+					Type:     IssueTypeReqTestedButNotImplemented,
+				}
+				issues = append(issues, issue)
+			} else {
+				issue := Issue{
+					Line:     req.Position,
+					Path:     req.Document.Path,
+					RepoName: req.RepoName,
+					Error:    fmt.Errorf("Requirement %s is not implemented.", req.ID),
+					Severity: IssueSeverityNote,
+					Type:     IssueTypeReqNotImplemented,
+				}
+				issues = append(issues, issue)
+
+			}
+		} else if !tested {
 			issue := Issue{
 				Line:     req.Position,
 				Path:     req.Document.Path,
 				RepoName: req.RepoName,
-				Error:    errors.New("Requirement " + req.ID + " is tested, but it is not implemented."),
-				Type:     IssueTypeReqTestedButNotImplemented,
+				Error:    fmt.Errorf("Requirement %s is not tested.", req.ID),
+				Severity: IssueSeverityNote,
+				Type:     IssueTypeReqNotTested,
 			}
 			issues = append(issues, issue)
 		}
@@ -474,6 +523,7 @@ func (r *Req) checkAttributes() []Issue {
 				Path:     r.Document.Path,
 				RepoName: r.RepoName,
 				Error:    fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, name),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeMissingAttribute,
 			}
 			issues = append(issues, issue)
@@ -488,6 +538,7 @@ func (r *Req) checkAttributes() []Issue {
 					Path:     r.Document.Path,
 					RepoName: r.RepoName,
 					Error:    fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name),
+					Severity: IssueSeverityMajor,
 					Type:     IssueTypeInvalidAttributeValue,
 				}
 				issues = append(issues, issue)
@@ -502,6 +553,7 @@ func (r *Req) checkAttributes() []Issue {
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")),
+			Severity: IssueSeverityMajor,
 			Type:     IssueTypeMissingAttribute,
 		}
 		issues = append(issues, issue)
@@ -515,6 +567,7 @@ func (r *Req) checkAttributes() []Issue {
 				Path:     r.Document.Path,
 				RepoName: r.RepoName,
 				Error:    fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeUnknownAttribute,
 			}
 			issues = append(issues, issue)
@@ -536,6 +589,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]),
+			Severity: IssueSeverityMajor,
 			Type:     IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
@@ -546,6 +600,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]),
+			Severity: IssueSeverityMajor,
 			Type:     IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
@@ -556,6 +611,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]),
+			Severity: IssueSeverityMajor,
 			Type:     IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
@@ -568,6 +624,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]),
+			Severity: IssueSeverityMajor,
 			Type:     IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
@@ -578,6 +635,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 				Path:     r.Document.Path,
 				RepoName: r.RepoName,
 				Error:    fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID),
+				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementId,
 			}
 			issues = append(issues, issue)
@@ -588,6 +646,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 					Path:     r.Document.Path,
 					RepoName: r.RepoName,
 					Error:    fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID),
+					Severity: IssueSeverityMajor,
 					Type:     IssueTypeInvalidRequirementId,
 				}
 				issues = append(issues, issue)
@@ -598,6 +657,7 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 						Path:     r.Document.Path,
 						RepoName: r.RepoName,
 						Error:    fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber),
+						Severity: IssueSeverityMajor,
 						Type:     IssueTypeInvalidRequirementId,
 					}
 					issues = append(issues, issue)

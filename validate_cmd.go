@@ -33,6 +33,20 @@ type LintMessage struct {
 	Description string `json:"description"`
 }
 
+// Translates the severity code into a value valid for the json output
+// @llr REQ-TRAQ-SWL-66
+func translateSeverityCode(severity IssueSeverity) string {
+	switch severity {
+	case IssueSeverityMajor:
+		return "error"
+	case IssueSeverityMinor:
+		return "warning"
+	case IssueSeverityNote:
+		return "note"
+	}
+	return "error"
+}
+
 // Builds a Json file with the issues found after parsing the requirements and code. It only collects
 // information for the base repository.
 // @llr REQ-TRAQ-SWL-66
@@ -70,12 +84,23 @@ func buildJsonIssues(issues []Issue, jsonWriter *json.Encoder) {
 		case IssueTypeInvalidAttributeValue:
 			name = "Invalid attribute"
 			code = "REQ8"
+		case IssueTypeReqTestedButNotImplemented:
+			name = "Requirement tested but not implemented"
+			code = "REQ9"
+		case IssueTypeReqNotImplemented:
+			name = "Requirement not implemented"
+			code = "REQ10"
+		case IssueTypeReqNotTested:
+			name = "Requirement not tested"
+			code = "REQ11"
+		default:
+			log.Fatal("Unhandled IssueType: %r", issue.Type)
 		}
 
 		jsonWriter.Encode(LintMessage{
 			Name:        name,
 			Code:        code,
-			Severity:    "error",
+			Severity:    translateSeverityCode(issue.Severity),
 			Path:        issue.Path,
 			Line:        issue.Line,
 			Char:        0,
@@ -92,14 +117,20 @@ func validate(config *config.Config, at string, strict bool) ([]Issue, error) {
 		return rg.Issues, err
 	}
 
-	if len(rg.Issues) > 0 {
-		for _, issue := range rg.Issues {
-			fmt.Println(issue.Error)
+	hasCriticalErrors := false
+	for _, issue := range rg.Issues {
+		if issue.Severity != IssueSeverityNote {
+			hasCriticalErrors = true
 		}
+		fmt.Println(issue.Error)
+	}
+
+	if hasCriticalErrors {
 		if strict {
 			return rg.Issues, errors.New("ERROR. Validation failed")
+		} else {
+			fmt.Println("WARNING. Validation failed")
 		}
-		fmt.Println("WARNING. Validation failed")
 	} else {
 		fmt.Println("Validation passed")
 	}
@@ -126,7 +157,14 @@ func runValidate(command *cobra.Command, args []string) error {
 		buildJsonIssues(issues, jsonWriter)
 	}
 
-	return err
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// The return error is used when the issued command is not valid, not in the
+	// case the command actually fails to run. Since no args are used by this command,
+	// we can always return nil
+	return nil
 }
 
 // Registers the validate command
