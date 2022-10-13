@@ -35,15 +35,19 @@ func TestTagCodeLibClang(t *testing.T) {
 	assert.Equal(t, 3, len(tags))
 
 	expectedTags := []TagMatch{
+		{"SomeType", 8, "", true},
 		{"doThings", 17, "", false},
 		{"doMoreThings", 23, "", false},
+		{"Array", 26, "", true},
 		{"Array<T, N>", 38, "", false},
 		{"operator[]", 45, "", false},
 		{"ButThisIsPublic", 59, "", false},
+		{"A", 62, "", true},
 		{"StructMethodsArePublicByDefault", 66, "", false},
 		{"JustAFreeFunction", 75, "", false},
 		{"sort", 95, "", false},
 		{"sort", 89, "", false},
+		{"B", 101, "", true},
 		{"cool", 113, "", false},
 		{"JustAFreeFunction", 119, "", false},
 	}
