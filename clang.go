@@ -134,6 +134,9 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 				return clang.ChildVisit_Continue
 			}
 
+			// Classes, Enums, and Structs CAN have parent requirements but DO NOT HAVE TO.
+			storeTag(cursor, true)
+
 			// Only recurse if there is a chance that we can find something of interest.
 			// In practice if the element is not public, there is no point in recursing
 			return clang.ChildVisit_Recurse
