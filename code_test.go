@@ -62,7 +62,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, codeType 
 				break
 			}
 		}
-		assert.True(t, found)
+		assert.True(t, found, tag)
 	}
 }
 

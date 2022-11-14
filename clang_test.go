@@ -50,6 +50,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"B", 101, "", true},
 		{"cool", 113, "", false},
 		{"JustAFreeFunction", 119, "", false},
+		{"ExternCFunc", 126, "", false},
 	}
 	LookFor(t, repoName, "code/include/a.hh", CodeTypeImplementation, tags, expectedTags)
 
@@ -61,6 +62,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"MyType", 28, "", true},
 		{"MyConcept", 32, "", true},
 		{"AnotherMyConcept", 37, "", true},
+		{"externFunc", 42, "", false},
 	}
 	LookFor(t, repoName, "code/a.cc", CodeTypeImplementation, tags, expectedTags)
 
