@@ -38,4 +38,15 @@ concept AnotherMyConcept = requires(T t) {
     { t++ } -> std::same_as<int>;
 };
 
+// @llr REQ-TEST-SWL-3
+extern "C" void externFunc();
+
+extern "C" {
+
+/**
+ * \llr REQ-TEST-SWL-2
+ */
+int ExternCVar;
+}
+
 }  // namespace na::nb::nc

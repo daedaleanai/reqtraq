@@ -118,4 +118,12 @@ class B final {
 
 void JustAFreeFunction();
 
+extern "C" {
+
+/**
+ * \llr REQ-TEST-SWL-2
+ */
+void ExternCFunc();
+}
+
 }  // namespace na::nb::nc

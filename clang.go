@@ -86,6 +86,11 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 	code := map[string]map[uint]*Code{}
 
 	storeTag := func(cursor clang.Cursor, optional bool) {
+		if strings.TrimSpace(cursor.Spelling()) == "" {
+			// Ignore empty symbols
+			return
+		}
+
 		file, line, _, _ := cursor.Location().FileLocation()
 
 		// Try to get relative path to the repo
@@ -127,7 +132,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			// concepts CAN have parent requirements but DO NOT HAVE TO.
 			storeTag(cursor, true)
 
-			return clang.ChildVisit_Continue
+			return clang.ChildVisit_Recurse
 
 		case clang.Cursor_ClassDecl, clang.Cursor_EnumDecl, clang.Cursor_StructDecl, clang.Cursor_ClassTemplate, clang.Cursor_ClassTemplatePartialSpecialization:
 			if !IsPublic(cursor) {
