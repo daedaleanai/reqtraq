@@ -239,6 +239,9 @@ func parseSingleFile(index *clang.Index, codeFile CodeFile, commands clang.Compi
 	for _, d := range tu.Diagnostics() {
 		fmt.Printf("Diagnostic for file %s: %s\n", codeFile.Path, d.Spelling())
 	}
+	if len(tu.Diagnostics()) != 0 {
+		return map[string]map[uint]*Code{}, fmt.Errorf("Diagnostic errors parsing translation unit `%s`\n", codeFile.Path)
+	}
 
 	return visitAstNodes(tu.TranslationUnitCursor(), codeFile.RepoName, absRepoPath, codeFile.Path, fileMap), nil
 
