@@ -185,6 +185,89 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	return nil
 }
 
+// Code may be declared many times and defined at least once per binary. To avoid having to repeat
+// the same llr in all declarations and definitions this function deduplicates entries and keeps
+// makes sure that all code tags use the same llr. If more than one tag with the same symbol uses a
+// different LLR this triggers an issue that is reported.
+// @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67, REQ-TRAQ-SWL-69
+func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) []string) {
+	issues := make([]Issue, 0)
+
+	// Deduplication must only happen per requirement document. One document may provide a declaration,
+	// which links a requirement in that document, while a different item may provide a definition and
+	// use a different requirements. Sometimes this means they may be different definitions for the
+	// same symbols even within the same project linking to different requirements.
+
+	// Map of parentIds each document and symbol. First key is the document, second key is the symbol
+	parentIds := map[string]map[string][]string{}
+	llrLoc := map[string]map[string]*Code{}
+
+	getParentIdsForSymbolInDocument := func(doc, symbol string) []string {
+		if _, ok := parentIds[doc]; !ok {
+			parentIds[doc] = make(map[string][]string)
+		}
+		return parentIds[doc][symbol]
+	}
+
+	setParentIdsForSymbolInDocument := func(doc, symbol string, ids []string) {
+		if _, ok := parentIds[doc]; !ok {
+			parentIds[doc] = make(map[string][]string)
+		}
+		parentIds[doc][symbol] = ids
+	}
+
+	getLlrLocForSymbolInDocument := func(doc, symbol string) *Code {
+		if _, ok := llrLoc[doc]; !ok {
+			llrLoc[doc] = make(map[string]*Code)
+		}
+		return llrLoc[doc][symbol]
+	}
+
+	setLlrLocForSymbolInDocument := func(doc, symbol string, loc *Code) {
+		if _, ok := llrLoc[doc]; !ok {
+			llrLoc[doc] = make(map[string]*Code)
+		}
+		llrLoc[doc][symbol] = loc
+	}
+
+	// Walk the code tags, resolving links and looking for errors
+	for _, tags := range rg.CodeTags {
+		for _, code := range tags {
+			parentIds := getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
+
+			if len(code.ParentIds) == 0 {
+				continue
+			}
+
+			if code.Symbol == "" {
+				continue
+			}
+
+			if len(parentIds) == 0 {
+				setParentIdsForSymbolInDocument(code.Document.Path, code.Symbol, code.ParentIds)
+				setLlrLocForSymbolInDocument(code.Document.Path, code.Symbol, code)
+				continue
+			}
+
+			prevLoc := getLlrLocForSymbolInDocument(code.Document.Path, code.Symbol)
+
+			if !reflect.DeepEqual(parentIds, code.ParentIds) {
+				issue := Issue{
+					Line:     code.Line,
+					Path:     code.CodeFile.Path,
+					RepoName: code.CodeFile.RepoName,
+					Error: fmt.Errorf("LLR declarations differs in %s@%s:%d and %s@%s:%d`.",
+						code.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line),
+					Severity: IssueSeverityMajor,
+					Type:     IssueTypeInvalidRequirementInCode,
+				}
+				issues = append(issues, issue)
+			}
+		}
+	}
+	return issues, getParentIdsForSymbolInDocument
+}
+
 // resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema for their document. Any errors encountered such as links to
@@ -275,50 +358,14 @@ func (rg *ReqGraph) resolve() []Issue {
 		// TODO check for references to missing or deleted requirements in attribute text
 	}
 
-	knownSymbols := map[string][]string{}
-	llrLoc := map[string]*Code{}
-
-	// Walk the code tags, resolving links and looking for errors
-	for _, tags := range rg.CodeTags {
-		for _, code := range tags {
-			parentIds := knownSymbols[code.Symbol]
-
-			if len(code.ParentIds) == 0 {
-				continue
-			}
-
-			if code.Symbol == "" {
-				continue
-			}
-
-			if len(parentIds) == 0 {
-				knownSymbols[code.Symbol] = code.ParentIds
-				llrLoc[code.Symbol] = code
-				continue
-			}
-
-			prevLoc := llrLoc[code.Symbol]
-
-			if !reflect.DeepEqual(parentIds, code.ParentIds) {
-				issue := Issue{
-					Line:     code.Line,
-					Path:     code.CodeFile.Path,
-					RepoName: code.CodeFile.RepoName,
-					Error: fmt.Errorf("LLR declarations differs in %s@%s:%d and %s@%s:%d`.",
-						code.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidRequirementInCode,
-				}
-				issues = append(issues, issue)
-			}
-		}
-	}
+	symbolIssues, getParentIdsForSymbolInDocument := rg.deduplicateCodeSymbols()
+	issues = append(issues, symbolIssues...)
 
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
 			parentIds := code.ParentIds
 			if code.Symbol != "" {
-				parentIds = knownSymbols[code.Symbol]
+				parentIds = getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
 			}
 
 			if len(parentIds) == 0 && !code.Optional {
