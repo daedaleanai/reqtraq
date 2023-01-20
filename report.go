@@ -70,52 +70,6 @@ func (rg ReqGraph) OrdsByPosition() []*Req {
 	return r
 }
 
-// Matches returns true if the requirement matches the filter AND its ID is in the diffs map, if any.
-// @llr REQ-TRAQ-SWL-19
-func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
-	if filter != nil {
-		if filter.IDRegexp != nil {
-			if !filter.IDRegexp.MatchString(r.ID) {
-				return false
-			}
-		}
-		if filter.TitleRegexp != nil {
-			if !filter.TitleRegexp.MatchString(r.Title) {
-				return false
-			}
-		}
-		if filter.BodyRegexp != nil {
-			if !filter.BodyRegexp.MatchString(r.Body) {
-				return false
-			}
-		}
-		if filter.AnyAttributeRegexp != nil {
-			var matches bool
-			// Any of the existing attributes must match.
-			for _, value := range r.Attributes {
-				if filter.AnyAttributeRegexp.MatchString(value) {
-					matches = true
-					break
-				}
-			}
-			if !matches {
-				return false
-			}
-		}
-		// Each of the filtered attributes must match.
-		for a, e := range filter.AttributeRegexp {
-			if !e.MatchString(r.Attributes[a]) {
-				return false
-			}
-		}
-	}
-	if diffs != nil {
-		_, ok := diffs[r.ID]
-		return ok
-	}
-	return true
-}
-
 // Prints a filter in a nicely formatted manner to be shown in the report
 // @llr REQ-TRAQ-SWL-19
 func (report reportData) PrintFilter() string {

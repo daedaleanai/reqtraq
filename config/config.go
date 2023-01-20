@@ -192,7 +192,7 @@ func (rs ReqSpec) ToString() string {
 func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 	for repoName := range config.Repos {
 		for docIdx := range config.Repos[repoName].Documents {
-			if config.Repos[repoName].Documents[docIdx].Path == path {
+			if strings.Contains(config.Repos[repoName].Documents[docIdx].Path, path) {
 				return repoName, &config.Repos[repoName].Documents[docIdx]
 			}
 		}

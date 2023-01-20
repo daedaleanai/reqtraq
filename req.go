@@ -783,10 +783,101 @@ type ReqFilter struct {
 	AttributeRegexp    map[string]*regexp.Regexp
 }
 
+// createFilterFromCmdLine reads the filter regular expressions from the command line arguments and
+// compiles them into a filter structure ready to use
+// @llr REQ-TRAQ-SWL-19, REQ-TRAQ-SWL-73
+func createFilterFromCmdLine(idFilter, titleFilter, bodyFilter string, attributeFilter []string) (ReqFilter, error) {
+	filter := ReqFilter{} // Filter for report generation
+	filter.AttributeRegexp = make(map[string]*regexp.Regexp, 0)
+	var err error
+	if len(idFilter) > 0 {
+		filter.IDRegexp, err = regexp.Compile(idFilter)
+		if err != nil {
+			return filter, err
+		}
+	}
+	if len(titleFilter) > 0 {
+		filter.TitleRegexp, err = regexp.Compile(titleFilter)
+		if err != nil {
+			return filter, err
+		}
+	}
+	if len(bodyFilter) > 0 {
+		filter.BodyRegexp, err = regexp.Compile(bodyFilter)
+		if err != nil {
+			return filter, err
+		}
+	}
+	if len(attributeFilter) > 0 {
+		for _, f := range attributeFilter {
+			if strings.Contains(f, "=") {
+				parts := strings.Split(f, "=")
+				r, err := regexp.Compile(parts[1])
+				if err != nil {
+					return filter, err
+				}
+				filter.AttributeRegexp[strings.ToUpper(parts[0])] = r
+			} else {
+				filter.AnyAttributeRegexp, err = regexp.Compile(f)
+				if err != nil {
+					return filter, err
+				}
+			}
+		}
+	}
+	return filter, nil
+}
+
 // IsEmpty returns whether the filter has no restriction.
 // @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21
 func (f ReqFilter) IsEmpty() bool {
 	return f.IDRegexp == nil && f.TitleRegexp == nil &&
 		f.BodyRegexp == nil && f.AnyAttributeRegexp == nil &&
 		len(f.AttributeRegexp) == 0
+}
+
+// Matches returns true if the requirement matches the filter AND its ID is in the diffs map, if any.
+// @llr REQ-TRAQ-SWL-19, REQ-TRAQ-SWL-73
+func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
+	if filter != nil {
+		if filter.IDRegexp != nil {
+			if !filter.IDRegexp.MatchString(r.ID) {
+				return false
+			}
+		}
+		if filter.TitleRegexp != nil {
+			if !filter.TitleRegexp.MatchString(r.Title) {
+				return false
+			}
+		}
+		if filter.BodyRegexp != nil {
+			if !filter.BodyRegexp.MatchString(r.Body) {
+				return false
+			}
+		}
+		if filter.AnyAttributeRegexp != nil {
+			var matches bool
+			// Any of the existing attributes must match.
+			for _, value := range r.Attributes {
+				if filter.AnyAttributeRegexp.MatchString(value) {
+					matches = true
+					break
+				}
+			}
+			if !matches {
+				return false
+			}
+		}
+		// Each of the filtered attributes must match.
+		for a, e := range filter.AttributeRegexp {
+			if !e.MatchString(r.Attributes[a]) {
+				return false
+			}
+		}
+	}
+	if diffs != nil {
+		_, ok := diffs[r.ID]
+		return ok
+	}
+	return true
 }
