@@ -621,12 +621,13 @@ Reqtraq report outputs SHALL be created as HTML.
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-19 Filtering of output
+#### REQ-TRAQ-SWL-19 Filtering of report output
 
-Reqtraq SHALL allow filtering by matching a regular expression against:
+Reqtraq SHALL allow filtering of the report by matching a regular expression against:
 - requirement id
 - requirement title
 - requirement description/body
+- requirement attribute
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-8
@@ -1029,6 +1030,30 @@ The list command implements the CLI for listing all requirements in a given cert
 #### REQ-TRAQ-SWL-33 CLI list requirements
 
 Reqtraq SHALL provide a command line option to list the requirements within a given requirements document.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-73 Filtering of list output
+
+Reqtraq SHALL allow filtering of the list output by matching a regular expression against:
+- requirement id
+- requirement title
+- requirement description/body
+- requirement attribute
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-74 CLI list csv output
+
+Reqtraq SHALL allow the user to output the list in csv format.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-16

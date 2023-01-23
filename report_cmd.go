@@ -3,18 +3,18 @@ package main
 import (
 	"log"
 	"os"
-	"regexp"
 
 	"github.com/daedaleanai/cobra"
 )
 
 var (
-	reportPrefix            *string
-	reportTitleFilterString *string
-	reportIdFilterString    *string
-	reportBodyFilterString  *string
-	reportAt                *string
-	reportSince             *string
+	reportPrefix          *string
+	reportIdFilter        *string
+	reportTitleFilter     *string
+	reportBodyFilter      *string
+	reportAttributeFilter *[]string
+	reportAt              *string
+	reportSince           *string
 )
 
 var reportCmd = &cobra.Command{
@@ -47,9 +47,10 @@ var reportIssuesCmd = &cobra.Command{
 // @llr REQ-TRAQ-SWL-35
 func init() {
 	reportPrefix = reportCmd.PersistentFlags().String("pfx", "./req-", "Path and filename prefix for reports.")
-	reportTitleFilterString = reportCmd.PersistentFlags().String("title_filter", "", "Regular expression to filter by requirement title.")
-	reportIdFilterString = reportCmd.PersistentFlags().String("id_filter", "", "Regular expression to filter by requirement id.")
-	reportBodyFilterString = reportCmd.PersistentFlags().String("body_filter", "", "Regular expression to filter by requirement body.")
+	reportIdFilter = reportCmd.PersistentFlags().String("id", "", "Regular expression to filter by requirement id.")
+	reportTitleFilter = reportCmd.PersistentFlags().String("title", "", "Regular expression to filter by requirement title.")
+	reportBodyFilter = reportCmd.PersistentFlags().String("body", "", "Regular expression to filter by requirement body.")
+	reportAttributeFilter = reportCmd.PersistentFlags().StringSlice("attribute", nil, "Regular expression to filter by requirement attribute.")
 	reportAt = reportCmd.PersistentFlags().String("at", "", "The commit representing the end of the range.")
 	reportSince = reportCmd.PersistentFlags().String("since", "", "The commit representing the start of the range.")
 
@@ -92,7 +93,7 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 	}
 	of.Close()
 
-	filter, err := createFilterFromCmdLine()
+	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -144,7 +145,7 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 	of.Close()
-	filter, err := createFilterFromCmdLine()
+	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -196,7 +197,7 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 	}
 	of.Close()
 
-	filter, err := createFilterFromCmdLine()
+	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -213,32 +214,4 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// createFilterFromCmdLine reads the filter regular expressions from the command line arguments and
-// compiles them into a filter structure ready to use
-// @llr REQ-TRAQ-SWL-35, REQ-TRAQ-SWL-36
-func createFilterFromCmdLine() (ReqFilter, error) {
-	filter := ReqFilter{} // Filter for report generation
-	var err error
-	if len(*reportTitleFilterString) > 0 {
-		filter.TitleRegexp, err = regexp.Compile(*reportTitleFilterString)
-		if err != nil {
-			return filter, err
-		}
-	}
-	if len(*reportIdFilterString) > 0 {
-		filter.IDRegexp, err = regexp.Compile(*reportIdFilterString)
-		if err != nil {
-			return filter, err
-		}
-	}
-	if len(*reportBodyFilterString) > 0 {
-		filter.BodyRegexp, err = regexp.Compile(*reportBodyFilterString)
-		if err != nil {
-			return filter, err
-		}
-	}
-	// TODO can't currently filter on attributes from the command line
-	return filter, nil
 }
