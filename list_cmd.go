@@ -50,7 +50,7 @@ func runListCmd(command *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	filter, err := createFilterFromCmdLine(*listIdFilter, *listTitleFilter, *listBodyFilter, *listAttributeFilter)
+	filter, err := createFilter(*listIdFilter, *listTitleFilter, *listBodyFilter, *listAttributeFilter)
 	if err != nil {
 		return err
 	}

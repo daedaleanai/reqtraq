@@ -783,10 +783,10 @@ type ReqFilter struct {
 	AttributeRegexp    map[string]*regexp.Regexp
 }
 
-// createFilterFromCmdLine reads the filter regular expressions from the command line arguments and
+// createFilter reads the filter regular expressions from the command line arguments and
 // compiles them into a filter structure ready to use
 // @llr REQ-TRAQ-SWL-19, REQ-TRAQ-SWL-73
-func createFilterFromCmdLine(idFilter, titleFilter, bodyFilter string, attributeFilter []string) (ReqFilter, error) {
+func createFilter(idFilter, titleFilter, bodyFilter string, attributeFilter []string) (ReqFilter, error) {
 	filter := ReqFilter{} // Filter for report generation
 	filter.AttributeRegexp = make(map[string]*regexp.Regexp, 0)
 	var err error
@@ -818,6 +818,9 @@ func createFilterFromCmdLine(idFilter, titleFilter, bodyFilter string, attribute
 				}
 				filter.AttributeRegexp[strings.ToUpper(parts[0])] = r
 			} else {
+				if filter.AnyAttributeRegexp != nil {
+					return filter, errors.New("cannot specify more than one any attribute filter")
+				}
 				filter.AnyAttributeRegexp, err = regexp.Compile(f)
 				if err != nil {
 					return filter, err

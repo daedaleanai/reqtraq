@@ -93,7 +93,7 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 	}
 	of.Close()
 
-	filter, err := createFilterFromCmdLine(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
+	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 	of.Close()
-	filter, err := createFilterFromCmdLine(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
+	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 	}
 	of.Close()
 
-	filter, err := createFilterFromCmdLine(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
+	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
