@@ -1,4 +1,3 @@
-
 #include "x/y"
 
 namespace na {
@@ -10,28 +9,25 @@ uint8_t numberOfSegments = 0;
 PcieSegment segment;
 }  // namespace
 
-// @llr REQ-PROJ-SWH-11
-uint8_t System::getNumberOfSegments() {
-    return numberOfSegments;
-}
+// This is a test and is linked to requirements
+// @llr REQ-TEST-SWL-13
+void testThatSomethingHappens() {}
 
 // This method does stuff.
-// @llr REQ-PROJ-SWL-12
 const PcieSegment *System::getSegment(uint8_t i) {
-    if (numberOfSegments == 1) {
-        return &segment;
-    }
-    return nullptr;
+  if (numberOfSegments == 1) {
+    return &segment;
+  }
+  return nullptr;
 }
 
 // This method does stuff also.
-// @llr REQ-PROJ-SWL-13
 // @xlr R-1
 void enumerateObjects() {
-    io::printf("[system] Scanning for objects\n");
+  io::printf("[system] Scanning for objects\n");
 
-    // Comment.
-    numberOfSegments = 1;
+  // Comment.
+  numberOfSegments = 1;
 }
 
 }  // namespace nc

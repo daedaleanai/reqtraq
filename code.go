@@ -239,7 +239,8 @@ func parseComments(codeTags map[CodeFile][]*Code) error {
 		if err != nil {
 			return err
 		}
-		if err := parseFileComments(fsPath, codeTags[codeFile]); err != nil {
+		isTestFile := codeFile.Type.Matches(CodeTypeTests)
+		if err := parseFileComments(fsPath, codeTags[codeFile], isTestFile); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed comments discovery for %s - %s", codeFile.RepoName, codeFile.Path))
 		}
 	}
@@ -249,7 +250,7 @@ func parseComments(codeTags map[CodeFile][]*Code) error {
 // parseFileComments detects comments in the specified source code file, parses them for requirements IDs and
 // associates them with the tags detected in the same file.
 // @llr REQ-TRAQ-SWL-9
-func parseFileComments(absolutePath string, tags []*Code) error {
+func parseFileComments(absolutePath string, tags []*Code, isTestFile bool) error {
 	// Read in the source code and break into string slice
 	sourceRaw, err := os.ReadFile(absolutePath)
 	if err != nil {
@@ -263,6 +264,10 @@ func parseFileComments(absolutePath string, tags []*Code) error {
 	// For each tag, search through the source code backwards looking for requirement references
 	previousTag := 0
 	for i := range tags {
+		if isTestFile {
+			// Test code can link to requirements but does not need to. In principle, only testcases should be linked.
+			tags[i].Optional = true
+		}
 		if tags[i].Line == previousTag {
 			// If there's a duplicate tag then just copy the links and continue
 			tags[i].ParentIds = tags[i-1].ParentIds

@@ -112,7 +112,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 		},
 		Implementation: config.Implementation{
 			CodeFiles:  []string{"a.cc"},
-			TestFiles:  []string{},
+			TestFiles:  []string{"testdata/a.c"},
 			CodeParser: "ctags",
 		},
 	}
@@ -141,6 +141,19 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			`REQ-TEST-SWH-11`, false},
 	}
 	LookFor(t, repoName, "a.cc", CodeTypeImplementation, rg.CodeTags, expectedTags)
+
+	expectedTestTags := []TagMatch{
+		{"testThatSomethingHappens",
+			14,
+			"REQ-TEST-SWL-13", true},
+		{"getSegment",
+			17,
+			"", true},
+		{"enumerateObjects",
+			26,
+			"", true},
+	}
+	LookFor(t, repoName, "testdata/a.c", CodeTypeTests, rg.CodeTags, expectedTestTags)
 
 	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc, RepoName: "cproject1", Position: 12}
 	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc, RepoName: "cproject1", Position: 13}
@@ -181,14 +194,6 @@ func TestReqGraph_ParseCode(t *testing.T) {
 				Error:    fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
 				Severity: IssueSeverityMajor,
 				Type:     IssueTypeInvalidRequirementInCode,
-			},
-			{
-				Path:     "path/to/doc.md",
-				RepoName: "cproject1",
-				Line:     12,
-				Error:    fmt.Errorf("Requirement REQ-TEST-SWL-13 is not tested."),
-				Severity: IssueSeverityNote,
-				Type:     IssueTypeReqNotTested,
 			},
 			{
 				Path:     "path/to/doc.md",
