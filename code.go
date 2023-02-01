@@ -232,7 +232,7 @@ func isSourceCodeFile(name string) bool {
 }
 
 // parseComments updates the specified tags with the requirement IDs discovered in the codeFiles.
-// @llr REQ-TRAQ-SWL-9
+// @llr REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-75
 func parseComments(codeTags map[CodeFile][]*Code) error {
 	for codeFile := range codeTags {
 		fsPath, err := repos.PathInRepo(codeFile.RepoName, codeFile.Path)
@@ -249,7 +249,7 @@ func parseComments(codeTags map[CodeFile][]*Code) error {
 
 // parseFileComments detects comments in the specified source code file, parses them for requirements IDs and
 // associates them with the tags detected in the same file.
-// @llr REQ-TRAQ-SWL-9
+// @llr REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-75
 func parseFileComments(absolutePath string, tags []*Code, isTestFile bool) error {
 	// Read in the source code and break into string slice
 	sourceRaw, err := os.ReadFile(absolutePath)

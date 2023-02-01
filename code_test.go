@@ -98,7 +98,7 @@ func TestTagCode(t *testing.T) {
 	LookFor(t, repoName, "a.cc", CodeTypeTests, tags, expectedTags)
 }
 
-// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
+// @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-75
 func TestReqGraph_ParseCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
