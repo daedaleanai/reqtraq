@@ -443,7 +443,7 @@ func (rg *ReqGraph) resolve() []Issue {
 				tested = true
 			}
 			if implemented && tested {
-				continue
+				break
 			}
 		}
 
