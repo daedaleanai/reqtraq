@@ -81,7 +81,7 @@ ReqGraph source code is arranged as follows:
 - webapp.go: Launch and service a local web server
 - repos/repos.go: Keeps a registry of all repositories where code and certification documents can be found
 - linepipes/run.go: Wrapper functions the golang command interface
-- config/config.go: Parses the reqtraq configuration for the git repository in the current directory. 
+- config/config.go: Parses the reqtraq configuration for the git repository in the current directory.
 Registers any parent and children repositories found in the configuration file, and recursively parses their configuration.
 
 ## Low-level Software Requirements Identification
@@ -134,11 +134,11 @@ Reqtraq SHALL include links to source code within the reports.
 
 #### REQ-TRAQ-SWL-65 Code parsers
 
-Reqtraq SHALL provide functionality to register code parsers during runtime. Ctags is built-in, 
+Reqtraq SHALL provide functionality to register code parsers during runtime. Ctags is built-in,
 but other parsers can optionally be compiled-in and registered during initialization.
 
 ##### Attributes:
-- Parents: 
+- Parents:
 - Rationale: To avoid dependencies on libclang for users that don't need libclang.
 - Verification: Test
 - Safety Impact: None
@@ -150,8 +150,8 @@ code parser. If the code parser determines that the link is optional and no link
 MUST pass. If the link is not optional and no link is found, validation MUST fail.
 
 ##### Attributes:
-- Parents: 
-- Rationale: To allow adding requriements on type aliases without forcing all type aliases to have 
+- Parents:
+- Rationale: To allow adding requriements on type aliases without forcing all type aliases to have
 linked requirements.
 - Verification: Test
 - Safety Impact: None
@@ -162,7 +162,17 @@ Reqtraq SHALL tag all code links with its type (implementation or tests) after p
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-19
-- Rationale: 
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-75 Optional test code
+
+Reqtraq SHALL mark all test code as optional. Test code MAY link to requirements but it does not have to.
+
+##### Attributes:
+- Parents:
+- Rationale: In order to only link test cases to requirements and not force links for test support code.
 - Verification: Test
 - Safety Impact: None
 
@@ -302,23 +312,23 @@ Reqtraq SHALL generate tables which map between source code functions (source fi
 
 #### REQ-TRAQ-SWL-71 Implementation Code traceablility tables
 
-Reqtraq SHALL generate tables which map between implementation in the form of source code functions 
+Reqtraq SHALL generate tables which map between implementation in the form of source code functions
 (source file + function name) and low-level software requirements.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-5, REQ-TRAQ-SWH-19
-- Rationale: 
+- Rationale:
 - Verification: Test
 - Safety Impact: None
 
 #### REQ-TRAQ-SWL-72 Test Code traceablility tables
 
-Reqtraq SHALL generate tables which map between tests in the form of source code functions 
+Reqtraq SHALL generate tables which map between tests in the form of source code functions
 (source file + function name) and low-level software requirements.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-5, REQ-TRAQ-SWH-19
-- Rationale: 
+- Rationale:
 - Verification: Test
 - Safety Impact: None
 
@@ -364,7 +374,7 @@ reqtraq SHALL implement a root command which will act as a CLI entrypoint and wh
 
 #### REQ-TRAQ-SWL-60 Setup configuration
 
-reqtraq SHALL implement a configuration setup that ensures the global configuration is configured 
+reqtraq SHALL implement a configuration setup that ensures the global configuration is configured
 before any command tries to access it.
 
 ##### Attributes:
@@ -816,7 +826,7 @@ The command must be executed in the repository for which the reports will be gen
 
 ### config/config.go
 
-Reqtraq contains a configuration component that parses an arbitrary number of configuration files named `reqtraq_config.json` to determine the 
+Reqtraq contains a configuration component that parses an arbitrary number of configuration files named `reqtraq_config.json` to determine the
 structure of the project and requirements. Requirements and implementation can be scattered across multiple repositories and reqtraq must
 be able to locate all dependencies and collect requirement and code information from all of them.
 
@@ -897,38 +907,38 @@ There can only be one parent repository per configuration file, but multiple chi
 
 Each document contains:
 - A path where it can be located inside the repository that defines it.
-- A requirement specification in terms of a `prefix` and `level`. Together they fully specify how the 
-requirements in the document will look like. A document with level `SWL` and prefix `TEST` will have 
+- A requirement specification in terms of a `prefix` and `level`. Together they fully specify how the
+requirements in the document will look like. A document with level `SWL` and prefix `TEST` will have
 requirements of the form `REQ-TEST-SWL-1`.
-- An optional parent. If there is a parent document, it contains also a `prefix` and `level` with the 
+- An optional parent. If there is a parent document, it contains also a `prefix` and `level` with the
 specification of the parent so that requirements can be linked from children to parent. The parent also
-implies a `Parents` attribute with a filter for the requirement specification of the parent will be 
+implies a `Parents` attribute with a filter for the requirement specification of the parent will be
 added to the schema of the document.
-- An implementation, which consists of separated matchers for both code and tests. It accepts the 
+- An implementation, which consists of separated matchers for both code and tests. It accepts the
 following parameters:
   - `codeParser`: The selected code parser. Defaults to `ctags`. Available values are `ctags` and `clang`.
-  - `compilationDatabase`: A path to a clang compilation database where the compiler invokation for 
+  - `compilationDatabase`: A path to a clang compilation database where the compiler invokation for
   each translation unit can be found.
-  - `compilerArguments`: If the source file is not found in the compilation database (which can happen for 
-  header files, since they are not a translation unit), it will fall back to the arguments specified 
+  - `compilerArguments`: If the source file is not found in the compilation database (which can happen for
+  header files, since they are not a translation unit), it will fall back to the arguments specified
   in this list.
   each translation unit can be found.
 - Any attributes for its requirements and assumptions.
 
-Common attributes are appended to the attribute schema in each document to fully define the schema 
+Common attributes are appended to the attribute schema in each document to fully define the schema
 of the attributes in the requirements that belong to the document.
 
 Parsing the configuration is an involved process that requires:
 - Finding the top-level repository that does not have any parents.
 - Iterating all the children from the top repository and parsing all requirement documents.
 
-The result of this process is a structure that contains, for each repository, all the certification 
-documents that must be parsed. This is used by other components (e.g.: the req.go component) to parse 
+The result of this process is a structure that contains, for each repository, all the certification
+documents that must be parsed. This is used by other components (e.g.: the req.go component) to parse
 and validate requirements.
 
 #### REQ-TRAQ-SWL-52 Find top-level configuration
 
-Reqtraq SHALL find the top level configuration file and parse the complete configuration starting from 
+Reqtraq SHALL find the top level configuration file and parse the complete configuration starting from
 the top of the configuration tree.
 
 ##### Attributes:
@@ -939,7 +949,7 @@ the top of the configuration tree.
 
 #### REQ-TRAQ-SWL-53 Parse `reqtraq_config.json`
 
-Reqtraq SHALL provide a method to parse a `requirement_config.json` file, validating them 
+Reqtraq SHALL provide a method to parse a `requirement_config.json` file, validating them
 (making sure they contain all relevant information and doesn't contradict other files)
 
 ##### Attributes:
@@ -960,7 +970,7 @@ Reqtraq SHALL provide a method to find a certification document inside any of th
 
 #### REQ-TRAQ-SWL-55 Find linked documents
 
-Reqtraq SHALL provide a method to find linked requirements across different documents that share a 
+Reqtraq SHALL provide a method to find linked requirements across different documents that share a
 parent/child relationship.
 
 ##### Attributes:
@@ -983,34 +993,33 @@ positive and negative filtering criteria for the files within those folders.
 
 #### REQ-TRAQ-SWL-64 Libclang arguments
 
-Reqtraq SHALL provide options in its configuration file to obtain a compilation database and clang 
+Reqtraq SHALL provide options in its configuration file to obtain a compilation database and clang
 arguments required for parsing code using libclang.
 
 ##### Attributes:
-- Parents: 
-- Rationale: In order to effectively parse code where the AST construction depends on the build 
+- Parents:
+- Rationale: In order to effectively parse code where the AST construction depends on the build
 arguments and included files.
 - Verification: Test
 - Safety Impact: None
 
 #### REQ-TRAQ-SWL-68 Direct dependencies
 
-Reqtraq SHALL provide a command-line argument to determine whether it will check direct dependencies only 
+Reqtraq SHALL provide a command-line argument to determine whether it will check direct dependencies only
 or traverse all repositories (all parents and children).
 
-If the direct dependencies command-line argument is chosen, reqtraq MUST only traverse parent repositories 
+If the direct dependencies command-line argument is chosen, reqtraq MUST only traverse parent repositories
 but ignore children repositories.
 
 ##### Attributes:
-- Parents: 
+- Parents:
 - Rationale: Allows to check only the necessary dependencies for validation of a single repository.
 - Verification: Test
 - Safety Impact: None
 
-
 ### completion_cmd.go
 
-The completion command takes advantage of the underlying cobra infrastructure to print completion 
+The completion command takes advantage of the underlying cobra infrastructure to print completion
 scripts for different shells. Supported shells are `bash`, `zsh` and `fish`.
 
 #### REQ-TRAQ-SWL-57 Generate shell completions
@@ -1105,7 +1114,7 @@ Reqtraq SHALL provide a command line option to validate a requirements graph and
 
 #### REQ-TRAQ-SWL-66 CLI validate json output
 
-Reqtraq SHALL allow the user to obtain a json file with the list of issues in the base repository 
+Reqtraq SHALL allow the user to obtain a json file with the list of issues in the base repository
 compatible with Phabricator.
 
 ##### Attributes:
@@ -1131,12 +1140,12 @@ Reqtraq SHALL provide a command line option to start a local web sever to genera
 ### clang.go
 
 Reqtraq can use libclang to parse the ast of any linked code and obtain code references. This option
-is preferred for a fine-grained code parsing, while ctags is preferred for compatibility with other 
+is preferred for a fine-grained code parsing, while ctags is preferred for compatibility with other
 languages like Go.
 
 #### REQ-TRAQ-SWL-61 Support for libclang backend to parse code
 
-Reqtraq SHALL provide libclang as a backend to parse code and find public functions/methods and type 
+Reqtraq SHALL provide libclang as a backend to parse code and find public functions/methods and type
 aliases.
 
 ##### Attributes:
@@ -1147,12 +1156,12 @@ aliases.
 
 #### REQ-TRAQ-SWL-62 Skip anonymous and detail namespaces
 
-Reqtraq SHALL ensure that code inside anonymous and detail namespaces is not reported for 
+Reqtraq SHALL ensure that code inside anonymous and detail namespaces is not reported for
 requirements tracking.
 
 ##### Attributes:
-- Parents: 
-- Rationale: It belongs only as an implementation detail that is needed, but not functionally directly related 
+- Parents:
+- Rationale: It belongs only as an implementation detail that is needed, but not functionally directly related
 to requirements.
 - Verification: Test
 - Safety Impact: None
@@ -1163,15 +1172,15 @@ Reqtraq SHALL ensure that code inside a non-public path is not reported for requ
 requirements tracking.
 
 ##### Attributes:
-- Parents: 
-- Rationale: It belongs only as an implementation detail that is needed, but not functionally directly related 
+- Parents:
+- Rationale: It belongs only as an implementation detail that is needed, but not functionally directly related
 to requirements.
 - Verification: Test
 - Safety Impact: None
 
 #### REQ-TRAQ-SWL-67 Handle multiple symbol declaration
 
-Reqtraq SHALL use same parent links for all declarations and definitions of the same C++ symbol and 
+Reqtraq SHALL use same parent links for all declarations and definitions of the same C++ symbol and
 raise an error if multiple different parent links declaration present.
 
 ##### Attributes:
