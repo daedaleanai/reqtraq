@@ -98,6 +98,21 @@ func (codeFile *CodeFile) String() string {
 	return fmt.Sprintf("%s: %s", codeFile.RepoName, codeFile.Path)
 }
 
+type Position struct {
+	Line      uint
+	Character uint
+}
+
+type Range struct {
+	Start Position
+	End   Position
+}
+
+type ReqLink struct {
+	Id    string
+	Range Range
+}
+
 // Code represents a code node in the graph of requirements.
 type Code struct {
 	// The file where the code can be found
@@ -109,8 +124,7 @@ type Code struct {
 	// Line number where the function starts.
 	Line int
 	// Requirement IDs found in the comment above the function.
-	ParentIds []string
-	Parents   []*Req
+	Links []ReqLink
 	// Link back to its parent document. Used to validate the requirements belong to this document
 	Document *config.Document
 	// Whether the code MUST link to a requirement or simply CAN link to a requirement
@@ -270,14 +284,24 @@ func parseFileComments(absolutePath string, tags []*Code, isTestFile bool) error
 		}
 		if tags[i].Line == previousTag {
 			// If there's a duplicate tag then just copy the links and continue
-			tags[i].ParentIds = tags[i-1].ParentIds
+			tags[i].Links = tags[i-1].Links
 			continue
 		}
-		tags[i].ParentIds = []string{}
+		tags[i].Links = []ReqLink{}
 		for lineNo := tags[i].Line - 1; lineNo > previousTag; lineNo-- {
 			if reLLRReferenceLine.MatchString(sourceLines[lineNo]) {
 				// Looks good, extract all references straight into the tag
-				tags[i].ParentIds = append(tags[i].ParentIds, reLLRReferences.FindAllString(sourceLines[lineNo], -1)...)
+				matches := reLLRReferences.FindAllStringIndex(sourceLines[lineNo], -1)
+				for _, match := range matches {
+					link := ReqLink{
+						Id: sourceLines[lineNo][match[0]:match[1]],
+						Range: Range{
+							Start: Position{Line: uint(lineNo), Character: uint(match[0])},
+							End:   Position{Line: uint(lineNo), Character: uint(match[1])},
+						},
+					}
+					tags[i].Links = append(tags[i].Links, link)
+				}
 			} else if reBlankLine.MatchString(sourceLines[lineNo]) {
 				// We've hit a blank line
 				break

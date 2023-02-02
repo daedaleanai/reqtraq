@@ -135,7 +135,13 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 	for file, tags := range rg.CodeTags {
 		files = append(files, file.String())
 		for _, codeTag := range tags {
-			if codeTag.Optional && len(codeTag.Parents) == 0 {
+			hasParents := false
+			for _, link := range codeTag.Links {
+				if _, ok := rg.Reqs[link.Id]; ok {
+					hasParents = true
+				}
+			}
+			if codeTag.Optional && hasParents {
 				// Ignore optional tags with no linked requirements
 				continue
 			}
@@ -164,11 +170,13 @@ func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec, codeType CodeTyp
 			}
 
 			count := 0
-			for _, parentReq := range codeTag.Parents {
-				if parentReq.Document.MatchesSpec(reqSpec) {
-					row := TableRow{newCodeTableCell(codeTag), newReqTableCell(parentReq)}
-					items = append(items, row)
-					count++
+			for _, parentLink := range codeTag.Links {
+				if parentReq, ok := rg.Reqs[parentLink.Id]; ok {
+					if parentReq.Document.MatchesSpec(reqSpec) {
+						row := TableRow{newCodeTableCell(codeTag), newReqTableCell(parentReq)}
+						items = append(items, row)
+						count++
+					}
 				}
 			}
 			// Ignore optional tags with no linked requirements

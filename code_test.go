@@ -5,7 +5,6 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/daedaleanai/reqtraq/config"
@@ -30,10 +29,10 @@ func TestCheckCtagsAvailable(t *testing.T) {
 }
 
 type TagMatch struct {
-	tag       string
-	line      int
-	parentIds string
-	optional  bool
+	tag      string
+	line     int
+	links    []ReqLink
+	optional bool
 }
 
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
@@ -56,9 +55,7 @@ func LookFor(t *testing.T, repoName repos.RepoName, sourceFile string, codeType 
 				assert.Equal(t, e.tag, tag.Tag)
 				assert.Equal(t, e.optional, tag.Optional)
 				assert.Equal(t, codeFile, tag.CodeFile)
-				if e.parentIds != "" {
-					assert.Equal(t, e.parentIds, strings.Join(tag.ParentIds, ","))
-				}
+				assert.Equal(t, e.links, tag.Links)
 				break
 			}
 		}
@@ -81,19 +78,19 @@ func TestTagCode(t *testing.T) {
 	expectedTags := []TagMatch{
 		{"SeparateCommentsForLLrs",
 			41,
-			"", false},
+			nil, false},
 		{"operator []",
 			37,
-			"", false},
+			nil, false},
 		{"enumerateObjects",
 			27,
-			"", false},
+			nil, false},
 		{"getSegment",
 			17,
-			"", false},
+			nil, false},
 		{"getNumberOfSegments",
 			13,
-			"", false},
+			nil, false},
 	}
 	LookFor(t, repoName, "a.cc", CodeTypeTests, tags, expectedTags)
 }
@@ -126,32 +123,93 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	expectedTags := []TagMatch{
 		{"SeparateCommentsForLLrs",
 			41,
-			"REQ-TEST-SWL-15,REQ-TEST-SWL-13", false},
+			[]ReqLink{
+				{
+					Id: "REQ-TEST-SWL-15",
+					Range: Range{
+						Start: Position{Line: 39, Character: 8},
+						End:   Position{Line: 39, Character: 23},
+					},
+				},
+				{
+					Id: "REQ-TEST-SWL-13",
+					Range: Range{
+						Start: Position{Line: 38, Character: 8},
+						End:   Position{Line: 38, Character: 23},
+					},
+				},
+			},
+			false},
 		{"operator []",
 			37,
-			"REQ-TEST-SWL-13,REQ-TEST-SWL-14", false},
+			[]ReqLink{
+				{
+					Id: "REQ-TEST-SWL-13",
+					Range: Range{
+						Start: Position{Line: 35, Character: 8},
+						End:   Position{Line: 35, Character: 23},
+					},
+				},
+				{
+					Id: "REQ-TEST-SWL-14",
+					Range: Range{
+						Start: Position{Line: 35, Character: 25},
+						End:   Position{Line: 35, Character: 40},
+					},
+				},
+			},
+			false},
 		{"enumerateObjects",
 			27,
-			`REQ-TEST-SWL-13`, false},
+			[]ReqLink{
+				{
+					Id: "REQ-TEST-SWL-13",
+					Range: Range{
+						Start: Position{Line: 24, Character: 8},
+						End:   Position{Line: 24, Character: 23},
+					},
+				},
+			},
+			false},
 		{"getSegment",
 			17,
-			`REQ-TEST-SWL-12`, false},
+			[]ReqLink{{
+				Id: "REQ-TEST-SWL-12",
+				Range: Range{
+					Start: Position{Line: 15, Character: 8},
+					End:   Position{Line: 15, Character: 23},
+				},
+			}},
+			false},
 		{"getNumberOfSegments",
 			13,
-			`REQ-TEST-SWH-11`, false},
+			[]ReqLink{{
+				Id: "REQ-TEST-SWH-11",
+				Range: Range{
+					Start: Position{Line: 11, Character: 8},
+					End:   Position{Line: 11, Character: 23},
+				},
+			}}, false},
 	}
 	LookFor(t, repoName, "a.cc", CodeTypeImplementation, rg.CodeTags, expectedTags)
 
 	expectedTestTags := []TagMatch{
 		{"testThatSomethingHappens",
 			14,
-			"REQ-TEST-SWL-13", true},
+			[]ReqLink{{
+				Id: "REQ-TEST-SWL-13",
+				Range: Range{
+					Start: Position{Line: 12, Character: 8},
+					End:   Position{Line: 12, Character: 23},
+				},
+			}},
+			true},
 		{"getSegment",
 			17,
-			"", true},
+			[]ReqLink{}, true},
 		{"enumerateObjects",
 			26,
-			"", true},
+			[]ReqLink{}, true},
 	}
 	LookFor(t, repoName, "testdata/a.c", CodeTypeTests, rg.CodeTags, expectedTestTags)
 

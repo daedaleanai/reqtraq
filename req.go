@@ -199,21 +199,25 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 	// same symbols even within the same project linking to different requirements.
 
 	// Map of parentIds each document and symbol. First key is the document, second key is the symbol
-	parentIds := map[string]map[string][]string{}
+	linksMap := map[string]map[string][]string{}
 	llrLoc := map[string]map[string]*Code{}
 
 	getParentIdsForSymbolInDocument := func(doc, symbol string) []string {
-		if _, ok := parentIds[doc]; !ok {
-			parentIds[doc] = make(map[string][]string)
+		if _, ok := linksMap[doc]; !ok {
+			linksMap[doc] = make(map[string][]string)
 		}
-		return parentIds[doc][symbol]
+		return linksMap[doc][symbol]
 	}
 
-	setParentIdsForSymbolInDocument := func(doc, symbol string, ids []string) {
-		if _, ok := parentIds[doc]; !ok {
-			parentIds[doc] = make(map[string][]string)
+	setParentIdsForSymbolInDocument := func(doc, symbol string, links []ReqLink) {
+		if _, ok := linksMap[doc]; !ok {
+			linksMap[doc] = make(map[string][]string)
 		}
-		parentIds[doc][symbol] = ids
+		ids := []string{}
+		for _, link := range links {
+			ids = append(ids, link.Id)
+		}
+		linksMap[doc][symbol] = ids
 	}
 
 	getLlrLocForSymbolInDocument := func(doc, symbol string) *Code {
@@ -233,9 +237,9 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 	// Walk the code tags, resolving links and looking for errors
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
-			parentIds := getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
+			links := getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
 
-			if len(code.ParentIds) == 0 {
+			if len(code.Links) == 0 {
 				continue
 			}
 
@@ -243,15 +247,15 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 				continue
 			}
 
-			if len(parentIds) == 0 {
-				setParentIdsForSymbolInDocument(code.Document.Path, code.Symbol, code.ParentIds)
+			if len(links) == 0 {
+				setParentIdsForSymbolInDocument(code.Document.Path, code.Symbol, code.Links)
 				setLlrLocForSymbolInDocument(code.Document.Path, code.Symbol, code)
 				continue
 			}
 
 			prevLoc := getLlrLocForSymbolInDocument(code.Document.Path, code.Symbol)
 
-			if !reflect.DeepEqual(parentIds, code.ParentIds) {
+			if !reflect.DeepEqual(links, code.Links) {
 				issue := Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
@@ -376,9 +380,13 @@ func (rg *ReqGraph) resolve() []Issue {
 
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
-			parentIds := code.ParentIds
+			parentIds := []string{}
 			if code.Symbol != "" {
 				parentIds = getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
+			} else {
+				for _, link := range code.Links {
+					parentIds = append(parentIds, link.Id)
+				}
 			}
 
 			if len(parentIds) == 0 && !code.Optional {
@@ -422,7 +430,6 @@ func (rg *ReqGraph) resolve() []Issue {
 					}
 
 					parent.Tags = append(parent.Tags, code)
-					code.Parents = append(code.Parents, parent)
 				} else {
 					issue := Issue{
 						Line:     code.Line,

@@ -187,7 +187,15 @@ func formatBodyAsHTML(txt string) template.HTML {
 	return template.HTML(out)
 }
 
-var reportTmpl = template.Must(template.Must(template.New("").Funcs(template.FuncMap{"formatBodyAsHTML": formatBodyAsHTML, "codeFileToString": codeFileToString, "isImpl": isImpl, "isTest": isTest, "shouldShowTag": shouldShowTag}).Parse(headerFooterTmplText)).Parse(reportTmplText))
+var functionMap = template.FuncMap{
+	"formatBodyAsHTML": formatBodyAsHTML,
+	"codeFileToString": codeFileToString,
+	"isImpl":           isImpl,
+	"isTest":           isTest,
+	"shouldShowTag":    shouldShowTag,
+	"listCodeParents":  listCodeParents,
+}
+var reportTmpl = template.Must(template.Must(template.New("").Funcs(functionMap).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
 func codeFileToString(CodeFile CodeFile) string {
@@ -205,8 +213,19 @@ func isTest(CodeFile CodeFile) bool {
 }
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func shouldShowTag(code *Code) bool {
-	return !code.Optional || (len(code.Parents) != 0)
+func shouldShowTag(code *Code, rg ReqGraph) bool {
+	return !code.Optional || (len(listCodeParents(code.Links, rg)) != 0)
+}
+
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
+func listCodeParents(links []ReqLink, rg ReqGraph) []*Req {
+	var parents []*Req
+	for _, link := range links {
+		if parent, ok := rg.Reqs[link.Id]; ok {
+			parents = append(parents, parent)
+		}
+	}
+	return parents
 }
 
 var reportTmplText = `
@@ -304,7 +323,7 @@ var reportTmplText = `
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
-		{{ if shouldShowTag . }}
+		{{ if shouldShowTag . $.Reqs }}
 			<li>
 				{{ if isImpl .CodeFile }}
 					<h3><a href="{{ .URL }}" target="_blank">Impl: {{ codeFileToString .CodeFile }} - {{ .Tag }}</a></h3>
@@ -314,7 +333,7 @@ var reportTmplText = `
 
 				<!-- LLRs -->
 				<ul>
-					{{ range .Parents }}
+					{{ range listCodeParents .Links $.Reqs }}
 					{{ with ($.Once.Once .) }}
 					<li>
 						{{ template "REQUIREMENT" . }}
@@ -410,8 +429,8 @@ var reportTmplText = `
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.CodeTags }}
 		{{ range . }}
-		{{ if shouldShowTag . }}
-			{{ range .Parents }}
+		{{ if shouldShowTag . $.Reqs }}
+			{{ range listCodeParents .Links $.Reqs }}
 				{{ if .Matches $.Filter $.Diffs }}
 					{{ with ($.Once.Once .) }}
 						{{ template "REQUIREMENT" . }}
