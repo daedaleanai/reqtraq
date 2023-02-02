@@ -35,41 +35,41 @@ func TestTagCodeLibClang(t *testing.T) {
 	assert.Equal(t, 3, len(tags))
 
 	expectedTags := []TagMatch{
-		{"SomeType", 8, "", true},
-		{"doThings", 17, "", false},
-		{"doMoreThings", 23, "", false},
-		{"Array", 26, "", true},
-		{"Array<T, N>", 38, "", false},
-		{"operator[]", 45, "", false},
-		{"ButThisIsPublic", 59, "", false},
-		{"A", 62, "", true},
-		{"StructMethodsArePublicByDefault", 66, "", false},
-		{"JustAFreeFunction", 75, "", false},
-		{"sort", 95, "", false},
-		{"sort", 89, "", false},
-		{"B", 101, "", true},
-		{"cool", 113, "", false},
-		{"JustAFreeFunction", 119, "", false},
-		{"ExternCFunc", 126, "", false},
+		{"SomeType", 8, nil, true},
+		{"doThings", 17, nil, false},
+		{"doMoreThings", 23, nil, false},
+		{"Array", 26, nil, true},
+		{"Array<T, N>", 38, nil, false},
+		{"operator[]", 45, nil, false},
+		{"ButThisIsPublic", 59, nil, false},
+		{"A", 62, nil, true},
+		{"StructMethodsArePublicByDefault", 66, nil, false},
+		{"JustAFreeFunction", 75, nil, false},
+		{"sort", 95, nil, false},
+		{"sort", 89, nil, false},
+		{"B", 101, nil, true},
+		{"cool", 113, nil, false},
+		{"JustAFreeFunction", 119, nil, false},
+		{"ExternCFunc", 126, nil, false},
 	}
 	LookFor(t, repoName, "code/include/a.hh", CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
-		{"hiddenFunction", 10, "", false},
-		{"doThings", 16, "", false},
-		{"doMoreThings", 22, "", false},
-		{"allReqsCovered", 25, "", false},
-		{"MyType", 28, "", true},
-		{"MyConcept", 32, "", true},
-		{"AnotherMyConcept", 37, "", true},
-		{"externFunc", 42, "", false},
+		{"hiddenFunction", 10, nil, false},
+		{"doThings", 16, nil, false},
+		{"doMoreThings", 22, nil, false},
+		{"allReqsCovered", 25, nil, false},
+		{"MyType", 28, nil, true},
+		{"MyConcept", 32, nil, true},
+		{"AnotherMyConcept", 37, nil, true},
+		{"externFunc", 42, nil, false},
 	}
 	LookFor(t, repoName, "code/a.cc", CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
-		{"TestDoThings", 9, "", false},
-		{"TestDoMoreThings", 15, "", false},
-		{"TestAllReqsCovered", 21, "", false},
+		{"TestDoThings", 9, nil, false},
+		{"TestDoMoreThings", 15, nil, false},
+		{"TestAllReqsCovered", 21, nil, false},
 	}
 	LookFor(t, repoName, "test/a/a_test.cc", CodeTypeTests, tags, expectedTags)
 }
