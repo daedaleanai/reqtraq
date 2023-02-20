@@ -131,6 +131,17 @@ func cloneFromRemote(repoName RepoName, remotePath RemotePath, gitReference stri
 
 	repoPath := RepoPath(filepath.Join(cloneDir, string(repoName)))
 
+	// Use the baseRepoPath when checking out repositories in case remotePath is a local path
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	err = os.Chdir(string(basePath))
+	if err != nil {
+		return "", err
+	}
+	defer os.Chdir(originalDir)
+
 	if _, err := linepipes.All(linepipes.Run("git", "clone", string(remotePath), string(repoPath))); err != nil {
 		return "", err
 	}
