@@ -1,8 +1,7 @@
 # Reqtraq
 
 
-Reqtraq is an open source go tool for requirement management, as mandated by
-DO-178C.
+Reqtraq is an open source Go tool for requirement management.
 Reqtraq is designed to stay out of your way. It requires no user interaction for day-to-day tasks.
 Instead, it parses documents that are required in the certification process and extracts everything
 it needs from there.
@@ -63,13 +62,13 @@ Requirement REQ-TEST-SYS-1  Bidirectional tracing.
 #### Report generation
 In report tags such as 'Changelists' and 'Problem Reports' will not work if not integrated with a task manager such as Phrabricator etc. (currently supported for Phabricator; JIRA and others need to be added)
 ```
-$ reqtraq reportdown
+$ reqtraq report down
 2017/06/06 22:48:12 Creating ./req-down.html (this may take a while)...
 ...
 ```
 Filtering:
 ```
-$ reqtraq reportdown --id_filter=".*TEST-SYS.*"
+$ reqtraq report down --id_filter=".*TEST-SYS.*"
 2017/06/06 22:51:23 Creating ./req-down.html (this may take a while)...
 2017/06/06 22:51:41 Creating ./req-down-filtered.html (this may take a while)...
 ```

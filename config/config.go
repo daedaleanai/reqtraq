@@ -48,8 +48,10 @@ type jsonImplementation struct {
 }
 
 type jsonParent struct {
-	Prefix ReqPrefix `json:"prefix"`
-	Level  ReqLevel  `json:"level"`
+	Prefix       ReqPrefix     `json:"prefix"`
+	Level        ReqLevel      `json:"level"`
+	SrcAttribute jsonAttribute `json:"srcAttribute"`
+	DstAttribute jsonAttribute `json:"dstAttribute"`
 }
 
 type jsonDoc struct {
@@ -57,6 +59,7 @@ type jsonDoc struct {
 	Prefix         ReqPrefix          `json:"prefix"`
 	Level          ReqLevel           `json:"level"`
 	Parent         jsonParent         `json:"parent"`
+	Parents        []jsonParent       `json:"parents"`
 	Attributes     []jsonAttribute    `json:"attributes"`
 	AsmAttributes  []jsonAttribute    `json:"asmAttributes"`
 	Implementation jsonImplementation `json:"implementation"`
@@ -110,8 +113,17 @@ type Schema struct {
 
 // A requirement specification. Identifies the form of requirements in a document
 type ReqSpec struct {
-	Prefix ReqPrefix
-	Level  ReqLevel
+	Prefix  ReqPrefix
+	Level   ReqLevel
+	Re      *regexp.Regexp
+	AttrKey string
+	AttrVal *regexp.Regexp
+}
+
+// A link specification. Identifies valid source and destination ends of a parent link.
+type LinkSpec struct {
+	Src ReqSpec
+	Dst ReqSpec
 }
 
 // A certification document with its given requirement specification and schema, as well as its
@@ -119,7 +131,7 @@ type ReqSpec struct {
 type Document struct {
 	Path           string
 	ReqSpec        ReqSpec
-	ParentReqSpec  ReqSpec
+	LinkSpecs      []LinkSpec
 	Schema         Schema
 	Implementation Implementation
 }
@@ -165,7 +177,7 @@ func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 // Returns true if the document has a parent
 // @llr REQ-TRAQ-SWL-55
 func (doc *Document) HasParent() bool {
-	return doc.ParentReqSpec.Level != "" && doc.ParentReqSpec.Prefix != ""
+	return doc.LinkSpecs != nil
 }
 
 // Returns true if the document has associated implementation
@@ -182,8 +194,12 @@ func (doc *Document) MatchesSpec(reqSpec ReqSpec) bool {
 
 // Converts the requirement specification to a REQ string
 // @llr REQ-TRAQ-SWL-55
-func (rs ReqSpec) ToString() string {
-	return fmt.Sprintf("REQ-%s-%s", rs.Prefix, rs.Level)
+func (req ReqSpec) String() string {
+	if req.AttrKey == "" {
+		return fmt.Sprintf("REQ-%s-%s", req.Prefix, req.Level)
+	} else {
+		return fmt.Sprintf("REQ-%s-%s (%s == %s)", req.Prefix, req.Level, req.AttrKey, strings.Trim(req.AttrVal.String(), "^$"))
+	}
 }
 
 // Finds the associated Document for a certdoc located at the given path or a nil document if it
@@ -203,14 +219,16 @@ func (config *Config) FindCertdoc(path string) (repos.RepoName, *Document) {
 // Builds a map of the linked child -> parent requirement specification to know what specs are related by a
 // parent/children relationship
 // @llr REQ-TRAQ-SWL-54
-func (config *Config) GetLinkedReqSpecs() map[ReqSpec]ReqSpec {
-	links := make(map[ReqSpec]ReqSpec)
+func (config *Config) GetLinkedSpecs() []LinkSpec {
+	var links []LinkSpec
 
 	for repoName := range config.Repos {
 		for docIdx := range config.Repos[repoName].Documents {
 			doc := &config.Repos[repoName].Documents[docIdx]
-			if doc.HasParent() {
-				links[doc.ReqSpec] = doc.ParentReqSpec
+			for _, link := range doc.LinkSpecs {
+				if link.Src.Level != "" && link.Src.Prefix != "" {
+					links = append(links, link)
+				}
 			}
 		}
 	}
@@ -296,6 +314,36 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 	return strings.ToUpper(rawAttribute.Name), attribute, nil
 }
 
+// parseParent creates a link specification from a json description
+// @llr REQ-TRAQ-SWL-53
+func parseParent(rawParent jsonParent, srcPrefix ReqPrefix, srcLevel ReqLevel) (LinkSpec, error) {
+	newLink := LinkSpec{}
+
+	newLink.Src.Prefix = srcPrefix
+	newLink.Src.Level = srcLevel
+	newLink.Src.Re = regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", srcPrefix, srcLevel))
+
+	srcName, srcAttr, err := parseAttribute(rawParent.SrcAttribute)
+	if err != nil {
+		return newLink, err
+	}
+	newLink.Src.AttrKey = srcName
+	newLink.Src.AttrVal = srcAttr.Value
+
+	newLink.Dst.Prefix = rawParent.Prefix
+	newLink.Dst.Level = rawParent.Level
+	newLink.Dst.Re = regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", rawParent.Prefix, rawParent.Level))
+
+	dstName, dstAttr, err := parseAttribute(rawParent.DstAttribute)
+	if err != nil {
+		return newLink, err
+	}
+	newLink.Dst.AttrKey = dstName
+	newLink.Dst.AttrVal = dstAttr.Value
+
+	return newLink, nil
+}
+
 // Finds all matching files for the given query under the given repository.
 // @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
 func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([]string, error) {
@@ -369,13 +417,28 @@ The parents attribute is implicit from the parent declaration in the document`)
 		parsedDoc.Schema.Attributes[parsedName] = &parsedAttr
 	}
 
-	parsedDoc.ParentReqSpec.Level = doc.Parent.Level
-	parsedDoc.ParentReqSpec.Prefix = doc.Parent.Prefix
+	// Add the parents attribute and link specifications
 	if doc.Parent.Level != "" && doc.Parent.Prefix != "" {
-		// Add the parents attribute
+		link, err := parseParent(doc.Parent, doc.Prefix, doc.Level)
+		if err != nil {
+			return err
+		}
+		parsedDoc.LinkSpecs = append(parsedDoc.LinkSpecs, link)
+	}
+	if doc.Parents != nil {
+		for _, p := range doc.Parents {
+			link, err := parseParent(p, doc.Prefix, doc.Level)
+			if err != nil {
+				return err
+			}
+			parsedDoc.LinkSpecs = append(parsedDoc.LinkSpecs, link)
+		}
+
+	}
+	if parsedDoc.LinkSpecs != nil {
 		parsedDoc.Schema.Attributes["PARENTS"] = &Attribute{
 			Type:  AttributeAny,
-			Value: regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parsedDoc.ParentReqSpec.Prefix, parsedDoc.ParentReqSpec.Level)),
+			Value: regexp.MustCompile(".*"),
 		}
 	}
 

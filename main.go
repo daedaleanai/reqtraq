@@ -30,7 +30,7 @@ and the source code for references to them.`,
 var reqtraqConfig *config.Config
 
 // Runs the root command and defers the cleanup of the temporary directories until it exits
-// @llr REQ-TRAQ-SWL-59
+// @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-59
 func Execute() error {
 	defer repos.CleanupTemporaryDirectories()
 

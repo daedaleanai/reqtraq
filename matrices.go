@@ -20,8 +20,8 @@ func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.
 		From, To         string
 		ItemsAB, ItemsBA []TableRow
 	}{
-		From: nodeTypeA.ToString(),
-		To:   nodeTypeB.ToString(),
+		From: nodeTypeA.String(),
+		To:   nodeTypeB.String(),
 	}
 
 	data.ItemsAB = rg.createDownstreamMatrix(nodeTypeA, nodeTypeB)
@@ -39,7 +39,7 @@ func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec, 
 		From, To         string
 		ItemsAB, ItemsBA []TableRow
 	}{
-		From: reqSpec.ToString(),
+		From: reqSpec.String(),
 		To:   codeType.String(),
 	}
 
@@ -71,7 +71,7 @@ var matrixTmplText = `
 
 {{ define "MATRIX" }}
 	{{template "HEADER"}}
-	<h1>Trace Matrices {{ .From }}&ndash;{{ .To }}</h1>
+	<h1>Trace Matrices {{ .From }} &ndash; {{ .To }}</h1>
 
 	<div style="display: table; padding-top: 1em;">
 		<div style="display: table-row">
@@ -189,7 +189,10 @@ func (rg ReqGraph) createDownstreamMatrix(from, to config.ReqSpec) []TableRow {
 	for _, r := range reqsHigh {
 		count := 0
 		for _, childReq := range r.Children {
-			if childReq.Document.MatchesSpec(to) {
+			if childReq.Document.MatchesSpec(to) && to.Re.MatchString(childReq.ID) {
+				if to.AttrKey != "" && !to.AttrVal.MatchString(childReq.Attributes[to.AttrKey]) {
+					continue
+				}
 				row := TableRow{newReqTableCell(r), newReqTableCell(childReq)}
 				items = append(items, row)
 				count++
@@ -236,7 +239,10 @@ func (rg ReqGraph) createUpstreamMatrix(from, to config.ReqSpec) []TableRow {
 	for _, r := range reqsLow {
 		count := 0
 		for _, parentReq := range r.Parents {
-			if parentReq.Document.MatchesSpec(to) {
+			if parentReq.Document.MatchesSpec(to) && to.Re.MatchString(parentReq.ID) {
+				if to.AttrKey != "" && !to.AttrVal.MatchString(parentReq.Attributes[to.AttrKey]) {
+					continue
+				}
 				row := TableRow{newReqTableCell(r), newReqTableCell(parentReq)}
 				items = append(items, row)
 				count++
@@ -255,7 +261,10 @@ func (rg ReqGraph) createUpstreamMatrix(from, to config.ReqSpec) []TableRow {
 func (rg ReqGraph) reqsWithSpec(spec config.ReqSpec) map[string]*Req {
 	reqs := make(map[string]*Req, 0)
 	for _, r := range rg.Reqs {
-		if r.Document.MatchesSpec(spec) && !r.IsDeleted() {
+		if r.Document.MatchesSpec(spec) && spec.Re.MatchString(r.ID) && !r.IsDeleted() {
+			if spec.AttrKey != "" && !spec.AttrVal.MatchString(r.Attributes[spec.AttrKey]) {
+				continue
+			}
 			reqs[r.ID] = r
 		}
 	}

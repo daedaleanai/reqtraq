@@ -1,0 +1,67 @@
+{
+    "repoName": "multiple_level_doc",
+    "documents": [
+        {
+            "path": "TEST-120-CST.md",
+            "prefix": "TEST",
+            "level": "CST",
+            "attributes": [
+                {
+                    "name": "External Reference"
+                }
+            ]
+        },
+        {
+            "path": "TEST-100-ORD.md",
+            "prefix": "TEST",
+            "level": "SYS",
+            "parents": [
+                {
+                    "prefix": "TEST",
+                    "level": "CST"
+                },
+                {
+                    "prefix": "TEST",
+                    "level": "SYS",
+                    "srcAttribute": {
+                        "name": "Component Allocation",
+                        "value": "^(Component1|Component2)$"
+                    },
+                    "dstAttribute": {
+                        "name": "Component Allocation",
+                        "value": "^System$"
+                    }
+                }
+            ],
+            "attributes": [
+                {
+                    "name": "Rationale",
+                    "required": "any"
+                },
+                {
+                    "name": "Component Allocation",
+                    "value": "^(System|Component1|Component2)$"
+                }
+            ]
+        },
+        {
+            "path": "TEST-137-SRD.md",
+            "prefix": "TEST",
+            "level": "SWH",
+            "parent": {
+                "prefix": "TEST",
+                "level": "SYS",
+                "dstAttribute": {
+                    "name": "Component Allocation",
+                    "value": "^(Component1|Component2)$"
+                }
+            },
+            "attributes": [
+                {
+                    "name": "Rationale",
+                    "required": "any"
+                }
+            ]
+        }
+    ]
+}

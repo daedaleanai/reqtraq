@@ -313,6 +313,19 @@ func (rg *ReqGraph) resolve() []Issue {
 					}
 					issues = append(issues, issue)
 				}
+				if req.Variant == ReqVariantRequirement {
+					if err := req.validateLink(parent); err != nil {
+						issue := Issue{
+							Line:     req.Position,
+							Path:     req.Document.Path,
+							RepoName: req.RepoName,
+							Error:    err,
+							Severity: IssueSeverityMajor,
+							Type:     IssueTypeInvalidParent,
+						}
+						issues = append(issues, issue)
+					}
+				}
 				parent.Children = append(parent.Children, req)
 				req.Parents = append(req.Parents, parent)
 			} else {
@@ -622,6 +635,41 @@ func (r *Req) checkAttributes() []Issue {
 	}
 
 	return issues
+}
+
+// validateLink iterates through the link options for the requirement and checks if the parent ID is valid
+// @llr REQ-TRAQ-SWL-76
+func (r *Req) validateLink(parent *Req) error {
+	for _, link := range r.Document.LinkSpecs {
+		if !link.Src.Re.MatchString(r.ID) {
+			// link option doesn't apply to this requirement
+			continue
+		}
+
+		if link.Src.AttrKey != "" {
+			value, present := r.Attributes[link.Src.AttrKey]
+			if !present || !link.Src.AttrVal.MatchString(value) {
+				// link option doesn't apply to this requirement
+				continue
+			}
+		}
+
+		if !link.Dst.Re.MatchString(parent.ID) {
+			// link option doesn't apply to this parent
+			continue
+		}
+
+		if link.Dst.AttrKey != "" {
+			value, present := parent.Attributes[link.Dst.AttrKey]
+			if !present || !link.Dst.AttrVal.MatchString(value) {
+				return fmt.Errorf("Requirement '%s' has invalid parent link ID '%s' with attribute value '%s'=='%s'.", r.ID, parent.ID, link.Dst.AttrKey, value)
+			}
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("Requirement '%s' has invalid parent link ID '%s'.", r.ID, parent.ID)
 }
 
 // checkID verifies that the requirement is not duplicated

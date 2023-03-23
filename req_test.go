@@ -39,6 +39,22 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 			Prefix: "TEST",
 			Level:  "SWH",
 		},
+		LinkSpecs: []config.LinkSpec{
+			{
+				Src: config.ReqSpec{
+					Prefix:  config.ReqPrefix("TEST"),
+					Level:   config.ReqLevel("SWH"),
+					Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+					AttrKey: "",
+					AttrVal: regexp.MustCompile(".*")},
+				Dst: config.ReqSpec{
+					Prefix:  config.ReqPrefix("TEST"),
+					Level:   config.ReqLevel("SYS"),
+					Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+					AttrKey: "",
+					AttrVal: regexp.MustCompile(".*")},
+			},
+		},
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
@@ -52,9 +68,11 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg.Reqs[r.ID] = r
 
 	reqIssues := rg.resolve()
-	assert.Equal(t, len(reqIssues), 1)
+	assert.Equal(t, len(reqIssues), 2)
 	assert.Equal(t, reqIssues[0].Error.Error(),
 		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")
+	assert.Equal(t, reqIssues[1].Error.Error(),
+		"Requirement 'REQ-UIEM-SYS-1' has invalid parent link ID 'REQ-TEST-SYS-1'.")
 
 	reqs := rg.OrdsByPosition()
 	assert.Len(t, reqs, 2)

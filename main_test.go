@@ -76,6 +76,18 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 							Prefix: "TEST",
 							Level:  "SWH",
 						},
+						LinkSpecs: []config.LinkSpec{
+							{
+								Src: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+								Dst: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+							},
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -84,7 +96,7 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 								"PARENTS": {
 									Type:  config.AttributeAny,
-									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+									Value: regexp.MustCompile(`.*`),
 								},
 							},
 						},
@@ -98,6 +110,18 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 							Prefix: "TEST",
 							Level:  "SWL",
 						},
+						LinkSpecs: []config.LinkSpec{
+							{
+								Src: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+								Dst: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+							},
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SWL-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -106,7 +130,7 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 								"PARENTS": {
 									Type:  config.AttributeAny,
-									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+									Value: regexp.MustCompile(`.*`),
 								},
 							},
 						},
@@ -194,6 +218,18 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 							Prefix: "TEST",
 							Level:  "SWH",
 						},
+						LinkSpecs: []config.LinkSpec{
+							{
+								Src: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+								Dst: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+							},
+						},
 						Schema: config.Schema{
 							Requirements: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
 							Attributes: map[string]*config.Attribute{
@@ -202,7 +238,7 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 								"PARENTS": {
 									Type:  config.AttributeAny,
-									Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+									Value: regexp.MustCompile(`.*`),
 								},
 							},
 						},
@@ -271,6 +307,29 @@ func TestValidateMultipleRepos(t *testing.T) {
 	expected := `Requirement 'ASM-TEST-SWH-3' is missing attribute 'VALIDATION'.
 Requirement 'ASM-TEST-SWH-3' has unknown attribute 'VERIFICATION'.
 Requirement 'ASM-TEST-SWH-2' has invalid value 'REQ-TEST-SYS-2' in attribute 'PARENTS'.
+WARNING. Validation failed`
+
+	checkValidateError(t, actual, expected)
+}
+
+// @llr REQ-TRAQ-SWL-36
+func TestValidateMultipleLevelDoc(t *testing.T) {
+	// Actually read configuration from repositories
+	repos.ClearAllRepositories()
+	repos.RegisterRepository(repos.RepoName("multiple_level_doc"), repos.RepoPath("testdata/multiple_level_doc"))
+
+	// Make sure the child can reach the parent
+	config, err := config.ParseConfig("testdata/multiple_level_doc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual, err := RunValidate(t, &config)
+	assert.Empty(t, err, "Got unexpected error")
+
+	expected := `Requirement 'REQ-TEST-SYS-6' has invalid parent link ID 'REQ-TEST-SYS-1'.
+Requirement 'REQ-TEST-SYS-7' has invalid parent link ID 'REQ-TEST-SYS-3' with attribute value 'COMPONENT ALLOCATION'=='Component1'.
+Requirement 'REQ-TEST-SWH-3' has invalid parent link ID 'REQ-TEST-SYS-1' with attribute value 'COMPONENT ALLOCATION'=='System'.
 WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)
