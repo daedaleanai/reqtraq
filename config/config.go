@@ -54,12 +54,13 @@ type jsonParent struct {
 	DstAttribute jsonAttribute `json:"dstAttribute"`
 }
 
+type jsonParents []jsonParent
+
 type jsonDoc struct {
 	Path           string             `json:"path"`
 	Prefix         ReqPrefix          `json:"prefix"`
 	Level          ReqLevel           `json:"level"`
-	Parent         jsonParent         `json:"parent"`
-	Parents        []jsonParent       `json:"parents"`
+	Parent         jsonParents        `json:"parent"`
 	Attributes     []jsonAttribute    `json:"attributes"`
 	AsmAttributes  []jsonAttribute    `json:"asmAttributes"`
 	Implementation jsonImplementation `json:"implementation"`
@@ -174,12 +175,6 @@ func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 	return config, nil
 }
 
-// Returns true if the document has a parent
-// @llr REQ-TRAQ-SWL-55
-func (doc *Document) HasParent() bool {
-	return doc.LinkSpecs != nil
-}
-
 // Returns true if the document has associated implementation
 // @llr REQ-TRAQ-SWL-56
 func (doc *Document) HasImplementation() bool {
@@ -282,6 +277,39 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 		return jsonConfig{}, fmt.Errorf("Error while parsing configuration file `%s`: %s", configPath, err)
 	}
 	return config, nil
+}
+
+// UnmarshalJSON implements the Unmarshaler interface for the jsonParents type, allowing the 'parent' field to be a single
+// struct or array of structs when defined in the config file.
+// @llr REQ-TRAQ-SWL-53
+func (op *jsonParents) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("no bytes to unmarshal")
+	}
+
+	// Use the first character to determine the type
+	switch data[0] {
+	case '{':
+		var parent jsonParent
+		err := json.Unmarshal(data, &parent)
+		if err != nil {
+			return err
+		}
+		*op = append(*op, parent)
+		return nil
+
+	case '[':
+		// we can't use the jsonParents type or Unmarshal will call back this function
+		var parents []jsonParent
+		err := json.Unmarshal(data, &parents)
+		if err != nil {
+			return err
+		}
+		*op = append(*op, parents...)
+		return nil
+	}
+
+	return fmt.Errorf("malformed JSON, expected '[' or '{' in parents field, got %c", data[0])
 }
 
 // Parses an a single attribute from its json description
@@ -418,15 +446,8 @@ The parents attribute is implicit from the parent declaration in the document`)
 	}
 
 	// Add the parents attribute and link specifications
-	if doc.Parent.Level != "" && doc.Parent.Prefix != "" {
-		link, err := parseParent(doc.Parent, doc.Prefix, doc.Level)
-		if err != nil {
-			return err
-		}
-		parsedDoc.LinkSpecs = append(parsedDoc.LinkSpecs, link)
-	}
-	if doc.Parents != nil {
-		for _, p := range doc.Parents {
+	if doc.Parent != nil {
+		for _, p := range doc.Parent {
 			link, err := parseParent(p, doc.Prefix, doc.Level)
 			if err != nil {
 				return err

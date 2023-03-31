@@ -928,12 +928,10 @@ Each document contains:
 - A requirement specification in terms of a `prefix` and `level`. Together they fully specify how the
 requirements in the document will look like. A document with level `SWL` and prefix `TEST` will have
 requirements of the form `REQ-TEST-SWL-1`.
-- An optional parent. If there is a parent document, it contains also a `prefix` and `level` with the
-specification of the parent so that requirements can be linked from children to parent. The parent may also
-include source and destination attribute filters to enforce linking on a subset of requirements. The parent also
-implies a `Parents` attribute with a filter for the requirement specification of the parent will be
+- An optional parent. If requirements can be linked to parent requirements, this field contains one or more link
+specifications containing a `prefix` and `level` of the parent, plus optional source and destination attribute
+filters to enforce linking on a subset of requirements. The parent also implies a `Parents` attribute will be
 added to the schema of the document.
-- An optional parents. If multiple parent links need to be specified.
 - An implementation, which consists of separated matchers for both code and tests. It accepts the
 following parameters:
   - `codeParser`: The selected code parser. Defaults to `ctags`. Available values are `ctags` and `clang`.

@@ -15,7 +15,7 @@
             "path": "TEST-100-ORD.md",
             "prefix": "TEST",
             "level": "SYS",
-            "parents": [
+            "parent": [
                 {
                     "prefix": "TEST",
                     "level": "CST"

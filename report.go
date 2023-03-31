@@ -62,7 +62,7 @@ func (rg ReqGraph) ReportIssuesFiltered(w io.Writer, filter *ReqFilter, diffs ma
 func (rg ReqGraph) OrdsByPosition() []*Req {
 	var r []*Req
 	for _, v := range rg.Reqs {
-		if !v.Document.HasParent() && len(v.ParentIds) == 0 {
+		if v.Document.LinkSpecs == nil && len(v.ParentIds) == 0 {
 			r = append(r, v)
 		}
 	}
