@@ -23,13 +23,13 @@
                 {
                     "prefix": "TEST",
                     "level": "SYS",
-                    "srcAttribute": {
-                        "name": "Component Allocation",
-                        "value": "^(Component1|Component2)$"
-                    },
-                    "dstAttribute": {
+                    "parentAttribute": {
                         "name": "Component Allocation",
                         "value": "^System$"
+                    },
+                    "childAttribute": {
+                        "name": "Component Allocation",
+                        "value": "^(Component1|Component2)$"
                     }
                 }
             ],
@@ -51,7 +51,7 @@
             "parent": {
                 "prefix": "TEST",
                 "level": "SYS",
-                "dstAttribute": {
+                "parentAttribute": {
                     "name": "Component Allocation",
                     "value": "^(Component1|Component2)$"
                 }

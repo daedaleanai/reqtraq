@@ -641,28 +641,28 @@ func (r *Req) checkAttributes() []Issue {
 // @llr REQ-TRAQ-SWL-76
 func (r *Req) validateLink(parent *Req) error {
 	for _, link := range r.Document.LinkSpecs {
-		if !link.Src.Re.MatchString(r.ID) {
+		if !link.Child.Re.MatchString(r.ID) {
 			// link option doesn't apply to this requirement
 			continue
 		}
 
-		if link.Src.AttrKey != "" {
-			value, present := r.Attributes[link.Src.AttrKey]
-			if !present || !link.Src.AttrVal.MatchString(value) {
+		if link.Child.AttrKey != "" {
+			value, present := r.Attributes[link.Child.AttrKey]
+			if !present || !link.Child.AttrVal.MatchString(value) {
 				// link option doesn't apply to this requirement
 				continue
 			}
 		}
 
-		if !link.Dst.Re.MatchString(parent.ID) {
+		if !link.Parent.Re.MatchString(parent.ID) {
 			// link option doesn't apply to this parent
 			continue
 		}
 
-		if link.Dst.AttrKey != "" {
-			value, present := parent.Attributes[link.Dst.AttrKey]
-			if !present || !link.Dst.AttrVal.MatchString(value) {
-				return fmt.Errorf("Requirement '%s' has invalid parent link ID '%s' with attribute value '%s'=='%s'.", r.ID, parent.ID, link.Dst.AttrKey, value)
+		if link.Parent.AttrKey != "" {
+			value, present := parent.Attributes[link.Parent.AttrKey]
+			if !present || !link.Parent.AttrVal.MatchString(value) {
+				return fmt.Errorf("Requirement '%s' has invalid parent link ID '%s' with attribute value '%s'=='%s'.", r.ID, parent.ID, link.Parent.AttrKey, value)
 			}
 		}
 

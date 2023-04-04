@@ -81,13 +81,13 @@ func TestReqGraph_createMatrix(t *testing.T) {
 		ReqSpec: swhReqSpec,
 		LinkSpecs: []config.LinkSpec{
 			{
-				Src: config.ReqSpec{
+				Child: config.ReqSpec{
 					Prefix:  config.ReqPrefix("TEST"),
 					Level:   config.ReqLevel("SWH"),
 					Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 					AttrKey: "",
 					AttrVal: regexp.MustCompile(".*")},
-				Dst: config.ReqSpec{
+				Parent: config.ReqSpec{
 					Prefix:  config.ReqPrefix("TEST"),
 					Level:   config.ReqLevel("SYS"),
 					Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
@@ -125,13 +125,13 @@ func TestReqGraph_createMatrix(t *testing.T) {
 		ReqSpec: swlReqSpec,
 		LinkSpecs: []config.LinkSpec{
 			{
-				Src: config.ReqSpec{
+				Child: config.ReqSpec{
 					Prefix:  config.ReqPrefix("TEST"),
 					Level:   config.ReqLevel("SWL"),
 					Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 					AttrKey: "",
 					AttrVal: regexp.MustCompile(".*")},
-				Dst: config.ReqSpec{
+				Parent: config.ReqSpec{
 					Prefix:  config.ReqPrefix("TEST"),
 					Level:   config.ReqLevel("SWH"),
 					Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),

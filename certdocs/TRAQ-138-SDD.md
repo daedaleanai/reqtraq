@@ -880,14 +880,14 @@ A sample configuration file is shown below:
             "parent": {
                 "prefix": "TEST",
                 "level": "SWH"
-                "srcAttribute": {
-                    "name": "Item",
-                    "value": "^Item1$"
-                },
-                "dstAttribute": {
+                "parentAttribute": {
                     "name": "Item Allocation",
                     "value": "Item1"
-                 }
+                },
+                "childAttribute": {
+                    "name": "Item",
+                    "value": "^Item1$"
+                }
             },
             "attributes": [
                 {
@@ -929,7 +929,7 @@ Each document contains:
 requirements in the document will look like. A document with level `SWL` and prefix `TEST` will have
 requirements of the form `REQ-TEST-SWL-1`.
 - An optional parent. If requirements can be linked to parent requirements, this field contains one or more link
-specifications containing a `prefix` and `level` of the parent, plus optional source and destination attribute
+specifications containing a `prefix` and `level` of the parent, plus optional parent and child attribute
 filters to enforce linking on a subset of requirements. The parent also implies a `Parents` attribute will be
 added to the schema of the document.
 - An implementation, which consists of separated matchers for both code and tests. It accepts the

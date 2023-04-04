@@ -48,10 +48,10 @@ type jsonImplementation struct {
 }
 
 type jsonParent struct {
-	Prefix       ReqPrefix     `json:"prefix"`
-	Level        ReqLevel      `json:"level"`
-	SrcAttribute jsonAttribute `json:"srcAttribute"`
-	DstAttribute jsonAttribute `json:"dstAttribute"`
+	Prefix          ReqPrefix     `json:"prefix"`
+	Level           ReqLevel      `json:"level"`
+	ParentAttribute jsonAttribute `json:"parentAttribute"`
+	ChildAttribute  jsonAttribute `json:"childAttribute"`
 }
 
 type jsonParents []jsonParent
@@ -121,10 +121,10 @@ type ReqSpec struct {
 	AttrVal *regexp.Regexp
 }
 
-// A link specification. Identifies valid source and destination ends of a parent link.
+// A link specification. Identifies valid child and parent ends of a link.
 type LinkSpec struct {
-	Src ReqSpec
-	Dst ReqSpec
+	Child  ReqSpec
+	Parent ReqSpec
 }
 
 // A certification document with its given requirement specification and schema, as well as its
@@ -221,7 +221,7 @@ func (config *Config) GetLinkedSpecs() []LinkSpec {
 		for docIdx := range config.Repos[repoName].Documents {
 			doc := &config.Repos[repoName].Documents[docIdx]
 			for _, link := range doc.LinkSpecs {
-				if link.Src.Level != "" && link.Src.Prefix != "" {
+				if link.Child.Level != "" && link.Child.Prefix != "" {
 					links = append(links, link)
 				}
 			}
@@ -291,8 +291,9 @@ func (op *jsonParents) UnmarshalJSON(data []byte) error {
 	switch data[0] {
 	case '{':
 		var parent jsonParent
-		err := json.Unmarshal(data, &parent)
-		if err != nil {
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&parent); err != nil {
 			return err
 		}
 		*op = append(*op, parent)
@@ -301,8 +302,9 @@ func (op *jsonParents) UnmarshalJSON(data []byte) error {
 	case '[':
 		// we can't use the jsonParents type or Unmarshal will call back this function
 		var parents []jsonParent
-		err := json.Unmarshal(data, &parents)
-		if err != nil {
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&parents); err != nil {
 			return err
 		}
 		*op = append(*op, parents...)
@@ -344,30 +346,30 @@ func parseAttribute(rawAttribute jsonAttribute) (string, Attribute, error) {
 
 // parseParent creates a link specification from a json description
 // @llr REQ-TRAQ-SWL-53
-func parseParent(rawParent jsonParent, srcPrefix ReqPrefix, srcLevel ReqLevel) (LinkSpec, error) {
+func parseParent(rawParent jsonParent, childPrefix ReqPrefix, childLevel ReqLevel) (LinkSpec, error) {
 	newLink := LinkSpec{}
 
-	newLink.Src.Prefix = srcPrefix
-	newLink.Src.Level = srcLevel
-	newLink.Src.Re = regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", srcPrefix, srcLevel))
+	newLink.Child.Prefix = childPrefix
+	newLink.Child.Level = childLevel
+	newLink.Child.Re = regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", childPrefix, childLevel))
 
-	srcName, srcAttr, err := parseAttribute(rawParent.SrcAttribute)
+	childName, childAttr, err := parseAttribute(rawParent.ChildAttribute)
 	if err != nil {
 		return newLink, err
 	}
-	newLink.Src.AttrKey = srcName
-	newLink.Src.AttrVal = srcAttr.Value
+	newLink.Child.AttrKey = childName
+	newLink.Child.AttrVal = childAttr.Value
 
-	newLink.Dst.Prefix = rawParent.Prefix
-	newLink.Dst.Level = rawParent.Level
-	newLink.Dst.Re = regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", rawParent.Prefix, rawParent.Level))
+	newLink.Parent.Prefix = rawParent.Prefix
+	newLink.Parent.Level = rawParent.Level
+	newLink.Parent.Re = regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", rawParent.Prefix, rawParent.Level))
 
-	dstName, dstAttr, err := parseAttribute(rawParent.DstAttribute)
+	parentName, parentAttr, err := parseAttribute(rawParent.ParentAttribute)
 	if err != nil {
 		return newLink, err
 	}
-	newLink.Dst.AttrKey = dstName
-	newLink.Dst.AttrVal = dstAttr.Value
+	newLink.Parent.AttrKey = parentName
+	newLink.Parent.AttrVal = parentAttr.Value
 
 	return newLink, nil
 }

@@ -80,13 +80,13 @@ func TestConfig_ParseConfig(t *testing.T) {
 			},
 			LinkSpecs: []LinkSpec{
 				{
-					Src: ReqSpec{
+					Child: ReqSpec{
 						Prefix:  ReqPrefix("TEST"),
 						Level:   ReqLevel("SWH"),
 						Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 						AttrKey: "",
 						AttrVal: regexp.MustCompile(".*")},
-					Dst: ReqSpec{
+					Parent: ReqSpec{
 						Prefix:  ReqPrefix("TEST"),
 						Level:   ReqLevel("SYS"),
 						Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
@@ -132,13 +132,13 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
 	assert.Equal(t, config.Repos["projectB"].Documents[0].LinkSpecs, []LinkSpec{
 		{
-			Src: ReqSpec{
+			Child: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWL"),
 				Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 				AttrKey: "",
 				AttrVal: regexp.MustCompile(".*")},
-			Dst: ReqSpec{
+			Parent: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWH"),
 				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
@@ -181,13 +181,13 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.Equal(t, config.Repos["projectC"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
 	assert.Equal(t, config.Repos["projectC"].Documents[0].LinkSpecs, []LinkSpec{
 		{
-			Src: ReqSpec{
+			Child: ReqSpec{
 				Prefix:  ReqPrefix("TST"),
 				Level:   ReqLevel("SWL"),
 				Re:      regexp.MustCompile("REQ-TST-SWL-(\\d+)"),
 				AttrKey: "",
 				AttrVal: regexp.MustCompile(".*")},
-			Dst: ReqSpec{
+			Parent: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWH"),
 				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
@@ -295,13 +295,13 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 			},
 			LinkSpecs: []LinkSpec{
 				{
-					Src: ReqSpec{
+					Child: ReqSpec{
 						Prefix:  ReqPrefix("TEST"),
 						Level:   ReqLevel("SWH"),
 						Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 						AttrKey: "",
 						AttrVal: regexp.MustCompile(".*")},
-					Dst: ReqSpec{
+					Parent: ReqSpec{
 						Prefix:  ReqPrefix("TEST"),
 						Level:   ReqLevel("SYS"),
 						Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
@@ -347,13 +347,13 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].LinkSpecs, []LinkSpec{
 		{
-			Src: ReqSpec{
+			Child: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWL"),
 				Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 				AttrKey: "",
 				AttrVal: regexp.MustCompile(".*")},
-			Dst: ReqSpec{
+			Parent: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWH"),
 				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
@@ -461,13 +461,13 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			},
 			LinkSpecs: []LinkSpec{
 				{
-					Src: ReqSpec{
+					Child: ReqSpec{
 						Prefix:  ReqPrefix("TEST"),
 						Level:   ReqLevel("SWH"),
 						Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 						AttrKey: "",
 						AttrVal: regexp.MustCompile(".*")},
-					Dst: ReqSpec{
+					Parent: ReqSpec{
 						Prefix:  ReqPrefix("TEST"),
 						Level:   ReqLevel("SYS"),
 						Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
@@ -509,13 +509,13 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].ReqSpec.Level, ReqLevel("SWL"))
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].LinkSpecs, []LinkSpec{
 		{
-			Src: ReqSpec{
+			Child: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWL"),
 				Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 				AttrKey: "",
 				AttrVal: regexp.MustCompile(".*")},
-			Dst: ReqSpec{
+			Parent: ReqSpec{
 				Prefix:  ReqPrefix("TEST"),
 				Level:   ReqLevel("SWH"),
 				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),

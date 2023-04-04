@@ -154,8 +154,8 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 	{{ range $linkSpec := .ReqLinks }}
 		<div>
 			<div>
-				<a href="/matrix?from={{ requrl $linkSpec.Dst }}&to={{ requrl $linkSpec.Src }}">
-					{{ $linkSpec.Dst }} -> {{ $linkSpec.Src }}
+				<a href="/matrix?from={{ requrl $linkSpec.Parent }}&to={{ requrl $linkSpec.Child }}">
+					{{ $linkSpec.Parent }} -> {{ $linkSpec.Child }}
 				</a>
 			</div>
 		</div>

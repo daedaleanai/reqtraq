@@ -78,11 +78,11 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 						},
 						LinkSpecs: []config.LinkSpec{
 							{
-								Src: config.ReqSpec{
+								Child: config.ReqSpec{
 									Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 									AttrKey: "",
 									AttrVal: regexp.MustCompile(".*")},
-								Dst: config.ReqSpec{
+								Parent: config.ReqSpec{
 									Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
 									AttrKey: "",
 									AttrVal: regexp.MustCompile(".*")},
@@ -112,11 +112,11 @@ func TestValidateCreateReqGraphMarkdown(t *testing.T) {
 						},
 						LinkSpecs: []config.LinkSpec{
 							{
-								Src: config.ReqSpec{
+								Child: config.ReqSpec{
 									Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 									AttrKey: "",
 									AttrVal: regexp.MustCompile(".*")},
-								Dst: config.ReqSpec{
+								Parent: config.ReqSpec{
 									Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
 									AttrKey: "",
 									AttrVal: regexp.MustCompile(".*")},
@@ -220,11 +220,11 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 						},
 						LinkSpecs: []config.LinkSpec{
 							{
-								Src: config.ReqSpec{
+								Child: config.ReqSpec{
 									Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 									AttrKey: "",
 									AttrVal: regexp.MustCompile(".*")},
-								Dst: config.ReqSpec{
+								Parent: config.ReqSpec{
 									Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
 									AttrKey: "",
 									AttrVal: regexp.MustCompile(".*")},
