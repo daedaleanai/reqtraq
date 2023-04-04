@@ -287,6 +287,8 @@ func (op *jsonParents) UnmarshalJSON(data []byte) error {
 		return errors.New("no bytes to unmarshal")
 	}
 
+	*op = jsonParents{}
+
 	// Use the first character to determine the type
 	switch data[0] {
 	case '{':
