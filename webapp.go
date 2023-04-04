@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -56,7 +57,13 @@ func Title(str string) string {
 	return strings.Title(strings.ToLower(str))
 }
 
-var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"title": Title}).Parse(
+// ReqUrl converts a ReqSpec into a url friendly string for use in the HTML template
+// @llr REQ-TRAQ-SWL-37
+func ReqUrl(req config.ReqSpec) string {
+	return url.QueryEscape(fmt.Sprintf("%s-%s-%s-%s", req.Prefix, req.Level, req.AttrKey, req.AttrVal))
+}
+
+var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"title": Title, "requrl": ReqUrl}).Parse(
 	`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -144,11 +151,11 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 <h2>Trace Matrices</h2>
 <div style="display: flex;">
 	<div class="matrices">
-	{{ range $childReqSpec, $parentReqSpec := .ReqSpecLinks }}
+	{{ range $linkSpec := .ReqLinks }}
 		<div>
 			<div>
-				<a href="/matrix?from=REQ-{{ $parentReqSpec.Prefix }}-{{ $parentReqSpec.Level }}&to=REQ-{{ $childReqSpec.Prefix }}-{{ $childReqSpec.Level }}">
-					REQ-{{ $parentReqSpec.Prefix }}-{{ $parentReqSpec.Level }} -> REQ-{{ $childReqSpec.Prefix }}-{{ $childReqSpec.Level }}
+				<a href="/matrix?from={{ requrl $linkSpec.Parent }}&to={{ requrl $linkSpec.Child }}">
+					{{ $linkSpec.Parent }} -> {{ $linkSpec.Child }}
 				</a>
 			</div>
 		</div>
@@ -157,22 +164,22 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 	{{ range $reqSpec := .CodeLinks }}
 		<div>
 			<div>
-				<a href="/matrix?from=REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }}&to=CODE">
-					REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }} -> CODE
+				<a href="/matrix?from={{ requrl $reqSpec }}&to=CODE">
+					{{ $reqSpec }} -> CODE
 				</a>
 			</div>
 		</div>
 		<div>
 			<div>
-				<a href="/matrix?from=REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }}&to=CODE&code-type=impl">
-					REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }} -> IMPLEMENTATION
+				<a href="/matrix?from={{ requrl $reqSpec }}&to=CODE&code-type=impl">
+					{{ $reqSpec }} -> IMPLEMENTATION
 				</a>
 			</div>
 		</div>
 		<div>
 			<div>
-				<a href="/matrix?from=REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }}&to=CODE&code-type=test">
-					REQ-{{ $reqSpec.Prefix }}-{{ $reqSpec.Level }} -> TESTS
+				<a href="/matrix?from={{ requrl $reqSpec }}&to=CODE&code-type=test">
+					{{ $reqSpec }} -> TESTS
 				</a>
 			</div>
 		</div>
@@ -183,28 +190,31 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 </html>`))
 
 type indexData struct {
-	RepoName     string
-	Attributes   map[string]*config.Attribute
-	Commits      []string
-	ReqSpecLinks map[config.ReqSpec]config.ReqSpec
-	CodeLinks    []config.ReqSpec
+	RepoName   string
+	Attributes map[string]*config.Attribute
+	Commits    []string
+	ReqLinks   []config.LinkSpec
+	CodeLinks  []config.ReqSpec
 }
 
 // Gets the requirement specifier from the http request string
 // @llr REQ-TRAQ-SWL-37
 func parseReqSpecFromRequest(specString string) (config.ReqSpec, error) {
-	if !strings.HasPrefix(specString, "REQ-") {
+	rawStr, err := url.QueryUnescape(specString)
+	if err != nil {
+		return config.ReqSpec{}, err
+	}
+	parts := strings.Split(rawStr, "-")
+	if len(parts) < 2 {
 		return config.ReqSpec{}, fmt.Errorf("Invalid requirement specification `%s`", specString)
 	}
-
-	parts := strings.Split(strings.TrimPrefix(specString, "REQ-"), "-")
-	if len(parts) != 2 {
-		return config.ReqSpec{}, fmt.Errorf("Invalid requirement specification `%s`", specString)
-	}
-	return config.ReqSpec{
-		Prefix: config.ReqPrefix(parts[0]),
-		Level:  config.ReqLevel(parts[1]),
-	}, nil
+	reqSpec := config.ReqSpec{
+		Prefix:  config.ReqPrefix(parts[0]),
+		Level:   config.ReqLevel(parts[1]),
+		Re:      regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parts[0], parts[1])),
+		AttrKey: parts[2],
+		AttrVal: regexp.MustCompile(parts[3])}
+	return reqSpec, nil
 }
 
 // @llr REQ-TRAQ-SWL-37
@@ -249,9 +259,9 @@ func get(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		reqSpecLinks := reqtraqConfig.GetLinkedReqSpecs()
+		reqLinks := reqtraqConfig.GetLinkedSpecs()
 
-		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits, reqSpecLinks, codeLinks})
+		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits, reqLinks, codeLinks})
 	}
 
 	// code files linked to from reports

@@ -34,16 +34,25 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	rg := &ReqGraph{Reqs: make(map[string]*Req)}
 
 	sysReqSpec := config.ReqSpec{
-		Prefix: "SYS",
-		Level:  "TEST",
+		Prefix:  "SYS",
+		Level:   "TEST",
+		Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+		AttrKey: "",
+		AttrVal: regexp.MustCompile(".*"),
 	}
 	swhReqSpec := config.ReqSpec{
-		Prefix: "SWH",
-		Level:  "TEST",
+		Prefix:  "SWH",
+		Level:   "TEST",
+		Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+		AttrKey: "",
+		AttrVal: regexp.MustCompile(".*"),
 	}
 	swlReqSpec := config.ReqSpec{
-		Prefix: "SWL",
-		Level:  "TEST",
+		Prefix:  "SWL",
+		Level:   "TEST",
+		Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+		AttrKey: "",
+		AttrVal: regexp.MustCompile(".*"),
 	}
 
 	sysDoc := config.Document{
@@ -68,9 +77,24 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	}
 
 	srdDoc := config.Document{
-		Path:          "path/to/srd.md",
-		ParentReqSpec: sysReqSpec,
-		ReqSpec:       swhReqSpec,
+		Path:    "path/to/srd.md",
+		ReqSpec: swhReqSpec,
+		LinkSpecs: []config.LinkSpec{
+			{
+				Child: config.ReqSpec{
+					Prefix:  config.ReqPrefix("TEST"),
+					Level:   config.ReqLevel("SWH"),
+					Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+					AttrKey: "",
+					AttrVal: regexp.MustCompile(".*")},
+				Parent: config.ReqSpec{
+					Prefix:  config.ReqPrefix("TEST"),
+					Level:   config.ReqLevel("SYS"),
+					Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+					AttrKey: "",
+					AttrVal: regexp.MustCompile(".*")},
+			},
+		},
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),
@@ -97,9 +121,24 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	}
 
 	sddDoc := config.Document{
-		Path:          "path/to/sdd.md",
-		ParentReqSpec: swhReqSpec,
-		ReqSpec:       swlReqSpec,
+		Path:    "path/to/sdd.md",
+		ReqSpec: swlReqSpec,
+		LinkSpecs: []config.LinkSpec{
+			{
+				Child: config.ReqSpec{
+					Prefix:  config.ReqPrefix("TEST"),
+					Level:   config.ReqLevel("SWL"),
+					Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+					AttrKey: "",
+					AttrVal: regexp.MustCompile(".*")},
+				Parent: config.ReqSpec{
+					Prefix:  config.ReqPrefix("TEST"),
+					Level:   config.ReqLevel("SWH"),
+					Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+					AttrKey: "",
+					AttrVal: regexp.MustCompile(".*")},
+			},
+		},
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 			Attributes:   make(map[string]*config.Attribute),

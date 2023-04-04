@@ -53,7 +53,7 @@ Reqtraq has the following outputs:
 Reqtraq uses a configuration file to determine:
 - What documents are part of the requirements identification. Reqtraq will parse all certification documents listed in the configuration and extract requirements from all of them.
 - What kind of requirements can be found in each of these documents. Reqtraq must categorize requirements according to their level and prefix.
-- What are the relationships between documents and requirements. Requirements at different levels have a parent-children relationship that is specified by the reqtraq configuration.
+- What are the relationships between documents and requirements. Requirements have a parent-child relationship that is specified by the reqtraq configuration.
 - Where the implementation of low-level-requirements is located. Reqtraq must check all implentation and tests in order to complete its traceability report.
 - What attributes are allowed by the reqtraq schema and their allowed range of values. This may depend on the document or requirement level.
 
@@ -288,11 +288,11 @@ Reqtraq SHALL provide a command line option to show tool usage.
 
 ### matrices.go
 
-Functions which generate trace matrix tables between different levels of requirements and source code.
+Functions which generate trace matrix tables between different requirements and source code.
 
 #### REQ-TRAQ-SWL-14 Requirement traceability tables
 
-Reqtraq SHALL generate tables which map between two adjacent level of requirements (e.g. system to high-Level software requirements).
+Reqtraq SHALL generate tables which map between parent-child requirements, as defined in the requirement configuration.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-5
@@ -702,6 +702,16 @@ Reqtraq SHALL check that the requirements referred to in each markdown document 
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-76 Valid parent links
+
+Reqtraq SHALL check that the parent links for each requirement conform to the associated schema.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-3
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 #### REQ-TRAQ-SWL-11 Invalid references to deleted requirements
 
 Reqtraq SHALL ensure that links are not made to deleted requirements.
@@ -870,6 +880,14 @@ A sample configuration file is shown below:
             "parent": {
                 "prefix": "TEST",
                 "level": "SWH"
+                "parentAttribute": {
+                    "name": "Item Allocation",
+                    "value": "Item1"
+                },
+                "childAttribute": {
+                    "name": "Item",
+                    "value": "^Item1$"
+                }
             },
             "attributes": [
                 {
@@ -910,9 +928,9 @@ Each document contains:
 - A requirement specification in terms of a `prefix` and `level`. Together they fully specify how the
 requirements in the document will look like. A document with level `SWL` and prefix `TEST` will have
 requirements of the form `REQ-TEST-SWL-1`.
-- An optional parent. If there is a parent document, it contains also a `prefix` and `level` with the
-specification of the parent so that requirements can be linked from children to parent. The parent also
-implies a `Parents` attribute with a filter for the requirement specification of the parent will be
+- An optional parent. If requirements can be linked to parent requirements, this field contains one or more link
+specifications containing a `prefix` and `level` of the parent, plus optional parent and child attribute
+filters to enforce linking on a subset of requirements. The parent also implies a `Parents` attribute will be
 added to the schema of the document.
 - An implementation, which consists of separated matchers for both code and tests. It accepts the
 following parameters:
@@ -970,8 +988,8 @@ Reqtraq SHALL provide a method to find a certification document inside any of th
 
 #### REQ-TRAQ-SWL-55 Find linked documents
 
-Reqtraq SHALL provide a method to find linked requirements across different documents that share a
-parent/child relationship.
+Reqtraq SHALL provide a method to find linked requirements within documents or across different documents,
+that share a parent/child relationship.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-15

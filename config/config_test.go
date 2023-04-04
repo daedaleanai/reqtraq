@@ -49,6 +49,7 @@ func TestConfig_ParseConfig(t *testing.T) {
 				Prefix: ReqPrefix("TEST"),
 				Level:  ReqLevel("SYS"),
 			},
+			LinkSpecs: nil,
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SYS-(\d+)`),
 				Attributes: map[string]*Attribute{
@@ -77,9 +78,21 @@ func TestConfig_ParseConfig(t *testing.T) {
 				Prefix: ReqPrefix("TEST"),
 				Level:  ReqLevel("SWH"),
 			},
-			ParentReqSpec: ReqSpec{
-				Prefix: ReqPrefix("TEST"),
-				Level:  ReqLevel("SYS"),
+			LinkSpecs: []LinkSpec{
+				{
+					Child: ReqSpec{
+						Prefix:  ReqPrefix("TEST"),
+						Level:   ReqLevel("SWH"),
+						Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+						AttrKey: "",
+						AttrVal: regexp.MustCompile(".*")},
+					Parent: ReqSpec{
+						Prefix:  ReqPrefix("TEST"),
+						Level:   ReqLevel("SYS"),
+						Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+						AttrKey: "",
+						AttrVal: regexp.MustCompile(".*")},
+				},
 			},
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SWH-(\d+)`),
@@ -88,7 +101,7 @@ func TestConfig_ParseConfig(t *testing.T) {
 					"VERIFICATION":  commonAttributes["VERIFICATION"],
 					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 					"PARENTS": {
-						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+						Value: regexp.MustCompile(`.*`),
 						Type:  AttributeAny,
 					},
 				},
@@ -117,23 +130,32 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Path, "TEST-138-SDD.md")
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Prefix, ReqPrefix("TEST"))
 	assert.Equal(t, config.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
-	assert.Equal(t, config.Repos["projectB"].Documents[0].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
+	assert.Equal(t, config.Repos["projectB"].Documents[0].LinkSpecs, []LinkSpec{
+		{
+			Child: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWL"),
+				Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+			Parent: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWH"),
+				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+		},
+	})
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TEST-SWL-(\d+)`))
 	assert.Equal(t, config.Repos["projectB"].Documents[0].Schema.Attributes, map[string]*Attribute{
 		"RATIONALE":     commonAttributes["RATIONALE"],
 		"VERIFICATION":  commonAttributes["VERIFICATION"],
 		"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 		"PARENTS": {
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+			Value: regexp.MustCompile(`.*`),
 			Type:  AttributeAny,
 		},
 	})
-	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.Attributes["PARENTS"],
-		Attribute{
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
-			Type:  AttributeAny,
-		},
-	)
 	assert.Equal(t, *config.Repos["projectB"].Documents[0].Schema.AsmAttributes["PARENTS"],
 		Attribute{
 			Value: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
@@ -157,23 +179,32 @@ func TestConfig_ParseConfig(t *testing.T) {
 	assert.Equal(t, config.Repos["projectC"].Documents[0].Path, "TST-138-SDD.md")
 	assert.Equal(t, config.Repos["projectC"].Documents[0].ReqSpec.Prefix, ReqPrefix("TST"))
 	assert.Equal(t, config.Repos["projectC"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
-	assert.Equal(t, config.Repos["projectC"].Documents[0].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
+	assert.Equal(t, config.Repos["projectC"].Documents[0].LinkSpecs, []LinkSpec{
+		{
+			Child: ReqSpec{
+				Prefix:  ReqPrefix("TST"),
+				Level:   ReqLevel("SWL"),
+				Re:      regexp.MustCompile("REQ-TST-SWL-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+			Parent: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWH"),
+				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+		},
+	})
 	assert.Equal(t, config.Repos["projectC"].Documents[0].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TST-SWL-(\d+)`))
 	assert.Equal(t, config.Repos["projectC"].Documents[0].Schema.Attributes, map[string]*Attribute{
 		"RATIONALE":     commonAttributes["RATIONALE"],
 		"VERIFICATION":  commonAttributes["VERIFICATION"],
 		"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 		"PARENTS": {
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+			Value: regexp.MustCompile(`.*`),
 			Type:  AttributeAny,
 		},
 	})
-	assert.Equal(t, *config.Repos["projectC"].Documents[0].Schema.Attributes["PARENTS"],
-		Attribute{
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
-			Type:  AttributeAny,
-		},
-	)
 	assert.Equal(t, *config.Repos["projectC"].Documents[0].Schema.AsmAttributes["PARENTS"],
 		Attribute{
 			Value: regexp.MustCompile("REQ-TST-SWL-(\\d+)"),
@@ -233,6 +264,7 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 				Prefix: ReqPrefix("TEST"),
 				Level:  ReqLevel("SYS"),
 			},
+			LinkSpecs: nil,
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SYS-(\d+)`),
 				Attributes: map[string]*Attribute{
@@ -261,9 +293,21 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 				Prefix: ReqPrefix("TEST"),
 				Level:  ReqLevel("SWH"),
 			},
-			ParentReqSpec: ReqSpec{
-				Prefix: ReqPrefix("TEST"),
-				Level:  ReqLevel("SYS"),
+			LinkSpecs: []LinkSpec{
+				{
+					Child: ReqSpec{
+						Prefix:  ReqPrefix("TEST"),
+						Level:   ReqLevel("SWH"),
+						Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+						AttrKey: "",
+						AttrVal: regexp.MustCompile(".*")},
+					Parent: ReqSpec{
+						Prefix:  ReqPrefix("TEST"),
+						Level:   ReqLevel("SYS"),
+						Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+						AttrKey: "",
+						AttrVal: regexp.MustCompile(".*")},
+				},
 			},
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SWH-(\d+)`),
@@ -272,7 +316,7 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 					"VERIFICATION":  commonAttributes["VERIFICATION"],
 					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 					"PARENTS": {
-						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+						Value: regexp.MustCompile(`.*`),
 						Type:  AttributeAny,
 					},
 				},
@@ -301,23 +345,32 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].Path, "TEST-138-SDD.md")
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].ReqSpec.Prefix, ReqPrefix("TEST"))
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].ReqSpec.Level, ReqLevel("SWL"))
-	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
+	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].LinkSpecs, []LinkSpec{
+		{
+			Child: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWL"),
+				Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+			Parent: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWH"),
+				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+		},
+	})
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TEST-SWL-(\d+)`))
 	assert.Equal(t, parsedConfig.Repos["projectB"].Documents[0].Schema.Attributes, map[string]*Attribute{
 		"RATIONALE":     commonAttributes["RATIONALE"],
 		"VERIFICATION":  commonAttributes["VERIFICATION"],
 		"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 		"PARENTS": {
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+			Value: regexp.MustCompile(`.*`),
 			Type:  AttributeAny,
 		},
 	})
-	assert.Equal(t, *parsedConfig.Repos["projectB"].Documents[0].Schema.Attributes["PARENTS"],
-		Attribute{
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
-			Type:  AttributeAny,
-		},
-	)
 	assert.Equal(t, *parsedConfig.Repos["projectB"].Documents[0].Schema.AsmAttributes["PARENTS"],
 		Attribute{
 			Value: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
@@ -375,6 +428,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 				Prefix: ReqPrefix("TEST"),
 				Level:  ReqLevel("SYS"),
 			},
+			LinkSpecs: nil,
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SYS-(\d+)`),
 				Attributes: map[string]*Attribute{
@@ -405,9 +459,21 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 				Prefix: ReqPrefix("TEST"),
 				Level:  ReqLevel("SWH"),
 			},
-			ParentReqSpec: ReqSpec{
-				Prefix: ReqPrefix("TEST"),
-				Level:  ReqLevel("SYS"),
+			LinkSpecs: []LinkSpec{
+				{
+					Child: ReqSpec{
+						Prefix:  ReqPrefix("TEST"),
+						Level:   ReqLevel("SWH"),
+						Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+						AttrKey: "",
+						AttrVal: regexp.MustCompile(".*")},
+					Parent: ReqSpec{
+						Prefix:  ReqPrefix("TEST"),
+						Level:   ReqLevel("SYS"),
+						Re:      regexp.MustCompile("REQ-TEST-SYS-(\\d+)"),
+						AttrKey: "",
+						AttrVal: regexp.MustCompile(".*")},
+				},
 			},
 			Schema: Schema{
 				Requirements: regexp.MustCompile(`(REQ|ASM)-TEST-SWH-(\d+)`),
@@ -416,7 +482,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 					"VERIFICATION":  commonAttributes["VERIFICATION"],
 					"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 					"PARENTS": {
-						Value: regexp.MustCompile(`REQ-TEST-SYS-(\d+)`),
+						Value: regexp.MustCompile(`.*`),
 						Type:  AttributeAny,
 					},
 				},
@@ -441,14 +507,29 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Path, "TEST-138-SDD.md")
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].ReqSpec.Prefix, ReqPrefix("TEST"))
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].ReqSpec.Level, ReqLevel("SWL"))
-	assert.Equal(t, config.Repos["libclangtest"].Documents[2].ParentReqSpec, ReqSpec{Prefix: ReqPrefix("TEST"), Level: ReqLevel("SWH")})
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].LinkSpecs, []LinkSpec{
+		{
+			Child: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWL"),
+				Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+			Parent: ReqSpec{
+				Prefix:  ReqPrefix("TEST"),
+				Level:   ReqLevel("SWH"),
+				Re:      regexp.MustCompile("REQ-TEST-SWH-(\\d+)"),
+				AttrKey: "",
+				AttrVal: regexp.MustCompile(".*")},
+		},
+	})
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Schema.Requirements, regexp.MustCompile(`(REQ|ASM)-TEST-SWL-(\d+)`))
 	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Schema.Attributes, map[string]*Attribute{
 		"RATIONALE":     commonAttributes["RATIONALE"],
 		"VERIFICATION":  commonAttributes["VERIFICATION"],
 		"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 		"PARENTS": {
-			Value: regexp.MustCompile(`REQ-TEST-SWH-(\d+)`),
+			Value: regexp.MustCompile(`.*`),
 			Type:  AttributeAny,
 		},
 	})
