@@ -1,8 +1,10 @@
-package main
+package cmd
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -11,6 +13,20 @@ import (
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
+
+// Other packages (config) are expected to do this, but for the repos config we can do it here
+// @llr REQ-TRAQ-SWL-49
+func TestMain(m *testing.M) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current directory")
+	}
+	parentDir := filepath.Dir(workingDir)
+	os.Chdir(parentDir)
+
+	repos.SetBaseRepoInfo(repos.RepoPath(parentDir), repos.RepoName("reqtraq"))
+	os.Exit(m.Run())
+}
 
 // @llr REQ-TRAQ-SWL-36
 func RunValidate(t *testing.T, config *config.Config) (string, error) {

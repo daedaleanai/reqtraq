@@ -8,7 +8,7 @@
      ReqFilter - The different parameters used to filter the requirements set.
 */
 
-package main
+package reqs
 
 import (
 	"fmt"
@@ -17,74 +17,42 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/daedaleanai/reqtraq/code"
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/diagnostics"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/pkg/errors"
 )
 
-type IssueType uint
-
-const (
-	IssueTypeInvalidRequirementId IssueType = iota
-	IssueTypeInvalidParent
-	IssueTypeInvalidRequirementReference
-	IssueTypeInvalidRequirementInCode
-	IssueTypeMissingRequirementInCode
-	IssueTypeMissingAttribute
-	IssueTypeUnknownAttribute
-	IssueTypeInvalidAttributeValue
-	IssueTypeReqTestedButNotImplemented
-	IssueTypeReqNotImplemented
-	IssueTypeReqNotTested
-)
-
-type IssueSeverity uint
-
-const (
-	IssueSeverityMajor IssueSeverity = iota
-	IssueSeverityMinor
-	IssueSeverityNote
-)
-
-type Issue struct {
-	RepoName repos.RepoName
-	Path     string
-	Line     int
-	Error    error
-	Severity IssueSeverity
-	Type     IssueType
+// OrdsByPosition returns the SYSTEM requirements which don't have any parent, ordered by position.
+// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-20
+func (rg ReqGraph) OrdsByPosition() []*Req {
+	var r []*Req
+	for _, v := range rg.Reqs {
+		if v.Document.LinkSpecs == nil && len(v.ParentIds) == 0 {
+			r = append(r, v)
+		}
+	}
+	sort.Sort(byPosition(r))
+	return r
 }
 
-// ReqGraph holds the complete information about a set of requirements and associated code tags.
-type ReqGraph struct {
-	// Reqs contains the requirements by ID.
-	Reqs map[string]*Req
-	// CodeTags contains the source code functions per file.
-	// The keys are paths relative to the git repo path.
-	CodeTags map[CodeFile][]*Code
-	// Issues which have been found while analyzing the graph.
-	// This is extended in multiple places.
-	Issues []Issue
-	// Holds configuration of reqtraq for all associated repositories
-	ReqtraqConfig *config.Config
-}
-
-// buildGraph returns the requirements graph at the specified commit, or the graph for the current files if commit
+// BuildGraph returns the requirements graph at the specified commit, or the graph for the current files if commit
 // is empty. In case the commit is specified, a temporary clone of the repository is created and the path to it is
 // returned.
 // @llr REQ-TRAQ-SWL-17
-func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
+func BuildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
 	if commit != "" {
 		// Override the current repository to get a different revision. This will create a clone
 		// of the repo with the specified revision and it will be always used after this call for
 		// the base repo
-		_, err := repos.GetRepo(repos.BaseRepoName(), repos.RemotePath(repos.BaseRepoPath()), commit, true)
+		path, err := repos.GetRepo(repos.BaseRepoName(), repos.RemotePath(repos.BaseRepoPath()), commit, true)
 		if err != nil {
 			return nil, err
 		}
 
 		// Also override reqtraq configuration... as they are different repos
-		overridenConfig, err := config.ParseConfig(repos.BaseRepoPath())
+		overridenConfig, err := config.ParseConfig(path)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +78,7 @@ func buildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) 
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
 func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
-	rg := &ReqGraph{make(map[string]*Req, 0), make(map[CodeFile][]*Code), make([]Issue, 0), reqtraqConfig}
+	rg := &ReqGraph{make(map[string]*Req, 0), make(map[code.CodeFile][]*code.Code), make([]diagnostics.Issue, 0), reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them
 	for repoName := range reqtraqConfig.Repos {
@@ -120,7 +88,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 				return rg, errors.Wrap(err, "Failed parsing certdocs")
 			}
 
-			if codeTags, err := ParseCode(repoName, doc); err != nil {
+			if codeTags, err := code.ParseCode(repoName, doc); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing implementation")
 			} else {
 				rg.mergeTags(&codeTags)
@@ -129,7 +97,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	}
 
 	// Call resolve to check links between requirements and code
-	rg.Issues = append(rg.Issues, rg.resolve()...)
+	rg.Issues = append(rg.Issues, rg.Resolve()...)
 
 	return rg, nil
 }
@@ -137,7 +105,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 // Merges all tags from the given map into the ReqGraph instance, potentially replacing them if they
 // are already in the requirements graph
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
-func (rg *ReqGraph) mergeTags(tags *map[CodeFile][]*Code) {
+func (rg *ReqGraph) mergeTags(tags *map[code.CodeFile][]*code.Code) {
 	for tagKey := range *tags {
 		rg.CodeTags[tagKey] = (*tags)[tagKey]
 	}
@@ -165,7 +133,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextAsmId := 1
 
 	for _, r := range reqs {
-		var newIssues []Issue
+		var newIssues []diagnostics.Issue
 		if r.Variant == ReqVariantRequirement {
 			newIssues = r.checkID(documentConfig, nextReqId, isReqPresent)
 			nextReqId = r.IDNumber + 1
@@ -189,8 +157,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 // makes sure that all code tags use the same llr. If more than one tag with the same symbol uses a
 // different LLR this triggers an issue that is reported.
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67, REQ-TRAQ-SWL-69
-func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) []string) {
-	issues := make([]Issue, 0)
+func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, symbol string) []string) {
+	issues := make([]diagnostics.Issue, 0)
 
 	// Deduplication must only happen per requirement document. One document may provide a declaration,
 	// which links a requirement in that document, while a different item may provide a definition and
@@ -199,7 +167,7 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 
 	// Map of parentIds each document and symbol. First key is the document, second key is the symbol
 	linksMap := map[string]map[string][]string{}
-	llrLoc := map[string]map[string]*Code{}
+	llrLoc := map[string]map[string]*code.Code{}
 
 	getParentIdsForSymbolInDocument := func(doc, symbol string) []string {
 		if _, ok := linksMap[doc]; !ok {
@@ -208,7 +176,7 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 		return linksMap[doc][symbol]
 	}
 
-	setParentIdsForSymbolInDocument := func(doc, symbol string, links []ReqLink) {
+	setParentIdsForSymbolInDocument := func(doc, symbol string, links []code.ReqLink) {
 		if _, ok := linksMap[doc]; !ok {
 			linksMap[doc] = make(map[string][]string)
 		}
@@ -219,23 +187,23 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 		linksMap[doc][symbol] = ids
 	}
 
-	getLlrLocForSymbolInDocument := func(doc, symbol string) *Code {
+	getLlrLocForSymbolInDocument := func(doc, symbol string) *code.Code {
 		if _, ok := llrLoc[doc]; !ok {
-			llrLoc[doc] = make(map[string]*Code)
+			llrLoc[doc] = make(map[string]*code.Code)
 		}
 		return llrLoc[doc][symbol]
 	}
 
-	setLlrLocForSymbolInDocument := func(doc, symbol string, loc *Code) {
+	setLlrLocForSymbolInDocument := func(doc, symbol string, loc *code.Code) {
 		if _, ok := llrLoc[doc]; !ok {
-			llrLoc[doc] = make(map[string]*Code)
+			llrLoc[doc] = make(map[string]*code.Code)
 		}
 		llrLoc[doc][symbol] = loc
 	}
 
 	// linksMatch compares an array of requirement IDs with the given array of ReqLink's and matches
 	// each element if the requirement ID matches (ignoring other members of the ReqLink struct).
-	linksMatch := func(lhs []string, rhs []ReqLink) bool {
+	linksMatch := func(lhs []string, rhs []code.ReqLink) bool {
 		if len(lhs) != len(rhs) {
 			return false
 		}
@@ -288,13 +256,13 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 					errorMessage = fmt.Errorf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
 						code.Tag, code.CodeFile.Path, code.Line, prevLoc.Tag, prevLoc.CodeFile.Path, prevLoc.Line)
 				}
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
 					RepoName: code.CodeFile.RepoName,
 					Error:    errorMessage,
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidRequirementInCode,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeInvalidRequirementInCode,
 				}
 				issues = append(issues, issue)
 			}
@@ -303,13 +271,14 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 	return issues, getParentIdsForSymbolInDocument
 }
 
+// TODO(ja): Make this more modular and resolve diagnostics at multiple levels (we already know some of these diagnostics just by parsing code)
 // resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema for their document. Any errors encountered such as links to
 // non-existent requirements are returned in a list of issues.
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67, REQ-TRAQ-SWL-69
-func (rg *ReqGraph) resolve() []Issue {
-	issues := make([]Issue, 0)
+func (rg *ReqGraph) Resolve() []diagnostics.Issue {
+	issues := make([]diagnostics.Issue, 0)
 
 	// Walk the requirements, resolving links and looking for errors
 	for _, req := range rg.Reqs {
@@ -319,13 +288,13 @@ func (rg *ReqGraph) resolve() []Issue {
 
 		// Validate requirement Id
 		if !req.Document.Schema.Requirements.MatchString(req.ID) {
-			issue := Issue{
+			issue := diagnostics.Issue{
 				Line:     req.Position,
 				Path:     req.Document.Path,
 				RepoName: req.RepoName,
 				Error:    fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeInvalidRequirementId,
+				Severity: diagnostics.IssueSeverityMajor,
+				Type:     diagnostics.IssueTypeInvalidRequirementId,
 			}
 			issues = append(issues, issue)
 		}
@@ -338,25 +307,25 @@ func (rg *ReqGraph) resolve() []Issue {
 			parent := rg.Reqs[parentID]
 			if parent != nil {
 				if parent.IsDeleted() {
-					issue := Issue{
+					issue := diagnostics.Issue{
 						Line:     req.Position,
 						Path:     req.Document.Path,
 						RepoName: req.RepoName,
 						Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted."),
-						Severity: IssueSeverityMajor,
-						Type:     IssueTypeInvalidParent,
+						Severity: diagnostics.IssueSeverityMajor,
+						Type:     diagnostics.IssueTypeInvalidParent,
 					}
 					issues = append(issues, issue)
 				}
 				if req.Variant == ReqVariantRequirement {
 					if err := req.validateLink(parent); err != nil {
-						issue := Issue{
+						issue := diagnostics.Issue{
 							Line:     req.Position,
 							Path:     req.Document.Path,
 							RepoName: req.RepoName,
 							Error:    err,
-							Severity: IssueSeverityMajor,
-							Type:     IssueTypeInvalidParent,
+							Severity: diagnostics.IssueSeverityMajor,
+							Type:     diagnostics.IssueTypeInvalidParent,
 						}
 						issues = append(issues, issue)
 					}
@@ -364,40 +333,40 @@ func (rg *ReqGraph) resolve() []Issue {
 				parent.Children = append(parent.Children, req)
 				req.Parents = append(req.Parents, parent)
 			} else {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     req.Position,
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " does not exist."),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidParent,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeInvalidParent,
 				}
 				issues = append(issues, issue)
 			}
 		}
 		// Validate references to requirements in body text
-		matches := ReReqID.FindAllStringSubmatchIndex(req.Body, -1)
+		matches := reReqID.FindAllStringSubmatchIndex(req.Body, -1)
 		for _, ids := range matches {
 			reqID := req.Body[ids[0]:ids[1]]
 			v, reqFound := rg.Reqs[reqID]
 			if !reqFound {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     req.Position,
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    fmt.Errorf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidRequirementReference,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeInvalidRequirementReference,
 				}
 				issues = append(issues, issue)
 			} else if v.IsDeleted() {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     req.Position,
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidRequirementReference,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeInvalidRequirementReference,
 				}
 				issues = append(issues, issue)
 			}
@@ -421,26 +390,26 @@ func (rg *ReqGraph) resolve() []Issue {
 			}
 
 			if len(parentIds) == 0 && !code.Optional {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
 					RepoName: code.CodeFile.RepoName,
 					Error:    fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeMissingRequirementInCode,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeMissingRequirementInCode,
 				}
 				issues = append(issues, issue)
 			}
 			for _, parentID := range parentIds {
 				if !code.Document.Schema.Requirements.MatchString(parentID) {
-					issue := Issue{
+					issue := diagnostics.Issue{
 						Line:     code.Line,
 						Path:     code.CodeFile.Path,
 						RepoName: code.CodeFile.RepoName,
 						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path),
-						Severity: IssueSeverityMajor,
-						Type:     IssueTypeInvalidRequirementInCode,
+						Severity: diagnostics.IssueSeverityMajor,
+						Type:     diagnostics.IssueTypeInvalidRequirementInCode,
 					}
 					issues = append(issues, issue)
 				}
@@ -448,28 +417,28 @@ func (rg *ReqGraph) resolve() []Issue {
 				parent := rg.Reqs[parentID]
 				if parent != nil {
 					if parent.IsDeleted() {
-						issue := Issue{
+						issue := diagnostics.Issue{
 							Line:     code.Line,
 							Path:     code.CodeFile.Path,
 							RepoName: code.CodeFile.RepoName,
 							Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
 								code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
-							Severity: IssueSeverityMajor,
-							Type:     IssueTypeInvalidRequirementInCode,
+							Severity: diagnostics.IssueSeverityMajor,
+							Type:     diagnostics.IssueTypeInvalidRequirementInCode,
 						}
 						issues = append(issues, issue)
 					}
 
 					parent.Tags = append(parent.Tags, code)
 				} else {
-					issue := Issue{
+					issue := diagnostics.Issue{
 						Line:     code.Line,
 						Path:     code.CodeFile.Path,
 						RepoName: code.CodeFile.RepoName,
 						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
-						Severity: IssueSeverityMajor,
-						Type:     IssueTypeInvalidRequirementInCode,
+						Severity: diagnostics.IssueSeverityMajor,
+						Type:     diagnostics.IssueTypeInvalidRequirementInCode,
 					}
 					issues = append(issues, issue)
 				}
@@ -487,10 +456,10 @@ func (rg *ReqGraph) resolve() []Issue {
 		implemented := false
 		tested := false
 		for _, tag := range req.Tags {
-			if tag.CodeFile.Type.Matches(CodeTypeImplementation) {
+			if tag.CodeFile.Type.Matches(code.CodeTypeImplementation) {
 				implemented = true
 			}
-			if tag.CodeFile.Type.Matches(CodeTypeTests) {
+			if tag.CodeFile.Type.Matches(code.CodeTypeTests) {
 				tested = true
 			}
 			if implemented && tested {
@@ -500,35 +469,35 @@ func (rg *ReqGraph) resolve() []Issue {
 
 		if !implemented {
 			if tested {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     req.Position,
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    fmt.Errorf("Requirement %s is tested, but it is not implemented.", req.ID),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeReqTestedButNotImplemented,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeReqTestedButNotImplemented,
 				}
 				issues = append(issues, issue)
 			} else {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     req.Position,
 					Path:     req.Document.Path,
 					RepoName: req.RepoName,
 					Error:    fmt.Errorf("Requirement %s is not implemented.", req.ID),
-					Severity: IssueSeverityNote,
-					Type:     IssueTypeReqNotImplemented,
+					Severity: diagnostics.IssueSeverityNote,
+					Type:     diagnostics.IssueTypeReqNotImplemented,
 				}
 				issues = append(issues, issue)
 
 			}
 		} else if !tested {
-			issue := Issue{
+			issue := diagnostics.Issue{
 				Line:     req.Position,
 				Path:     req.Document.Path,
 				RepoName: req.RepoName,
 				Error:    fmt.Errorf("Requirement %s is not tested.", req.ID),
-				Severity: IssueSeverityNote,
-				Type:     IssueTypeReqNotTested,
+				Severity: diagnostics.IssueSeverityNote,
+				Type:     diagnostics.IssueTypeReqNotTested,
 			}
 			issues = append(issues, issue)
 		}
@@ -544,35 +513,6 @@ func (rg *ReqGraph) resolve() []Issue {
 	}
 
 	return nil
-}
-
-type ReqVariant uint
-
-const (
-	ReqVariantRequirement ReqVariant = iota
-	ReqVariantAssumption
-)
-
-// Req represents a requirement node in the graph of requirements.
-type Req struct {
-	ID        string // e.g. REQ-TEST-SWL-1
-	Variant   ReqVariant
-	IDNumber  int // e.g. 1
-	ParentIds []string
-	// Parents holds the parent requirements.
-	Parents []*Req
-	// Children holds the children requirements.
-	Children []*Req
-	// Tags holds the associated code functions.
-	Tags  []*Code
-	Title string
-	Body  string
-	// Attributes of the requirement by uppercase name.
-	Attributes map[string]string
-	Position   int
-	// Link back to the document where the requirement is defined and the name of the repository
-	Document *config.Document
-	RepoName repos.RepoName
 }
 
 // Changelists generates a list of Phabicator revisions that have affected a requirement
@@ -593,7 +533,7 @@ func (r *Req) IsDeleted() bool {
 // checkAttributes validates the requirement attributes against the schema from its document,
 // returns a list of issues found.
 // @llr REQ-TRAQ-SWL-10
-func (r *Req) checkAttributes() []Issue {
+func (r *Req) checkAttributes() []diagnostics.Issue {
 	var schemaAttributes map[string]*config.Attribute
 	switch r.Variant {
 	case ReqVariantRequirement:
@@ -602,7 +542,7 @@ func (r *Req) checkAttributes() []Issue {
 		schemaAttributes = r.Document.Schema.AsmAttributes
 	}
 
-	var issues []Issue
+	var issues []diagnostics.Issue
 	var anyAttributes []string
 	anyCount := 0
 
@@ -616,13 +556,13 @@ func (r *Req) checkAttributes() []Issue {
 		reqValuePresent = reqValuePresent && reqValue != ""
 
 		if !reqValuePresent && attribute.Type == config.AttributeRequired {
-			issue := Issue{
+			issue := diagnostics.Issue{
 				Line:     r.Position,
 				Path:     r.Document.Path,
 				RepoName: r.RepoName,
 				Error:    fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, name),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeMissingAttribute,
+				Severity: diagnostics.IssueSeverityMajor,
+				Type:     diagnostics.IssueTypeMissingAttribute,
 			}
 			issues = append(issues, issue)
 		} else if reqValuePresent {
@@ -631,13 +571,13 @@ func (r *Req) checkAttributes() []Issue {
 			}
 
 			if !attribute.Value.MatchString(reqValue) {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     r.Position,
 					Path:     r.Document.Path,
 					RepoName: r.RepoName,
 					Error:    fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidAttributeValue,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeInvalidAttributeValue,
 				}
 				issues = append(issues, issue)
 			}
@@ -646,13 +586,13 @@ func (r *Req) checkAttributes() []Issue {
 
 	if len(anyAttributes) > 0 && anyCount == 0 {
 		sort.Strings(anyAttributes)
-		issue := Issue{
+		issue := diagnostics.Issue{
 			Line:     r.Position,
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")),
-			Severity: IssueSeverityMajor,
-			Type:     IssueTypeMissingAttribute,
+			Severity: diagnostics.IssueSeverityMajor,
+			Type:     diagnostics.IssueTypeMissingAttribute,
 		}
 		issues = append(issues, issue)
 	}
@@ -660,13 +600,13 @@ func (r *Req) checkAttributes() []Issue {
 	// Iterate the requirement attributes to check for unknown ones
 	for name := range r.Attributes {
 		if _, present := schemaAttributes[strings.ToUpper(name)]; !present {
-			issue := Issue{
+			issue := diagnostics.Issue{
 				Line:     r.Position,
 				Path:     r.Document.Path,
 				RepoName: r.RepoName,
 				Error:    fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeUnknownAttribute,
+				Severity: diagnostics.IssueSeverityMajor,
+				Type:     diagnostics.IssueTypeUnknownAttribute,
 			}
 			issues = append(issues, issue)
 		}
@@ -712,86 +652,86 @@ func (r *Req) validateLink(parent *Req) error {
 
 // checkID verifies that the requirement is not duplicated
 // @llr REQ-TRAQ-SWL-25, REQ-TRAQ-SWL-26, REQ-TRAQ-SWL-28
-func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPresent []bool) []Issue {
-	var issues []Issue
+func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPresent []bool) []diagnostics.Issue {
+	var issues []diagnostics.Issue
 	reqIDComps := strings.Split(r.ID, "-") // results in an array such as [REQ PROJECT REQTYPE 1234]
 	// check requirement name, no need to check prefix because it would not have been parsed otherwise
 	if reqIDComps[1] != string(document.ReqSpec.Prefix) {
-		issue := Issue{
+		issue := diagnostics.Issue{
 			Line:     r.Position,
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]),
-			Severity: IssueSeverityMajor,
-			Type:     IssueTypeInvalidRequirementId,
+			Severity: diagnostics.IssueSeverityMajor,
+			Type:     diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	}
 	if reqIDComps[2] != string(document.ReqSpec.Level) {
-		issue := Issue{
+		issue := diagnostics.Issue{
 			Line:     r.Position,
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]),
-			Severity: IssueSeverityMajor,
-			Type:     IssueTypeInvalidRequirementId,
+			Severity: diagnostics.IssueSeverityMajor,
+			Type:     diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	}
 	if reqIDComps[3][0] == '0' {
-		issue := Issue{
+		issue := diagnostics.Issue{
 			Line:     r.Position,
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]),
-			Severity: IssueSeverityMajor,
-			Type:     IssueTypeInvalidRequirementId,
+			Severity: diagnostics.IssueSeverityMajor,
+			Type:     diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	}
 
 	currentID, err2 := strconv.Atoi(reqIDComps[3])
 	if err2 != nil {
-		issue := Issue{
+		issue := diagnostics.Issue{
 			Line:     r.Position,
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]),
-			Severity: IssueSeverityMajor,
-			Type:     IssueTypeInvalidRequirementId,
+			Severity: diagnostics.IssueSeverityMajor,
+			Type:     diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	} else {
 		if currentID < 1 {
-			issue := Issue{
+			issue := diagnostics.Issue{
 				Line:     r.Position,
 				Path:     r.Document.Path,
 				RepoName: r.RepoName,
 				Error:    fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeInvalidRequirementId,
+				Severity: diagnostics.IssueSeverityMajor,
+				Type:     diagnostics.IssueTypeInvalidRequirementId,
 			}
 			issues = append(issues, issue)
 		} else {
 			if isReqPresent[currentID-1] {
-				issue := Issue{
+				issue := diagnostics.Issue{
 					Line:     r.Position,
 					Path:     r.Document.Path,
 					RepoName: r.RepoName,
 					Error:    fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID),
-					Severity: IssueSeverityMajor,
-					Type:     IssueTypeInvalidRequirementId,
+					Severity: diagnostics.IssueSeverityMajor,
+					Type:     diagnostics.IssueTypeInvalidRequirementId,
 				}
 				issues = append(issues, issue)
 			} else {
 				if currentID != expectedIDNumber {
-					issue := Issue{
+					issue := diagnostics.Issue{
 						Line:     r.Position,
 						Path:     r.Document.Path,
 						RepoName: r.RepoName,
 						Error:    fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber),
-						Severity: IssueSeverityMajor,
-						Type:     IssueTypeInvalidRequirementId,
+						Severity: diagnostics.IssueSeverityMajor,
+						Type:     diagnostics.IssueTypeInvalidRequirementId,
 					}
 					issues = append(issues, issue)
 				}
@@ -801,13 +741,6 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 	}
 
 	return issues
-}
-
-type AttributeRule struct {
-	Filter   *regexp.Regexp // holds a regex which matches which requirement IDs this rule applies to
-	Required bool           // indicates if this attribute is mandatory
-	Any      bool           // indicates if this attribute, or another with this flag set, is mandatory
-	Value    *regexp.Regexp // regex which matches valid values for the attribute
 }
 
 // byPosition provides sort functions to order requirements by their Position value
@@ -834,45 +767,10 @@ func (a byIDNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 // @llr REQ-TRAQ-SWL-46
 func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
 
-// byFilenameTag provides sort functions to order code by their repo name, then path value, and then line number
-type byFilenameTag []*Code
-
-// @llr REQ-TRAQ-SWL-47
-func (a byFilenameTag) Len() int { return len(a) }
-
-// @llr REQ-TRAQ-SWL-47
-func (a byFilenameTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-
-// @llr REQ-TRAQ-SWL-47
-func (a byFilenameTag) Less(i, j int) bool {
-	switch strings.Compare(string(a[i].CodeFile.RepoName), string(a[j].CodeFile.RepoName)) {
-	case -1:
-		return true
-	case 0:
-		switch strings.Compare(a[i].CodeFile.Path, a[j].CodeFile.Path) {
-		case -1:
-			return true
-		case 0:
-			return a[i].Line < a[j].Line
-		}
-		return false
-	}
-	return false
-}
-
-// ReqFilter holds the different parameters used to filter the requirements set.
-type ReqFilter struct {
-	IDRegexp           *regexp.Regexp
-	TitleRegexp        *regexp.Regexp
-	BodyRegexp         *regexp.Regexp
-	AnyAttributeRegexp *regexp.Regexp
-	AttributeRegexp    map[string]*regexp.Regexp
-}
-
 // createFilter reads the filter regular expressions from the command line arguments and
 // compiles them into a filter structure ready to use
 // @llr REQ-TRAQ-SWL-19, REQ-TRAQ-SWL-73
-func createFilter(idFilter, titleFilter, bodyFilter string, attributeFilter []string) (ReqFilter, error) {
+func CreateFilter(idFilter, titleFilter, bodyFilter string, attributeFilter []string) (ReqFilter, error) {
 	filter := ReqFilter{} // Filter for report generation
 	filter.AttributeRegexp = make(map[string]*regexp.Regexp, 0)
 	var err error

@@ -1,10 +1,13 @@
-package main
+package cmd
 
 import (
 	"log"
 	"os"
 
 	"github.com/daedaleanai/cobra"
+	"github.com/daedaleanai/reqtraq/diff"
+	"github.com/daedaleanai/reqtraq/report"
+	"github.com/daedaleanai/reqtraq/reqs"
 )
 
 var (
@@ -68,32 +71,32 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	rg, err := buildGraph(*reportAt, reqtraqConfig)
+	rg, err := reqs.BuildGraph(*reportAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}
 
-	var prg *ReqGraph
+	var prg *reqs.ReqGraph
 	if *reportSince != "" {
-		prg, err = buildGraph(*reportSince, reqtraqConfig)
+		prg, err = reqs.BuildGraph(*reportSince, reqtraqConfig)
 		if err != nil {
 			return err
 		}
 	}
 
-	diffs := rg.ChangedSince(prg)
+	diffs := diff.ChangedSince(rg, prg)
 
 	of, err := os.Create(*reportPrefix + "down.html")
 	if err != nil {
 		return err
 	}
 	log.Print("Creating ", of.Name(), " (this may take a while)...")
-	if err := rg.ReportDown(of); err != nil {
+	if err := report.ReportDown(rg, of); err != nil {
 		return err
 	}
 	of.Close()
 
-	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
+	filter, err := reqs.CreateFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -103,7 +106,7 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 			return err
 		}
 		log.Print("Creating ", of.Name(), " (this may take a while)...")
-		if err := rg.ReportDownFiltered(of, &filter, diffs); err != nil {
+		if err := report.ReportDownFiltered(rg, of, &filter, diffs); err != nil {
 			return err
 		}
 		of.Close()
@@ -121,31 +124,31 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	rg, err := buildGraph(*reportAt, reqtraqConfig)
+	rg, err := reqs.BuildGraph(*reportAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}
 
-	var prg *ReqGraph
+	var prg *reqs.ReqGraph
 	if *reportSince != "" {
-		prg, err = buildGraph(*reportSince, reqtraqConfig)
+		prg, err = reqs.BuildGraph(*reportSince, reqtraqConfig)
 		if err != nil {
 			return err
 		}
 	}
 
-	diffs := rg.ChangedSince(prg)
+	diffs := diff.ChangedSince(rg, prg)
 
 	of, err := os.Create(*reportPrefix + "issues.html")
 	if err != nil {
 		return err
 	}
 	log.Print("Creating ", of.Name(), " (this may take a while)...")
-	if err := rg.ReportIssues(of); err != nil {
+	if err := report.ReportIssues(rg, of); err != nil {
 		return err
 	}
 	of.Close()
-	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
+	filter, err := reqs.CreateFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -155,7 +158,7 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 			return err
 		}
 		log.Print("Creating ", of.Name(), " (this may take a while)...")
-		if err := rg.ReportIssuesFiltered(of, &filter, diffs); err != nil {
+		if err := report.ReportIssuesFiltered(rg, of, &filter, diffs); err != nil {
 			return err
 		}
 		of.Close()
@@ -172,32 +175,32 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	rg, err := buildGraph(*reportAt, reqtraqConfig)
+	rg, err := reqs.BuildGraph(*reportAt, reqtraqConfig)
 	if err != nil {
 		return err
 	}
 
-	var prg *ReqGraph
+	var prg *reqs.ReqGraph
 	if *reportSince != "" {
-		prg, err = buildGraph(*reportSince, reqtraqConfig)
+		prg, err = reqs.BuildGraph(*reportSince, reqtraqConfig)
 		if err != nil {
 			return err
 		}
 	}
 
-	diffs := rg.ChangedSince(prg)
+	diffs := diff.ChangedSince(rg, prg)
 
 	of, err := os.Create(*reportPrefix + "up.html")
 	if err != nil {
 		return err
 	}
 	log.Print("Creating ", of.Name(), " (this may take a while)...")
-	if err = rg.ReportUp(of); err != nil {
+	if err = report.ReportUp(rg, of); err != nil {
 		return err
 	}
 	of.Close()
 
-	filter, err := createFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
+	filter, err := reqs.CreateFilter(*reportIdFilter, *reportTitleFilter, *reportBodyFilter, *reportAttributeFilter)
 	if err != nil {
 		return err
 	}
@@ -207,7 +210,7 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 			return err
 		}
 		log.Print("Creating ", of.Name(), " (this may take a while)...")
-		if err := rg.ReportUpFiltered(of, &filter, diffs); err != nil {
+		if err := report.ReportUpFiltered(rg, of, &filter, diffs); err != nil {
 			return err
 		}
 		of.Close()

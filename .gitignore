@@ -17,7 +17,7 @@
 .idea/
 
 # Compiled reqtraq binary
-reqtraq/reqtraq
+reqtraq
 
 testdata/libclangtest/build
 testdata/libclangtest/.cache

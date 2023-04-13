@@ -1,8 +1,8 @@
-package main
+package code
 
 import (
-	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -13,12 +13,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Setup the configuration when init runs
-// @llr REQ-TRAQ-SWL-8
-func init() {
-	if err := setupConfiguration(); err != nil {
-		log.Fatalf("Unable to setup configuration: %s", err.Error())
+// Other packages (config) are expected to do this, but for the repos config we can do it here
+// @llr REQ-TRAQ-SWL-49
+func TestMain(m *testing.M) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current directory")
 	}
+
+	repos.SetBaseRepoInfo(repos.RepoPath(filepath.Dir(workingDir)), repos.RepoName("reqtraq"))
+	os.Exit(m.Run())
 }
 
 // @llr REQ-TRAQ-SWL-8
@@ -100,8 +104,6 @@ func TestReqGraph_ParseCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
-	rg := ReqGraph{Reqs: make(map[string]*Req, 0)}
-
 	doc := config.Document{
 		Path: "path/to/doc.md",
 		Schema: config.Schema{
@@ -114,8 +116,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 		},
 	}
 
-	var err error
-	rg.CodeTags, err = ParseCode(repoName, &doc)
+	codeTags, err := ParseCode(repoName, &doc)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -191,7 +192,7 @@ func TestReqGraph_ParseCode(t *testing.T) {
 				},
 			}}, false},
 	}
-	LookFor(t, repoName, "a.cc", CodeTypeImplementation, rg.CodeTags, expectedTags)
+	LookFor(t, repoName, "a.cc", CodeTypeImplementation, codeTags, expectedTags)
 
 	expectedTestTags := []TagMatch{
 		{"testThatSomethingHappens",
@@ -211,63 +212,5 @@ func TestReqGraph_ParseCode(t *testing.T) {
 			26,
 			[]ReqLink{}, true},
 	}
-	LookFor(t, repoName, "testdata/a.c", CodeTypeTests, rg.CodeTags, expectedTestTags)
-
-	rg.Reqs["REQ-TEST-SWL-13"] = &Req{ID: "REQ-TEST-SWL-13", Document: &doc, RepoName: "cproject1", Position: 12}
-	rg.Reqs["REQ-TEST-SWH-11"] = &Req{ID: "REQ-TEST-SWH-11", Document: &doc, RepoName: "cproject1", Position: 13}
-	rg.Reqs["REQ-TEST-SWL-15"] = &Req{ID: "REQ-TEST-SWL-15", Document: &doc, RepoName: "cproject1", Position: 14}
-
-	errs := rg.resolve()
-	assert.ElementsMatch(t,
-		errs,
-		[]Issue{
-			{
-				Path:     "a.cc",
-				RepoName: "cproject1",
-				Line:     13,
-				Error:    fmt.Errorf("Invalid reference in function getNumberOfSegments@a.cc:13 in repo `cproject1`, `REQ-TEST-SWH-11` does not match requirement format in document `path/to/doc.md`."),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeInvalidRequirementInCode,
-			},
-			{
-				Path:     "a.cc",
-				RepoName: "cproject1",
-				Line:     17,
-				Error:    fmt.Errorf("Invalid reference in function getSegment@a.cc:17 in repo `cproject1`, REQ-TEST-SWL-12 does not exist."),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeInvalidRequirementInCode,
-			},
-			{
-				Path:     "path/to/doc.md",
-				RepoName: "cproject1",
-				Line:     13,
-				Error:    fmt.Errorf("Requirement `REQ-TEST-SWH-11` in document `path/to/doc.md` does not match required regexp `REQ-TEST-SWL-(\\d+)`"),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeInvalidRequirementId,
-			},
-			{
-				Path:     "a.cc",
-				RepoName: "cproject1",
-				Line:     37,
-				Error:    fmt.Errorf("Invalid reference in function operator []@a.cc:37 in repo `cproject1`, REQ-TEST-SWL-14 does not exist."),
-				Severity: IssueSeverityMajor,
-				Type:     IssueTypeInvalidRequirementInCode,
-			},
-			{
-				Path:     "path/to/doc.md",
-				RepoName: "cproject1",
-				Line:     13,
-				Error:    fmt.Errorf("Requirement REQ-TEST-SWH-11 is not tested."),
-				Severity: IssueSeverityNote,
-				Type:     IssueTypeReqNotTested,
-			},
-			{
-				Path:     "path/to/doc.md",
-				RepoName: "cproject1",
-				Line:     14,
-				Error:    fmt.Errorf("Requirement REQ-TEST-SWL-15 is not tested."),
-				Severity: IssueSeverityNote,
-				Type:     IssueTypeReqNotTested,
-			},
-		})
+	LookFor(t, repoName, "testdata/a.c", CodeTypeTests, codeTags, expectedTestTags)
 }

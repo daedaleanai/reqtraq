@@ -1,4 +1,4 @@
-package main
+package matrix
 
 import (
 	"regexp"
@@ -6,14 +6,15 @@ import (
 	"testing"
 
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/reqs"
 	"github.com/stretchr/testify/assert"
 )
 
 // matrixRows creates a simple textual representation of the matrix,
 // for comparison purposes.
 // @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-42, REQ-TRAQ-SWL-43
-func (rg *ReqGraph) matrixRows(matrix []TableRow) []string {
-	rg.sortMatrices(matrix)
+func matrixRows(rg *reqs.ReqGraph, matrix []TableRow) []string {
+	sortMatrices(rg, matrix)
 	parts := make([]string, 0)
 	for _, reqs := range matrix {
 		e := make([]string, 0)
@@ -30,8 +31,8 @@ func (rg *ReqGraph) matrixRows(matrix []TableRow) []string {
 }
 
 // @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-42, REQ-TRAQ-SWL-43
-func TestReqGraph_createMatrix(t *testing.T) {
-	rg := &ReqGraph{Reqs: make(map[string]*Req)}
+func TestMatrix_createMatrix(t *testing.T) {
+	rg := &reqs.ReqGraph{Reqs: make(map[string]*reqs.Req)}
 
 	sysReqSpec := config.ReqSpec{
 		Prefix:  "SYS",
@@ -65,12 +66,12 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	}
 
 	// System reqs
-	rg.Reqs["REQ-TEST-SYS-1"] = &Req{
+	rg.Reqs["REQ-TEST-SYS-1"] = &reqs.Req{
 		ID:       "REQ-TEST-SYS-1",
 		IDNumber: 1,
 		Document: &sysDoc,
 	}
-	rg.Reqs["REQ-TEST-SYS-2"] = &Req{
+	rg.Reqs["REQ-TEST-SYS-2"] = &reqs.Req{
 		ID:       "REQ-TEST-SYS-2",
 		IDNumber: 2,
 		Document: &sysDoc,
@@ -102,18 +103,18 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	}
 
 	// High level requirements
-	rg.Reqs["REQ-TEST-SWH-1"] = &Req{
+	rg.Reqs["REQ-TEST-SWH-1"] = &reqs.Req{
 		ID:       "REQ-TEST-SWH-1",
 		IDNumber: 1,
 		Document: &srdDoc,
 	}
-	rg.Reqs["REQ-TEST-SWH-2"] = &Req{
+	rg.Reqs["REQ-TEST-SWH-2"] = &reqs.Req{
 		ID:        "REQ-TEST-SWH-2",
 		IDNumber:  2,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
 		Document:  &srdDoc,
 	}
-	rg.Reqs["REQ-TEST-SWH-3"] = &Req{
+	rg.Reqs["REQ-TEST-SWH-3"] = &reqs.Req{
 		ID:        "REQ-TEST-SWH-3",
 		IDNumber:  3,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
@@ -146,13 +147,13 @@ func TestReqGraph_createMatrix(t *testing.T) {
 	}
 
 	// Low level requirements
-	rg.Reqs["REQ-TEST-SWL-1"] = &Req{
+	rg.Reqs["REQ-TEST-SWL-1"] = &reqs.Req{
 		ID:        "REQ-TEST-SWL-1",
 		IDNumber:  1,
 		ParentIds: []string{"REQ-TEST-SWH-2"},
 		Document:  &sddDoc,
 	}
-	rg.Reqs["REQ-TEST-SWL-2"] = &Req{
+	rg.Reqs["REQ-TEST-SWL-2"] = &reqs.Req{
 		ID:       "REQ-TEST-SWL-2",
 		IDNumber: 2,
 		ParentIds: []string{
@@ -161,14 +162,14 @@ func TestReqGraph_createMatrix(t *testing.T) {
 		},
 		Document: &sddDoc,
 	}
-	rg.Reqs["REQ-TEST-SWL-3"] = &Req{
+	rg.Reqs["REQ-TEST-SWL-3"] = &reqs.Req{
 		ID:        "REQ-TEST-SWL-3",
 		IDNumber:  3,
 		ParentIds: []string{},
 		Document:  &sddDoc,
 	}
 
-	errs := rg.resolve()
+	errs := rg.Resolve()
 	assert.Equal(t, 0, len(errs))
 
 	assert.Equal(t,
@@ -177,7 +178,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SYS-1 -> REQ-TEST-SWH-3",
 			"REQ-TEST-SYS-2 -> NIL",
 		},
-		rg.matrixRows(rg.createDownstreamMatrix(sysReqSpec, swhReqSpec)))
+		matrixRows(rg, createDownstreamMatrix(rg, sysReqSpec, swhReqSpec)))
 
 	assert.Equal(t,
 		[]string{
@@ -185,7 +186,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWH-2 -> REQ-TEST-SYS-1",
 			"REQ-TEST-SWH-3 -> REQ-TEST-SYS-1",
 		},
-		rg.matrixRows(rg.createUpstreamMatrix(swhReqSpec, sysReqSpec)))
+		matrixRows(rg, createUpstreamMatrix(rg, swhReqSpec, sysReqSpec)))
 
 	assert.Equal(t,
 		[]string{
@@ -194,7 +195,7 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWH-2 -> REQ-TEST-SWL-2",
 			"REQ-TEST-SWH-3 -> NIL",
 		},
-		rg.matrixRows(rg.createDownstreamMatrix(swhReqSpec, swlReqSpec)))
+		matrixRows(rg, createDownstreamMatrix(rg, swhReqSpec, swlReqSpec)))
 
 	assert.Equal(t,
 		[]string{
@@ -203,5 +204,5 @@ func TestReqGraph_createMatrix(t *testing.T) {
 			"REQ-TEST-SWL-2 -> REQ-TEST-SWH-2",
 			"REQ-TEST-SWL-3 -> NIL",
 		},
-		rg.matrixRows(rg.createUpstreamMatrix(swlReqSpec, swhReqSpec)))
+		matrixRows(rg, createUpstreamMatrix(rg, swlReqSpec, swhReqSpec)))
 }

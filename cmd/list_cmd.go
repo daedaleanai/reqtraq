@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"encoding/csv"
@@ -13,6 +13,7 @@ import (
 	"github.com/daedaleanai/cobra"
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/reqs"
 )
 
 var (
@@ -46,25 +47,25 @@ func runListCmd(command *cobra.Command, args []string) error {
 	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); certdocConfig == nil {
 		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
 	}
-	reqs, err := ParseMarkdown(repoName, certdocConfig)
+	requirements, err := reqs.ParseMarkdown(repoName, certdocConfig)
 	if err != nil {
 		return err
 	}
-	filter, err := createFilter(*listIdFilter, *listTitleFilter, *listBodyFilter, *listAttributeFilter)
+	filter, err := reqs.CreateFilter(*listIdFilter, *listTitleFilter, *listBodyFilter, *listAttributeFilter)
 	if err != nil {
 		return err
 	}
 	if *listCsvFormat {
-		printCsv(reqs, certdocConfig.Schema, filter)
+		printCsv(requirements, certdocConfig.Schema, filter)
 	} else {
-		printConcise(reqs, filter)
+		printConcise(requirements, filter)
 	}
 	return nil
 }
 
 // printConcise prints to stdout the requirements which match the filter in a concise format (id, title and first line of body text)
 // @llr REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-73
-func printConcise(reqs []*Req, filter ReqFilter) {
+func printConcise(reqs []*reqs.Req, filter reqs.ReqFilter) {
 	for _, r := range reqs {
 		if !filter.IsEmpty() && !r.Matches(&filter, nil) {
 			continue
@@ -88,7 +89,7 @@ func printConcise(reqs []*Req, filter ReqFilter) {
 
 // printCsv prints to stdout the requirements which match the filter in csv format, including all attributes
 // @llr REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-73, REQ-TRAQ-SWL-74
-func printCsv(reqs []*Req, schema config.Schema, filter ReqFilter) {
+func printCsv(reqs []*reqs.Req, schema config.Schema, filter reqs.ReqFilter) {
 	csvwriter := csv.NewWriter(os.Stdout)
 	var attributes []string
 	for a := range schema.Attributes {

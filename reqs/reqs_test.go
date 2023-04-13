@@ -1,4 +1,4 @@
-package main
+package reqs
 
 import (
 	"path/filepath"
@@ -67,7 +67,7 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 	r = &Req{ID: "REQ-UIEM-SYS-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
 	rg.Reqs[r.ID] = r
 
-	reqIssues := rg.resolve()
+	reqIssues := rg.Resolve()
 	assert.Equal(t, len(reqIssues), 2)
 	assert.Equal(t, reqIssues[0].Error.Error(),
 		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")

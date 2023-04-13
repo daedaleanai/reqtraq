@@ -2,7 +2,7 @@
 Functions which generate trace matrix tables between different levels of requirements and source code.
 */
 
-package main
+package matrix
 
 import (
 	"fmt"
@@ -10,12 +10,70 @@ import (
 	"io"
 	"sort"
 
+	"github.com/daedaleanai/reqtraq/code"
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/reqs"
 )
+
+var headerFooterTmplText = `
+{{define "HEADER"}}
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+	    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	    <meta name="viewport" content="width=device-width, initial-scale=1">
+	    <meta name="description" content="">
+	    <meta name="author" content="">
+
+		<title>Reqtraq - Daedalean AG</title>
+
+		<!-- BOOTSTRAP -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+		<!-- CUSTOM -->
+		<style>
+			h1 {
+				text-align: left;
+			}
+			body {
+				font-family: Roboto, Arial, sans-serif;
+				max-width: 3000px;
+				margin-left: 5%;
+				margin-right: 5%;
+			}
+			a, a:hover {
+				text-decoration: none;
+			}
+			div.trace-matrix-table {
+				display: table;
+				border: 1px solid black
+			}
+			div.trace-matrix-table > div {
+				display: table-row;
+			}
+			div.trace-matrix-table > div > div {
+				display: table-cell;
+				padding: 0em 0.5em;
+			}
+		</style>
+		<!-- Load MathJax for rendering of equations -->
+		<script type="text/javascript" async
+			src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+		</script>
+
+	</head>
+	<body>
+{{end}}
+
+{{define "FOOTER"}}
+	</body>
+</html>
+{{end}}
+`
 
 // GenerateTraceTables generates HTML for inspecting the gaps in the mappings between the two specified node types.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.ReqSpec) error {
+func GenerateTraceTables(rg *reqs.ReqGraph, w io.Writer, nodeTypeA, nodeTypeB config.ReqSpec) error {
 	data := struct {
 		From, To         string
 		ItemsAB, ItemsBA []TableRow
@@ -24,17 +82,17 @@ func (rg ReqGraph) GenerateTraceTables(w io.Writer, nodeTypeA, nodeTypeB config.
 		To:   nodeTypeB.String(),
 	}
 
-	data.ItemsAB = rg.createDownstreamMatrix(nodeTypeA, nodeTypeB)
-	data.ItemsBA = rg.createUpstreamMatrix(nodeTypeB, nodeTypeA)
+	data.ItemsAB = createDownstreamMatrix(rg, nodeTypeA, nodeTypeB)
+	data.ItemsBA = createUpstreamMatrix(rg, nodeTypeB, nodeTypeA)
 
-	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
+	sortMatrices(rg, data.ItemsAB, data.ItemsBA)
 	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
 }
 
 // GenerateCodeTraceTables generates HTML for inspecting the gaps in the mappings between the specified
 // node type and code
 // @llr REQ-TRAQ-SWL-15, REQ-TRAQ-SWL-71, REQ-TRAQ-SWL-72
-func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec, codeType CodeType) error {
+func GenerateCodeTraceTables(rg *reqs.ReqGraph, w io.Writer, reqSpec config.ReqSpec, codeType code.CodeType) error {
 	data := struct {
 		From, To         string
 		ItemsAB, ItemsBA []TableRow
@@ -43,10 +101,10 @@ func (rg ReqGraph) GenerateCodeTraceTables(w io.Writer, reqSpec config.ReqSpec, 
 		To:   codeType.String(),
 	}
 
-	data.ItemsAB = rg.createSWLCodeMatrix(reqSpec, codeType)
-	data.ItemsBA = rg.createCodeSWLMatrix(reqSpec, codeType)
+	data.ItemsAB = createSWLCodeMatrix(rg, reqSpec, codeType)
+	data.ItemsBA = createCodeSWLMatrix(rg, reqSpec, codeType)
 
-	rg.sortMatrices(data.ItemsAB, data.ItemsBA)
+	sortMatrices(rg, data.ItemsAB, data.ItemsBA)
 	return matrixTmpl.ExecuteTemplate(w, "MATRIX", data)
 }
 
@@ -90,10 +148,10 @@ var matrixTmplText = `
 
 // TableCell is a cell in a two-columns matrix, it can be a requirement or a code function.
 type TableCell struct {
-	Name        string // Name represents this item in the matrix.
-	OrderNumber int    // OrderNumber can be used to order the items in a column ascending.
-	req         *Req   // req is the represented requirement.
-	code        *Code  // code is the represented code tag.
+	Name        string     // Name represents this item in the matrix.
+	OrderNumber int        // OrderNumber can be used to order the items in a column ascending.
+	req         *reqs.Req  // req is the represented requirement.
+	code        *code.Code // code is the represented code tag.
 }
 
 // TableRow is a pair of TableCell
@@ -101,7 +159,7 @@ type TableRow [2]*TableCell
 
 // newCodeTableCell creates a new matrix cell from a code item
 // @llr REQ-TRAQ-SWL-15
-func newCodeTableCell(code *Code) *TableCell {
+func newCodeTableCell(code *code.Code) *TableCell {
 	item := &TableCell{}
 	item.Name = fmt.Sprintf("%s: %s - %s", code.CodeFile.RepoName, code.CodeFile.Path, code.Tag)
 	item.code = code
@@ -110,7 +168,7 @@ func newCodeTableCell(code *Code) *TableCell {
 
 // newReqTableCell create a new matrix cell from a requirement item
 // @llr REQ-TRAQ-SWL-14, REQ-TRAQ-SWL-15
-func newReqTableCell(req *Req) *TableCell {
+func newReqTableCell(req *reqs.Req) *TableCell {
 	item := &TableCell{}
 	item.Name = req.ID
 	item.req = req
@@ -127,7 +185,7 @@ type CodeOrderInfo struct {
 
 // codeOrderInfo returns the info needed for sorting TableCells by code.
 // @llr REQ-TRAQ-SWL-44
-func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
+func codeOrderInfo(rg *reqs.ReqGraph) (info CodeOrderInfo) {
 	info.filesIndex = make(map[string]int, len(rg.CodeTags))
 	files := make([]string, 0, len(rg.CodeTags))
 	info.fileIndexFactor = 0
@@ -161,7 +219,7 @@ func (rg ReqGraph) codeOrderInfo() (info CodeOrderInfo) {
 
 // createCodeSWLMatrix creates an upstream matrix mapping code procedures to low level requirements.
 // @llr REQ-TRAQ-SWL-15, REQ-TRAQ-SWL-71, REQ-TRAQ-SWL-72,
-func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec, codeType CodeType) []TableRow {
+func createCodeSWLMatrix(rg *reqs.ReqGraph, reqSpec config.ReqSpec, codeType code.CodeType) []TableRow {
 	items := make([]TableRow, 0)
 	for _, tags := range rg.CodeTags {
 		for _, codeTag := range tags {
@@ -191,8 +249,8 @@ func (rg *ReqGraph) createCodeSWLMatrix(reqSpec config.ReqSpec, codeType CodeTyp
 
 // createDownstreamMatrix returns a Trace Matrix from a set of requirements to a lower level set of requirements.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) createDownstreamMatrix(from, to config.ReqSpec) []TableRow {
-	reqsHigh := rg.reqsWithSpec(from)
+func createDownstreamMatrix(rg *reqs.ReqGraph, from, to config.ReqSpec) []TableRow {
+	reqsHigh := reqsWithSpec(rg, from)
 	items := make([]TableRow, 0, len(reqsHigh))
 	for _, r := range reqsHigh {
 		count := 0
@@ -216,8 +274,8 @@ func (rg ReqGraph) createDownstreamMatrix(from, to config.ReqSpec) []TableRow {
 
 // createSWLCodeMatrix creates a downstream matrix mapping low level requirements to code procedures.
 // @llr REQ-TRAQ-SWL-15, REQ-TRAQ-SWL-71, REQ-TRAQ-SWL-72,
-func (rg *ReqGraph) createSWLCodeMatrix(reqSpec config.ReqSpec, codeType CodeType) []TableRow {
-	reqs := rg.reqsWithSpec(reqSpec)
+func createSWLCodeMatrix(rg *reqs.ReqGraph, reqSpec config.ReqSpec, codeType code.CodeType) []TableRow {
+	reqs := reqsWithSpec(rg, reqSpec)
 
 	items := make([]TableRow, 0, len(reqs))
 	for _, r := range reqs {
@@ -241,8 +299,8 @@ func (rg *ReqGraph) createSWLCodeMatrix(reqSpec config.ReqSpec, codeType CodeTyp
 
 // createUpstreamMatrix returns a Trace Matrix from a set of requirements to an upper level set of requirements.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) createUpstreamMatrix(from, to config.ReqSpec) []TableRow {
-	reqsLow := rg.reqsWithSpec(from)
+func createUpstreamMatrix(rg *reqs.ReqGraph, from, to config.ReqSpec) []TableRow {
+	reqsLow := reqsWithSpec(rg, from)
 	items := make([]TableRow, 0, len(reqsLow))
 	for _, r := range reqsLow {
 		count := 0
@@ -266,8 +324,8 @@ func (rg ReqGraph) createUpstreamMatrix(from, to config.ReqSpec) []TableRow {
 
 // reqsWithSpec returns the non-deleted requirements of the specified ReqSpec, mapped by ID.
 // @llr REQ-TRAQ-SWL-14
-func (rg ReqGraph) reqsWithSpec(spec config.ReqSpec) map[string]*Req {
-	reqs := make(map[string]*Req, 0)
+func reqsWithSpec(rg *reqs.ReqGraph, spec config.ReqSpec) map[string]*reqs.Req {
+	reqs := make(map[string]*reqs.Req, 0)
 	for _, r := range rg.Reqs {
 		if r.Document.MatchesSpec(spec) && spec.Re.MatchString(r.ID) && !r.IsDeleted() {
 			if spec.AttrKey != "" && !spec.AttrVal.MatchString(r.Attributes[spec.AttrKey]) {
@@ -281,8 +339,8 @@ func (rg ReqGraph) reqsWithSpec(spec config.ReqSpec) map[string]*Req {
 
 // sortMatrices prepares the sort info and sorts the specified matrices.
 // @llr REQ-TRAQ-SWL-42, REQ-TRAQ-SWL-43, REQ-TRAQ-SWL-44
-func (rg ReqGraph) sortMatrices(matrices ...[]TableRow) {
-	codeOrderInfo := rg.codeOrderInfo()
+func sortMatrices(rg *reqs.ReqGraph, matrices ...[]TableRow) {
+	codeOrderInfo := codeOrderInfo(rg)
 	for _, matrix := range matrices {
 		// Update each item's OrderNumber.
 		for _, row := range matrix {

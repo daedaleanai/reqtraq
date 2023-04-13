@@ -1,7 +1,8 @@
-package main
+package cmd
 
 import (
 	"github.com/daedaleanai/cobra"
+	"github.com/daedaleanai/reqtraq/web"
 )
 
 var webAddr *string
@@ -20,7 +21,7 @@ func runWebCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	return Serve(*webAddr)
+	return web.Serve(reqtraqConfig, *webAddr)
 }
 
 // Registers the web command

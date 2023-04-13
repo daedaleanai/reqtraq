@@ -18,9 +18,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal("Could not get current directory")
 	}
+	parentDir := filepath.Dir(workingDir)
+	os.Chdir(parentDir)
 
-	SetBaseRepoInfo(RepoPath(filepath.Dir(workingDir)), RepoName("reqtraq"))
-
+	SetBaseRepoInfo(RepoPath(parentDir), RepoName("reqtraq"))
+	os.Exit(m.Run())
 }
 
 // @llr REQ-TRAQ-SWL-49
@@ -32,7 +34,7 @@ func TestRepos_BaseRepoName(t *testing.T) {
 func TestRepos_BaseRepoPath(t *testing.T) {
 	workingDir, err := os.Getwd()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, BaseRepoPath(), filepath.Dir(workingDir))
+	assert.Equal(t, BaseRepoPath(), RepoPath(workingDir))
 }
 
 // @llr REQ-TRAQ-SWL-49
