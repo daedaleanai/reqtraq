@@ -9,7 +9,7 @@ The entry point is ParseMarkdown which in turns calls other functions as follows
 - parseReq: Parses ATX heading requirements into the Req structure and returns it.
 - parseReqTable: Parses a requirements table and reads each row into a Req structure, returned in a slice.
 */
-package main
+package reqs
 
 import (
 	"bufio"
@@ -36,22 +36,12 @@ var (
 	// REQ, project number, project abbreviation, req type, req number
 	// For example: REQ-PROJ-SWH-4
 	reReqIdStr = `(REQ|ASM)-(\w+)-(\w+)-(\d+)`
-	ReReqID    = regexp.MustCompile(reReqIdStr)
+	reReqID    = regexp.MustCompile(reReqIdStr)
 	reReqIDBad = regexp.MustCompile(`(?i)(REQ|ASM)-((\d+)|((\w+)-(\d+)))`)
 
 	// For detecting attributes sections and attributes
 	reAttributesSectionHeading = regexp.MustCompile(`(?m)\n#{2,6} Attributes:$`)
 	reReqKWD                   = regexp.MustCompile(`(?mU)^- (.+):`)
-)
-
-// ReqType defines what type of requirement we are parsing. None, a heading based requirement or a table of
-// requirements.
-type ReqType int
-
-const (
-	None ReqType = iota
-	Heading
-	Table
 )
 
 // ParseMarkdown parses a certification document and returns the found requirements.
@@ -65,8 +55,8 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 		reqLevel         int // The level of the ATX heading starting the requirement.
 		reqLine          int // The line number of the ATX heading starting the requirement.
 
-		reqBuf bytes.Buffer // Temporary buffer for the fragment being read in.
-		inReq  ReqType      // The type of fragment being read.
+		reqBuf bytes.Buffer  // Temporary buffer for the fragment being read in.
+		inReq  ReqFormatType // The type of fragment being read.
 	)
 
 	documentPath, err := repos.PathInRepo(repoName, documentConfig.Path)
@@ -90,7 +80,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 			ATXparts := reATXHeading.FindStringSubmatch(line)
 			level := len(ATXparts[1])
 			title := ATXparts[3]
-			reqIDs := ReReqID.FindAllString(title, -1)
+			reqIDs := reReqID.FindAllString(title, -1)
 			if len(reqIDs) > 1 {
 				return nil, fmt.Errorf("malformed requirement title: too many IDs on line %d: %q", lno, line)
 			}
@@ -185,7 +175,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 // parseMarkdownFragment accepts a string containing either an ATX requirement or a requirements table and calls the
 // appropriate parsing function
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
-func parseMarkdownFragment(reqType ReqType, txt string, reqLine int, reqs []*Req) ([]*Req, error) {
+func parseMarkdownFragment(reqType ReqFormatType, txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 
 	if reqType == Heading {
 		// An ATX requirement
@@ -417,10 +407,10 @@ func extractIDParts(reqStr string) (string, ReqVariant, int, error) {
 	if len(head) > 40 {
 		head = head[:40]
 	}
-	defid := ReReqID.FindStringSubmatchIndex(reqStr)
+	defid := reReqID.FindStringSubmatchIndex(reqStr)
 	if len(defid) == 0 {
 		if reReqIDBad.MatchString(reqStr) {
-			return "", variant, 0, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, ReReqID)
+			return "", variant, 0, fmt.Errorf("malformed requirement: found only malformed ID: %q (doesn't match %q)", head, reReqID)
 		}
 		return "", variant, 0, fmt.Errorf("malformed requirement: missing ID in first 40 characters: %q", head)
 	}
@@ -451,7 +441,7 @@ func extractIDParts(reqStr string) (string, ReqVariant, int, error) {
 func parseParents(r *Req) error {
 	// PARENTS must be punctuation/space separated list of parseable req-ids.
 	parents := r.Attributes["PARENTS"]
-	parmatch := ReReqID.FindAllStringSubmatchIndex(parents, -1)
+	parmatch := reReqID.FindAllStringSubmatchIndex(parents, -1)
 
 	var parentIDs []string
 

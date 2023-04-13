@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -9,7 +9,9 @@ import (
 
 	"github.com/daedaleanai/cobra"
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/diagnostics"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/reqs"
 )
 
 var fValidateStrict *bool
@@ -35,13 +37,13 @@ type LintMessage struct {
 
 // Translates the severity code into a value valid for the json output
 // @llr REQ-TRAQ-SWL-66
-func translateSeverityCode(severity IssueSeverity) string {
+func translateSeverityCode(severity diagnostics.IssueSeverity) string {
 	switch severity {
-	case IssueSeverityMajor:
+	case diagnostics.IssueSeverityMajor:
 		return "error"
-	case IssueSeverityMinor:
+	case diagnostics.IssueSeverityMinor:
 		return "warning"
-	case IssueSeverityNote:
+	case diagnostics.IssueSeverityNote:
 		return "note"
 	}
 	return "error"
@@ -50,7 +52,7 @@ func translateSeverityCode(severity IssueSeverity) string {
 // Builds a Json file with the issues found after parsing the requirements and code. It only collects
 // information for the base repository.
 // @llr REQ-TRAQ-SWL-66
-func buildJsonIssues(issues []Issue, jsonWriter *json.Encoder) {
+func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) {
 	for _, issue := range issues {
 		// Only report issues for the current repository
 		if issue.RepoName != repos.BaseRepoName() {
@@ -60,37 +62,37 @@ func buildJsonIssues(issues []Issue, jsonWriter *json.Encoder) {
 		var name string
 		var code string
 		switch issue.Type {
-		case IssueTypeInvalidRequirementId:
+		case diagnostics.IssueTypeInvalidRequirementId:
 			name = "Invalid requirement ID"
 			code = "REQ1"
-		case IssueTypeInvalidParent:
+		case diagnostics.IssueTypeInvalidParent:
 			name = "Invalid parent requirement"
 			code = "REQ2"
-		case IssueTypeInvalidRequirementReference:
+		case diagnostics.IssueTypeInvalidRequirementReference:
 			name = "Invalid requirement reference"
 			code = "REQ3"
-		case IssueTypeInvalidRequirementInCode:
+		case diagnostics.IssueTypeInvalidRequirementInCode:
 			name = "Invalid requirement"
 			code = "REQ4"
-		case IssueTypeMissingRequirementInCode:
+		case diagnostics.IssueTypeMissingRequirementInCode:
 			name = "Code without requirements"
 			code = "REQ5"
-		case IssueTypeMissingAttribute:
+		case diagnostics.IssueTypeMissingAttribute:
 			name = "Missing attribute"
 			code = "REQ6"
-		case IssueTypeUnknownAttribute:
+		case diagnostics.IssueTypeUnknownAttribute:
 			name = "Unknown attribute"
 			code = "REQ7"
-		case IssueTypeInvalidAttributeValue:
+		case diagnostics.IssueTypeInvalidAttributeValue:
 			name = "Invalid attribute"
 			code = "REQ8"
-		case IssueTypeReqTestedButNotImplemented:
+		case diagnostics.IssueTypeReqTestedButNotImplemented:
 			name = "Requirement tested but not implemented"
 			code = "REQ9"
-		case IssueTypeReqNotImplemented:
+		case diagnostics.IssueTypeReqNotImplemented:
 			name = "Requirement not implemented"
 			code = "REQ10"
-		case IssueTypeReqNotTested:
+		case diagnostics.IssueTypeReqNotTested:
 			name = "Requirement not tested"
 			code = "REQ11"
 		default:
@@ -111,15 +113,15 @@ func buildJsonIssues(issues []Issue, jsonWriter *json.Encoder) {
 
 // validate builds the requirement graph, gathering any errors and prints them out. If the strict flag is set return an error.
 // @llr REQ-TRAQ-SWL-36
-func validate(config *config.Config, at string, strict bool) ([]Issue, error) {
-	rg, err := buildGraph(at, config)
+func validate(config *config.Config, at string, strict bool) ([]diagnostics.Issue, error) {
+	rg, err := reqs.BuildGraph(at, config)
 	if err != nil {
 		return rg.Issues, err
 	}
 
 	hasCriticalErrors := false
 	for _, issue := range rg.Issues {
-		if issue.Severity != IssueSeverityNote {
+		if issue.Severity != diagnostics.IssueSeverityNote {
 			hasCriticalErrors = true
 		}
 		fmt.Println(issue.Error)

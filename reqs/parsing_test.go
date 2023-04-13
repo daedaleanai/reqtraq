@@ -1,8 +1,9 @@
-package main
+package reqs
 
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,6 +13,18 @@ import (
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
+
+// Other packages (config) are expected to do this, but for the repos config we can do it here
+// @llr REQ-TRAQ-SWL-49
+func TestMain(m *testing.M) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Could not get current directory")
+	}
+
+	repos.SetBaseRepoInfo(repos.RepoPath(filepath.Dir(workingDir)), repos.RepoName("reqtraq"))
+	os.Exit(m.Run())
+}
 
 // TestParseMarkdown checks that parseMarkdown finds the requirements blocks
 // correctly.
@@ -174,7 +187,7 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 		if err != nil {
 			t.Errorf("content: `%s`\nshould not generate error: %v", content, err)
 		} else {
-			for i, _ := range reqs {
+			for i := range reqs {
 				// Set the document and repo name in the expected requirement
 				expectedReqs[i].Document = &doc
 				expectedReqs[i].RepoName = repoName

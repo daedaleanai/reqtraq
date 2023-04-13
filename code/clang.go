@@ -4,7 +4,7 @@
 Parses the libclang AST and collects functions which are a target for requirements tracking.
 */
 
-package main
+package code
 
 import (
 	"fmt"

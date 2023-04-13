@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/daedaleanai/cobra"
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/reqs"
 )
 
 var nextIdCmd = &cobra.Command{
@@ -21,7 +22,7 @@ var nextIdCmd = &cobra.Command{
 // @llr REQ-TRAQ-SWL-34
 func runNextId(command *cobra.Command, args []string) error {
 	var (
-		reqs          []*Req
+		requirements  []*reqs.Req
 		greatestReqID int = 0
 		greatestAsmID int = 0
 	)
@@ -38,16 +39,16 @@ func runNextId(command *cobra.Command, args []string) error {
 		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
 	}
 
-	reqs, err := ParseMarkdown(repoName, certdocConfig)
+	requirements, err := reqs.ParseMarkdown(repoName, certdocConfig)
 	if err != nil {
 		return err
 	}
 
 	// count existing REQ and ASM IDs
-	for _, r := range reqs {
-		if r.Variant == ReqVariantRequirement && r.IDNumber > greatestReqID {
+	for _, r := range requirements {
+		if r.Variant == reqs.ReqVariantRequirement && r.IDNumber > greatestReqID {
 			greatestReqID = r.IDNumber
-		} else if r.Variant == ReqVariantAssumption && r.IDNumber > greatestAsmID {
+		} else if r.Variant == reqs.ReqVariantAssumption && r.IDNumber > greatestAsmID {
 			greatestAsmID = r.IDNumber
 		}
 	}

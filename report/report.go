@@ -2,7 +2,7 @@
 Functions for generating HTML reports showing trace data.
 */
 
-package main
+package report
 
 import (
 	"fmt"
@@ -10,64 +10,53 @@ import (
 	"io"
 	"log"
 	"os/exec"
-	"sort"
+
+	"github.com/daedaleanai/reqtraq/code"
+	"github.com/daedaleanai/reqtraq/reqs"
 )
 
 type reportData struct {
-	Reqs   ReqGraph
-	Filter *ReqFilter
+	Reqs   reqs.ReqGraph
+	Filter *reqs.ReqFilter
 	Once   Oncer
 	Diffs  map[string][]string
 }
 
 // ReportDown generates a HTML report of top down trace information.
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-39
-func (rg ReqGraph) ReportDown(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{rg, nil, Oncer{}, nil})
+func ReportDown(rg *reqs.ReqGraph, w io.Writer) error {
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{*rg, nil, Oncer{}, nil})
 }
 
 // ReportUp generates a HTML report of bottom up trace information.
 // @llr REQ-TRAQ-SWL-13, REQ-TRAQ-SWL-39
-func (rg ReqGraph) ReportUp(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{rg, nil, Oncer{}, nil})
+func ReportUp(rg *reqs.ReqGraph, w io.Writer) error {
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{*rg, nil, Oncer{}, nil})
 }
 
 // ReportIssues generates a HTML report showing attribute and trace errors.
 // @llr REQ-TRAQ-SWL-30, REQ-TRAQ-SWL-39
-func (rg ReqGraph) ReportIssues(w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{rg, nil, Oncer{}, nil})
+func ReportIssues(rg *reqs.ReqGraph, w io.Writer) error {
+	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{*rg, nil, Oncer{}, nil})
 }
 
 // ReportDownFiltered generates a HTML report of top down trace information, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-39
-func (rg ReqGraph) ReportDownFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{rg, f, Oncer{}, diffs})
+func ReportDownFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter, diffs map[string][]string) error {
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{*rg, f, Oncer{}, diffs})
 }
 
 // ReportUpFiltered generates a HTML report of bottom up trace information, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-39
-func (rg ReqGraph) ReportUpFiltered(w io.Writer, f *ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{rg, f, Oncer{}, diffs})
+func ReportUpFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter, diffs map[string][]string) error {
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{*rg, f, Oncer{}, diffs})
 }
 
 // ReportIssuesFiltered generates a HTML report showing attribute and trace errors, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-31, REQ-TRAQ-SWL-39
-func (rg ReqGraph) ReportIssuesFiltered(w io.Writer, filter *ReqFilter, diffs map[string][]string) error {
+func ReportIssuesFiltered(rg *reqs.ReqGraph, w io.Writer, filter *reqs.ReqFilter, diffs map[string][]string) error {
 	// TODO apply filter in ISSUESFILT template
-	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{rg, filter, Oncer{}, diffs})
-}
-
-// OrdsByPosition returns the SYSTEM requirements which don't have any parent, ordered by position.
-// @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-20
-func (rg ReqGraph) OrdsByPosition() []*Req {
-	var r []*Req
-	for _, v := range rg.Reqs {
-		if v.Document.LinkSpecs == nil && len(v.ParentIds) == 0 {
-			r = append(r, v)
-		}
-	}
-	sort.Sort(byPosition(r))
-	return r
+	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{*rg, filter, Oncer{}, diffs})
 }
 
 // Prints a filter in a nicely formatted manner to be shown in the report
@@ -100,13 +89,13 @@ type Oncer map[string]bool
 // Once maintains a map of requirements that have already been seen, if a requirement is seen multiple times
 // subsequent occurrences are replaced with links to the first occurrence
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func (o Oncer) Once(r *Req) *Req {
+func (o Oncer) Once(r *reqs.Req) *reqs.Req {
 	ok := o[r.ID]
 	o[r.ID] = true
 	if !ok {
 		return r
 	}
-	return &Req{ID: r.ID, Title: r.Title, Body: r.Body, Document: nil}
+	return &reqs.Req{ID: r.ID, Title: r.Title, Body: r.Body, Document: nil}
 }
 
 var headerFooterTmplText = `
@@ -198,28 +187,28 @@ var functionMap = template.FuncMap{
 var reportTmpl = template.Must(template.Must(template.New("").Funcs(functionMap).Parse(headerFooterTmplText)).Parse(reportTmplText))
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func codeFileToString(CodeFile CodeFile) string {
+func codeFileToString(CodeFile code.CodeFile) string {
 	return CodeFile.String()
 }
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func isImpl(CodeFile CodeFile) bool {
-	return CodeFile.Type.Matches(CodeTypeImplementation)
+func isImpl(CodeFile code.CodeFile) bool {
+	return CodeFile.Type.Matches(code.CodeTypeImplementation)
 }
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func isTest(CodeFile CodeFile) bool {
-	return CodeFile.Type.Matches(CodeTypeTests)
+func isTest(CodeFile code.CodeFile) bool {
+	return CodeFile.Type.Matches(code.CodeTypeTests)
 }
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func shouldShowTag(code *Code, rg ReqGraph) bool {
+func shouldShowTag(code *code.Code, rg reqs.ReqGraph) bool {
 	return !code.Optional || (len(listCodeParents(code.Links, rg)) != 0)
 }
 
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-13
-func listCodeParents(links []ReqLink, rg ReqGraph) []*Req {
-	var parents []*Req
+func listCodeParents(links []code.ReqLink, rg reqs.ReqGraph) []*reqs.Req {
+	var parents []*reqs.Req
 	for _, link := range links {
 		if parent, ok := rg.Reqs[link.Id]; ok {
 			parents = append(parents, parent)

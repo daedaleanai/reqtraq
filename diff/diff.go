@@ -2,18 +2,20 @@
 Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.
 */
 
-package main
+package diff
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/daedaleanai/reqtraq/reqs"
 )
 
 // ChangedSince produces a report of how requirements have changed between two requirement graphs
 // @llr REQ-TRAQ-SWL-18
-func (rg ReqGraph) ChangedSince(prg *ReqGraph) (diffs map[string][]string) {
+func ChangedSince(rg, prg *reqs.ReqGraph) (diffs map[string][]string) {
 	if prg == nil {
 		return
 	}
@@ -31,7 +33,7 @@ func (rg ReqGraph) ChangedSince(prg *ReqGraph) (diffs map[string][]string) {
 	sort.Strings(kk)
 	diffs = make(map[string][]string)
 	for _, k := range kk {
-		if dd := rg.Reqs[k].changedSince(prg.Reqs[k]); dd != nil {
+		if dd := changedSince(rg.Reqs[k], prg.Reqs[k]); dd != nil {
 			diffs[k] = dd
 		}
 	}
@@ -44,7 +46,7 @@ func (rg ReqGraph) ChangedSince(prg *ReqGraph) (diffs map[string][]string) {
 
 // changedSince returns a set of messages that describe how a requirement has changed from a previous version.
 // @llr REQ-TRAQ-SWL-18, REQ-TRAQ-SWL-40
-func (r *Req) changedSince(pr *Req) (diffs []string) {
+func changedSince(r, pr *reqs.Req) (diffs []string) {
 	if r == nil && pr == nil {
 		return nil
 	}

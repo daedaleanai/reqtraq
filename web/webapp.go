@@ -1,7 +1,7 @@
 /*
    Functions for creating and servicing a web interface.
 */
-package main
+package web
 
 import (
 	"fmt"
@@ -16,14 +16,23 @@ import (
 	"github.com/alecthomas/chroma/formatters/html"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/daedaleanai/reqtraq/code"
 	"github.com/daedaleanai/reqtraq/config"
+	"github.com/daedaleanai/reqtraq/diff"
+	"github.com/daedaleanai/reqtraq/matrix"
+	"github.com/daedaleanai/reqtraq/report"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/reqs"
 	"github.com/pkg/errors"
 )
 
+var reqtraqConfig config.Config
+
 // Serve starts the web server listening on the supplied address:port
 // @llr REQ-TRAQ-SWL-37
-func Serve(addr string) error {
+func Serve(cfg *config.Config, addr string) error {
+	reqtraqConfig = *cfg
+
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}
@@ -218,18 +227,18 @@ func parseReqSpecFromRequest(specString string) (config.ReqSpec, error) {
 }
 
 // @llr REQ-TRAQ-SWL-37
-func getCodeType(request *http.Request) CodeType {
+func getCodeType(request *http.Request) code.CodeType {
 	formValue := request.FormValue("code-type")
 	switch formValue {
 	case "any":
-		return CodeTypeAny
+		return code.CodeTypeAny
 	case "impl":
-		return CodeTypeImplementation
+		return code.CodeTypeImplementation
 	case "test":
-		return CodeTypeTests
+		return code.CodeTypeTests
 	}
 
-	return CodeTypeAny
+	return code.CodeTypeAny
 }
 
 // get provides the page information for a given request
@@ -295,7 +304,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	if at != "" {
 		atCommit = strings.Split(at, " ")[0]
 	}
-	rg, err := buildGraph(atCommit, reqtraqConfig)
+	rg, err := reqs.BuildGraph(atCommit, &reqtraqConfig)
 	if err != nil {
 		return err
 	}
@@ -306,32 +315,32 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return fmt.Errorf("Failed to create filter: %v", err)
 		}
-		var prg *ReqGraph
+		var prg *reqs.ReqGraph
 		since := r.FormValue("since_commit")
 		if since != "" {
 			sinceCommit := strings.Split(since, " ")[0]
-			prg, err = buildGraph(sinceCommit, reqtraqConfig)
+			prg, err = reqs.BuildGraph(sinceCommit, &reqtraqConfig)
 			if err != nil {
 				return err
 			}
 		}
-		diffs := rg.ChangedSince(prg)
+		diffs := diff.ChangedSince(rg, prg)
 		switch r.FormValue("report-type") {
 		case "Bottom Up":
 			if !filter.IsEmpty() || diffs != nil {
-				return rg.ReportUpFiltered(w, filter, diffs)
+				return report.ReportUpFiltered(rg, w, filter, diffs)
 			}
-			return rg.ReportUp(w)
+			return report.ReportUp(rg, w)
 		case "Top Down":
 			if !filter.IsEmpty() || diffs != nil {
-				return rg.ReportDownFiltered(w, filter, diffs)
+				return report.ReportDownFiltered(rg, w, filter, diffs)
 			}
-			return rg.ReportDown(w)
+			return report.ReportDown(rg, w)
 		case "Issues":
 			if !filter.IsEmpty() || diffs != nil {
-				return rg.ReportIssuesFiltered(w, filter, diffs)
+				return report.ReportIssuesFiltered(rg, w, filter, diffs)
 			}
-			return rg.ReportIssues(w)
+			return report.ReportIssues(rg, w)
 		}
 	case reqPath == "/matrix":
 		fromSpec, err := parseReqSpecFromRequest(r.FormValue("from"))
@@ -341,22 +350,22 @@ func get(w http.ResponseWriter, r *http.Request) error {
 
 		to := r.FormValue("to")
 		if to == "CODE" {
-			return rg.GenerateCodeTraceTables(w, fromSpec, getCodeType(r))
+			return matrix.GenerateCodeTraceTables(rg, w, fromSpec, getCodeType(r))
 		}
 
 		toSpec, err := parseReqSpecFromRequest(to)
 		if err != nil {
 			return err
 		}
-		return rg.GenerateTraceTables(w, fromSpec, toSpec)
+		return matrix.GenerateTraceTables(rg, w, fromSpec, toSpec)
 	}
 	return nil
 }
 
 // createFilterFromHttpRequest generates an appropriate report filter based on the web page form values
 // @llr REQ-TRAQ-SWL-37
-func createFilterFromHttpRequest(r *http.Request) (*ReqFilter, error) {
-	filter := &ReqFilter{}
+func createFilterFromHttpRequest(r *http.Request) (*reqs.ReqFilter, error) {
+	filter := &reqs.ReqFilter{}
 	filter.AttributeRegexp = make(map[string]*regexp.Regexp, 0)
 	var err error
 	if r.FormValue("id_filter") != "" {

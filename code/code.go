@@ -2,7 +2,7 @@
 Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated requirement IDs. The external program Universal Ctags is used to scan for functions.
 */
 
-package main
+package code
 
 import (
 	"fmt"
@@ -129,6 +129,32 @@ type Code struct {
 	Document *config.Document
 	// Whether the code MUST link to a requirement or simply CAN link to a requirement
 	Optional bool
+}
+
+// byFilenameTag provides sort functions to order code by their repo name, then path value, and then line number
+type byFilenameTag []*Code
+
+// @llr REQ-TRAQ-SWL-47
+func (a byFilenameTag) Len() int { return len(a) }
+
+// @llr REQ-TRAQ-SWL-47
+func (a byFilenameTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// @llr REQ-TRAQ-SWL-47
+func (a byFilenameTag) Less(i, j int) bool {
+	switch strings.Compare(string(a[i].CodeFile.RepoName), string(a[j].CodeFile.RepoName)) {
+	case -1:
+		return true
+	case 0:
+		switch strings.Compare(a[i].CodeFile.Path, a[j].CodeFile.Path) {
+		case -1:
+			return true
+		case 0:
+			return a[i].Line < a[j].Line
+		}
+		return false
+	}
+	return false
 }
 
 // ParseCode is the entry point for the code related functions. It parses all tags found in the
