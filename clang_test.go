@@ -51,6 +51,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"cool", 113, nil, false},
 		{"JustAFreeFunction", 119, nil, false},
 		{"ExternCFunc", 126, nil, false},
+		{"doThings", 134, nil, false},
 	}
 	LookFor(t, repoName, "code/include/a.hh", CodeTypeImplementation, tags, expectedTags)
 
@@ -90,6 +91,7 @@ func TestValidateUsingLibClang(t *testing.T) {
 	assert.Empty(t, err, "Got unexpected error")
 
 	expected := `Invalid reference in function operator[]@code/include/a.hh:45 in repo ` + "`" + `libclangtest` + "`" + `, REQ-TEST-SWL-12 does not exist.
+LLR declarations differ in doThings@code/include/a.hh:134 and doThings@code/a.cc:16.
 WARNING. Validation failed`
 
 	checkValidateError(t, actual, expected)

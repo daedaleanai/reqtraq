@@ -126,4 +126,11 @@ extern "C" {
 void ExternCFunc();
 }
 
+/**
+ * \brief This declaration differs from the definition in its LLRs. Therefore
+ * reqtraq must flag it.
+ * \llr REQ-TEST-SWL-2
+ */
+void doThings();
+
 }  // namespace na::nb::nc

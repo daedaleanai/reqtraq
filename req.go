@@ -12,7 +12,6 @@ package main
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -234,6 +233,31 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 		llrLoc[doc][symbol] = loc
 	}
 
+	// linksMatch comparse an array of requirement IDs with the given array of ReqLink's and matches
+	// each element if the requirement ID matches (ignoring other members of the ReqLink struct).
+	linksMatch := func(lhs []string, rhs []ReqLink) bool {
+		if len(lhs) != len(rhs) {
+			return false
+		}
+
+		rhsMatched := make([]bool, len(rhs))
+
+		for lhs_idx := range lhs {
+			found := false
+			for rhs_idx := range rhs {
+				if !rhsMatched[rhs_idx] && lhs[lhs_idx] == rhs[rhs_idx].Id {
+					rhsMatched[rhs_idx] = true
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return true
+	}
+
 	// Walk the code tags, resolving links and looking for errors
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
@@ -255,13 +279,20 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 
 			prevLoc := getLlrLocForSymbolInDocument(code.Document.Path, code.Symbol)
 
-			if !reflect.DeepEqual(links, code.Links) {
+			if !linksMatch(links, code.Links) {
+				var errorMessage error
+				if prevLoc.CodeFile.Path > code.CodeFile.Path || (prevLoc.CodeFile.Path == code.CodeFile.Path && prevLoc.Line >= code.Line) {
+					errorMessage = fmt.Errorf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
+						prevLoc.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line)
+				} else {
+					errorMessage = fmt.Errorf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
+						code.Tag, code.CodeFile.Path, code.Line, prevLoc.Tag, prevLoc.CodeFile.Path, prevLoc.Line)
+				}
 				issue := Issue{
 					Line:     code.Line,
 					Path:     code.CodeFile.Path,
 					RepoName: code.CodeFile.RepoName,
-					Error: fmt.Errorf("LLR declarations differs in %s@%s:%d and %s@%s:%d`.",
-						code.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line),
+					Error:    errorMessage,
 					Severity: IssueSeverityMajor,
 					Type:     IssueTypeInvalidRequirementInCode,
 				}
