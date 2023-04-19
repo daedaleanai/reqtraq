@@ -233,7 +233,7 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]Issue, func(doc, symbol string) 
 		llrLoc[doc][symbol] = loc
 	}
 
-	// linksMatch comparse an array of requirement IDs with the given array of ReqLink's and matches
+	// linksMatch compares an array of requirement IDs with the given array of ReqLink's and matches
 	// each element if the requirement ID matches (ignoring other members of the ReqLink struct).
 	linksMatch := func(lhs []string, rhs []ReqLink) bool {
 		if len(lhs) != len(rhs) {
