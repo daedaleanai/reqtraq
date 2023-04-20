@@ -64,29 +64,31 @@ Documents (markdown and source code) are discovered and parsed from the current 
 Various actions, such as comparison or filtering, are then performed on the `ReqGraph` object, depending on the type of output requested. The requested output is then generated.
 
 ReqGraph source code is arranged as follows:
-- main.go: The main entry point to the program, defines the top level command handler and invokes one of the commands defined in:
-    - `completion_cmd.go`: Defines a `completion` subcommand that prints completion scripts for multiple shells (bash, zsh and fish).
-    - `list_cmd.go`: Defines a `list` subcommand that lists all requirements in the given certdoc.
-    - `nextid_cmd.go`: Defines a `nextid` subcommand that prints the next requirement id for the given certdoc.
-    - `report_cmd.go`: Defines a `report` subcommand that creates HTM reports.
-    - `validate_cmd.go`: Defines a `validate` subcommand that runs the validation checks on all certification documents.
-    - `web_cmd.go`: Defines a `web` subcommand that runs the web application.
-- req.go: The top-level functions dealing with finding and discovering markdown and source code files
-    - parsing.go: Reading and parsing markdown files
-    - code.go: Reading and parsing source code files. Reqtraq can use ctags or optionally libclang to obtain code references.
-    - clang.go: Parsing the AST using libclang and collecting references to implementation and tests.
-- diff.go: Comparison of ReqGraph objects
-- report.go: Generating html reports to save to disk or provide to a web server
-- matrices.go: Generating traceability tables to provide to a web server
-- webapp.go: Launch and service a local web server
+- main.go: The main entry point to the program, invokes the top level command defined in:
+- `cmd/common.go`: common infrastructure for running CLI commands. Defines a root command that can call any of the commands below.
+    - `cmd/completion_cmd.go`: Defines a `completion` subcommand that prints completion scripts for multiple shells (bash, zsh and fish).
+    - `cmd/list_cmd.go`: Defines a `list` subcommand that lists all requirements in the given certdoc.
+    - `cmd/nextid_cmd.go`: Defines a `nextid` subcommand that prints the next requirement id for the given certdoc.
+    - `cmd/report_cmd.go`: Defines a `report` subcommand that creates HTM reports.
+    - `cmd/validate_cmd.go`: Defines a `validate` subcommand that runs the validation checks on all certification documents.
+    - `cmd/web_cmd.go`: Defines a `web` subcommand that runs the web application.
+- reqs/reqs.go: The top-level functions dealing with finding and discovering markdown and source code files
+- code/parsing.go: Reading and parsing markdown files
+- code/code.go: Reading and parsing source code files. Reqtraq can use ctags or optionally libclang to obtain code references.
+- code/clang.go: Parsing the AST using libclang and collecting references to implementation and tests.
+- diff/diff.go: Comparison of ReqGraph objects
+- report/report.go: Generating html reports to save to disk or provide to a web server
+- matrix/matrices.go: Generating traceability tables to provide to a web server
+- web/webapp.go: Launch and service a local web server
 - repos/repos.go: Keeps a registry of all repositories where code and certification documents can be found
 - linepipes/run.go: Wrapper functions the golang command interface
 - config/config.go: Parses the reqtraq configuration for the git repository in the current directory.
 Registers any parent and children repositories found in the configuration file, and recursively parses their configuration.
+- diagnostics/types.go: Defines data types for reporting issues and diagnostics.
 
 ## Low-level Software Requirements Identification
 
-### code.go
+### code/code.go
 
 Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated requirement IDs. The external program Universal Ctags is used to scan for functions.
 
@@ -176,7 +178,17 @@ Reqtraq SHALL mark all test code as optional. Test code MAY link to requirements
 - Verification: Test
 - Safety Impact: None
 
-### diff.go
+#### REQ-TRAQ-SWL-47 Sort by filename
+
+Reqtraq SHALL include functions to sort a requirements list by filname tag.
+
+##### Attributes:
+- Parents:
+- Rationale: Used for providing easily readable output.
+- Verification: Test
+- Safety Impact: None
+
+### diff/diff.go
 
 Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.
 
@@ -286,7 +298,7 @@ Reqtraq SHALL provide a command line option to show tool usage.
 - Verification: Test
 - Safety Impact: None
 
-### matrices.go
+### matrix/matrices.go
 
 Functions which generate trace matrix tables between different requirements and source code.
 
@@ -383,7 +395,7 @@ before any command tries to access it.
 - Verification: Test
 - Safety Impact: None
 
-### parsing.go
+### code/parsing.go
 
 Functions for parsing requirements out of markdown documents.
 
@@ -464,7 +476,7 @@ Reqtraq SHALL parse requirements text found in a table row into a requirements d
 - Verification: Test
 - Safety Impact: None
 
-### report.go
+### report/report.go
 
 Functions for generating HTML reports showing trace data.
 
@@ -645,7 +657,7 @@ Reqtraq SHALL allow filtering of the report by matching a regular expression aga
 - Verification: Test
 - Safety Impact: None
 
-### req.go
+### reqs/reqs.go
 
 Functions related to the handling of requirements and code tags.
 
@@ -794,16 +806,6 @@ Reqtraq SHALL include functions to sort a requirements list by ID number.
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-47 Sort by filename
-
-Reqtraq SHALL include functions to sort a requirements list by filname tag.
-
-##### Attributes:
-- Parents:
-- Rationale: Used for providing easily readable output.
-- Verification: Test
-- Safety Impact: None
-
 #### REQ-TRAQ-SWL-17 Checkout alternative version
 
 Reqtraq SHALL create a temporary version of an old version of the requirements documents to allow them to be loaded.
@@ -814,7 +816,7 @@ Reqtraq SHALL create a temporary version of an old version of the requirements d
 - Verification: Test
 - Safety Impact: None
 
-### webapp.go
+### web/webapp.go
 
 Functions for creating and servicing a web interface.
 
@@ -951,7 +953,7 @@ Parsing the configuration is an involved process that requires:
 - Iterating all the children from the top repository and parsing all requirement documents.
 
 The result of this process is a structure that contains, for each repository, all the certification
-documents that must be parsed. This is used by other components (e.g.: the req.go component) to parse
+documents that must be parsed. This is used by other components (e.g.: the reqs/reqs.go component) to parse
 and validate requirements.
 
 #### REQ-TRAQ-SWL-52 Find top-level configuration
@@ -1035,7 +1037,7 @@ but ignore children repositories.
 - Verification: Test
 - Safety Impact: None
 
-### completion_cmd.go
+### cmd/completion_cmd.go
 
 The completion command takes advantage of the underlying cobra infrastructure to print completion
 scripts for different shells. Supported shells are `bash`, `zsh` and `fish`.
@@ -1050,7 +1052,7 @@ Reqtraq SHALL provide a subcommand to generate shell completions.
 - Verification: Test
 - Safety Impact: None
 
-### list_cmd.go
+### cmd/list_cmd.go
 
 The list command implements the CLI for listing all requirements in a given certification document
 
@@ -1088,7 +1090,7 @@ Reqtraq SHALL allow the user to output the list in csv format.
 - Verification: Test
 - Safety Impact: None
 
-### nextid_cmd.go
+### cmd/nextid_cmd.go
 
 The nextid command implements the CLI for displaying the next requirement ID in a given certification document.
 
@@ -1102,7 +1104,7 @@ Reqtraq SHALL provide a command line option to provide the user with the next av
 - Verification: Test
 - Safety Impact: None
 
-### report_cmd.go
+### cmd/report_cmd.go
 
 The report command implements the CLI for creating HTML reports with requirement trees or issues.
 
@@ -1116,7 +1118,7 @@ Reqtraq SHALL provide a command line options to generate reports showing top-dow
 - Verification: Test
 - Safety Impact: None
 
-### validate_cmd.go
+### cmd/validate_cmd.go
 
 The validate command implements the CLI for validating requirement graphs.
 
@@ -1141,7 +1143,7 @@ compatible with Phabricator.
 - Verification: Test
 - Safety Impact: None
 
-### web_cmd.go
+### cmd/web_cmd.go
 
 The validate command implements the CLI for validating requirement graphs.
 
@@ -1155,7 +1157,7 @@ Reqtraq SHALL provide a command line option to start a local web sever to genera
 - Verification: Test
 - Safety Impact: None
 
-### clang.go
+### code/clang.go
 
 Reqtraq can use libclang to parse the ast of any linked code and obtain code references. This option
 is preferred for a fine-grained code parsing, while ctags is preferred for compatibility with other

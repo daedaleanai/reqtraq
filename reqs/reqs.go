@@ -58,7 +58,7 @@ func BuildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) 
 		}
 
 		// Create the req graph with the new repository
-		rg, err := CreateReqGraph(&overridenConfig)
+		rg, err := createReqGraph(&overridenConfig)
 		if err != nil {
 			return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
 		}
@@ -66,18 +66,18 @@ func BuildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) 
 	}
 
 	// Create the req graph with the new repository
-	rg, err := CreateReqGraph(reqtraqConfig)
+	rg, err := createReqGraph(reqtraqConfig)
 	if err != nil {
 		return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
 	}
 	return rg, nil
 }
 
-// CreateReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
+// createReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
 // errors found while walking the requirements, code, or resolving the graph.
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
-func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
+func createReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	rg := &ReqGraph{make(map[string]*Req, 0), make(map[code.CodeFile][]*code.Code), make([]diagnostics.Issue, 0), reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them
@@ -96,7 +96,7 @@ func CreateReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 		}
 	}
 
-	// Call resolve to check links between requirements and code
+	// Call Resolve to check links between requirements and code
 	rg.Issues = append(rg.Issues, rg.Resolve()...)
 
 	return rg, nil
@@ -272,7 +272,7 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, sym
 }
 
 // TODO(ja): Make this more modular and resolve diagnostics at multiple levels (we already know some of these diagnostics just by parsing code)
-// resolve walks the requirements graph and resolves the links between different levels of requirements
+// Resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
 // of attributes against the schema for their document. Any errors encountered such as links to
 // non-existent requirements are returned in a list of issues.
@@ -767,7 +767,7 @@ func (a byIDNumber) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 // @llr REQ-TRAQ-SWL-46
 func (a byIDNumber) Less(i, j int) bool { return a[i].IDNumber < a[j].IDNumber }
 
-// createFilter reads the filter regular expressions from the command line arguments and
+// CreateFilter reads the filter regular expressions from the command line arguments and
 // compiles them into a filter structure ready to use
 // @llr REQ-TRAQ-SWL-19, REQ-TRAQ-SWL-73
 func CreateFilter(idFilter, titleFilter, bodyFilter string, attributeFilter []string) (ReqFilter, error) {
