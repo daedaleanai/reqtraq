@@ -74,8 +74,9 @@ ReqGraph source code is arranged as follows:
     - `cmd/web_cmd.go`: Defines a `web` subcommand that runs the web application.
 - reqs/reqs.go: The top-level functions dealing with finding and discovering markdown and source code files
 - code/parsing.go: Reading and parsing markdown files
-- code/code.go: Reading and parsing source code files. Reqtraq can use ctags or optionally libclang to obtain code references.
-- code/clang.go: Parsing the AST using libclang and collecting references to implementation and tests.
+- code/code.go: Handling of code tags. Reqtraq can use ctags or optionally libclang to obtain code references.
+- code/parsers/ctags.go: Reading and parsing source code files using ctags.
+- code/parsers/clang.go: Parsing the AST using libclang and collecting references to implementation and tests.
 - diff/diff.go: Comparison of ReqGraph objects
 - report/report.go: Generating html reports to save to disk or provide to a web server
 - matrix/matrices.go: Generating traceability tables to provide to a web server
@@ -91,28 +92,6 @@ Registers any parent and children repositories found in the configuration file, 
 ### code/code.go
 
 Functions which deal with source code files. Source code is discovered within a given path and searched for functions and associated requirement IDs. The external program Universal Ctags is used to scan for functions.
-
-#### REQ-TRAQ-SWL-6 Check for supported source code
-
-The code component SHALL check the provided source code files and make sure only supported files are parsed as code.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-2
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWL-7 DELETED
-
-#### REQ-TRAQ-SWL-8 Ctags
-
-Reqtraq SHALL use the Universal Ctags application to parse supported source code files (those with an extension: c, h, cc, hh or go) for function names, and store them.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-2
-- Rationale:
-- Verification: Test
-- Safety Impact: None
 
 #### REQ-TRAQ-SWL-9 Requirement IDs
 
@@ -1157,7 +1136,34 @@ Reqtraq SHALL provide a command line option to start a local web sever to genera
 - Verification: Test
 - Safety Impact: None
 
-### code/clang.go
+### code/parsers/ctags.go
+
+Reqtraq can use ctags to parse the ast of any linked code and obtain code references. ctags is
+preferred for compatibility with other languages like Go.
+
+#### REQ-TRAQ-SWL-6 Check for supported source code
+
+The code component SHALL check the provided source code files and make sure only supported files are parsed as code.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-7 DELETED
+
+#### REQ-TRAQ-SWL-8 Ctags
+
+Reqtraq SHALL use the Universal Ctags application to parse supported source code files (those with an extension: c, h, cc, hh or go) for function names, and store them.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+### code/parsers/clang.go
 
 Reqtraq can use libclang to parse the ast of any linked code and obtain code references. This option
 is preferred for a fine-grained code parsing, while ctags is preferred for compatibility with other

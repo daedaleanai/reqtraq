@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/daedaleanai/reqtraq/code/parsers"
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/daedaleanai/reqtraq/reqs"
@@ -23,6 +24,7 @@ func TestMain(m *testing.M) {
 	}
 
 	repos.SetBaseRepoInfo(repos.RepoPath(filepath.Dir(workingDir)), repos.RepoName("reqtraq"))
+	parsers.Register()
 	os.Exit(m.Run())
 }
 
