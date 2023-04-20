@@ -169,6 +169,7 @@ func TestMatrix_createMatrix(t *testing.T) {
 		Document:  &sddDoc,
 	}
 
+	// TODO(ja): Resolve should be private and this test should exercise BuildGraph instead.
 	errs := rg.Resolve()
 	assert.Equal(t, 0, len(errs))
 

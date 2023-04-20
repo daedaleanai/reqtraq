@@ -35,7 +35,7 @@ func TestReports(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rg, err := reqs.CreateReqGraph(&reqtraqConfig)
+	rg, err := reqs.BuildGraph("", &reqtraqConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

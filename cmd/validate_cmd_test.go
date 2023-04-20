@@ -46,7 +46,7 @@ func RunValidate(t *testing.T, config *config.Config) (string, error) {
 }
 
 // @llr REQ-TRAQ-SWL-36
-func TestValidateCreateReqGraphMarkdown(t *testing.T) {
+func TestValidateMarkdown(t *testing.T) {
 	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
 
 	commonAttributes := map[string]*config.Attribute{

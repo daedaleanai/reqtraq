@@ -40,7 +40,7 @@ func findMatchingCommand(pathInRepo string, commands clang.CompileCommands) *cla
 
 // Returns true if the cursor is pointing to a possibly public entity
 // @llr REQ-TRAQ-SWL-63
-func IsPublic(cursor clang.Cursor) bool {
+func isPublic(cursor clang.Cursor) bool {
 	if cursor.IsNull() {
 		return true
 	}
@@ -49,12 +49,12 @@ func IsPublic(cursor clang.Cursor) bool {
 		return false
 	}
 
-	return IsPublic(cursor.SemanticParent())
+	return isPublic(cursor.SemanticParent())
 }
 
 // Returns true if the cursor is part of an anonymous (or detail) namespace or class
 // @llr REQ-TRAQ-SWL-62
-func IsInAnonymousOrDetailNamespaceOrClass(cursor clang.Cursor) bool {
+func isInAnonymousOrDetailNamespaceOrClass(cursor clang.Cursor) bool {
 	if cursor.IsNull() {
 		return false
 	}
@@ -70,12 +70,12 @@ func IsInAnonymousOrDetailNamespaceOrClass(cursor clang.Cursor) bool {
 		return true
 	}
 
-	return IsInAnonymousOrDetailNamespaceOrClass(cursor.SemanticParent())
+	return isInAnonymousOrDetailNamespaceOrClass(cursor.SemanticParent())
 }
 
 // Returns true if the given cursor is a deleted member method. Libclang does not provide a nicer way to do this.
 // @llr REQ-TRAQ-SWL-61
-func IsDeleted(cursor clang.Cursor) bool {
+func isDeleted(cursor clang.Cursor) bool {
 	// There is no actual way to check for deleted functions, but this should be close enough...
 	return cursor.IsFunctionInlined() && cursor.Definition().IsNull() && !cursor.CXXMethod_IsDefaulted()
 }
@@ -135,7 +135,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			return clang.ChildVisit_Recurse
 
 		case clang.Cursor_ClassDecl, clang.Cursor_EnumDecl, clang.Cursor_StructDecl, clang.Cursor_ClassTemplate, clang.Cursor_ClassTemplatePartialSpecialization:
-			if !IsPublic(cursor) {
+			if !isPublic(cursor) {
 				return clang.ChildVisit_Continue
 			}
 
@@ -155,7 +155,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			return clang.ChildVisit_Recurse
 
 		case clang.Cursor_TypeAliasDecl, clang.Cursor_TypeAliasTemplateDecl:
-			if !IsPublic(cursor) || IsInAnonymousOrDetailNamespaceOrClass(cursor) {
+			if !isPublic(cursor) || isInAnonymousOrDetailNamespaceOrClass(cursor) {
 				return clang.ChildVisit_Continue
 			}
 
@@ -163,7 +163,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			storeTag(cursor, true)
 
 		case clang.Cursor_CXXMethod, clang.Cursor_FunctionDecl, clang.Cursor_FunctionTemplate, clang.Cursor_Constructor, clang.Cursor_ConversionFunction:
-			if !IsPublic(cursor) || IsInAnonymousOrDetailNamespaceOrClass(cursor) || IsDeleted(cursor) || cursor.CXXMethod_IsPureVirtual() {
+			if !isPublic(cursor) || isInAnonymousOrDetailNamespaceOrClass(cursor) || isDeleted(cursor) || cursor.CXXMethod_IsPureVirtual() {
 				return clang.ChildVisit_Continue
 			}
 
