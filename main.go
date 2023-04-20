@@ -9,7 +9,13 @@ import (
 	"os"
 
 	"github.com/daedaleanai/reqtraq/cmd"
+	"github.com/daedaleanai/reqtraq/code/parsers"
 )
+
+// @llr REQ-TRAQ-SWL-59
+func init() {
+	parsers.Register()
+}
 
 // Runs the program
 // @llr REQ-TRAQ-SWL-59

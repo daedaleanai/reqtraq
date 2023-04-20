@@ -1,11 +1,12 @@
 //go:build clang
 
-package code
+package parsers
 
 import (
 	"path/filepath"
 	"testing"
 
+	"github.com/daedaleanai/reqtraq/code"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,10 +17,10 @@ func TestTagCodeLibClang(t *testing.T) {
 	repoName := repos.RepoName("libclangtest")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/libclangtest")))
 
-	codeFiles := []CodeFile{
-		{RepoName: repoName, Path: "code/a.cc", Type: CodeTypeImplementation},
-		{RepoName: repoName, Path: "code/include/a.hh", Type: CodeTypeImplementation},
-		{RepoName: repoName, Path: "test/a/a_test.cc", Type: CodeTypeTests},
+	codeFiles := []code.CodeFile{
+		{RepoName: repoName, Path: "code/a.cc", Type: code.CodeTypeImplementation},
+		{RepoName: repoName, Path: "code/include/a.hh", Type: code.CodeTypeImplementation},
+		{RepoName: repoName, Path: "test/a/a_test.cc", Type: code.CodeTypeTests},
 	}
 
 	compilerArgs := []string{
@@ -27,7 +28,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		"-Icode/include",
 	}
 
-	tags, err := ClangCodeParser{}.tagCode(repoName, codeFiles, "", compilerArgs)
+	tags, err := clangCodeParser{}.TagCode(repoName, codeFiles, "", compilerArgs)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -52,7 +53,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"ExternCFunc", 126, nil, false},
 		{"doThings", 134, nil, false},
 	}
-	LookFor(t, repoName, "code/include/a.hh", CodeTypeImplementation, tags, expectedTags)
+	LookFor(t, repoName, "code/include/a.hh", code.CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
 		{"hiddenFunction", 10, nil, false},
@@ -64,12 +65,12 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"AnotherMyConcept", 37, nil, true},
 		{"externFunc", 42, nil, false},
 	}
-	LookFor(t, repoName, "code/a.cc", CodeTypeImplementation, tags, expectedTags)
+	LookFor(t, repoName, "code/a.cc", code.CodeTypeImplementation, tags, expectedTags)
 
 	expectedTags = []TagMatch{
 		{"TestDoThings", 9, nil, false},
 		{"TestDoMoreThings", 15, nil, false},
 		{"TestAllReqsCovered", 21, nil, false},
 	}
-	LookFor(t, repoName, "test/a/a_test.cc", CodeTypeTests, tags, expectedTags)
+	LookFor(t, repoName, "test/a/a_test.cc", code.CodeTypeTests, tags, expectedTags)
 }

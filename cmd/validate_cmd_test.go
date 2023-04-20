@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/daedaleanai/reqtraq/code/parsers"
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,7 @@ func TestMain(m *testing.M) {
 	parentDir := filepath.Dir(workingDir)
 	os.Chdir(parentDir)
 
+	parsers.Register()
 	repos.SetBaseRepoInfo(repos.RepoPath(parentDir), repos.RepoName("reqtraq"))
 	os.Exit(m.Run())
 }
