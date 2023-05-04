@@ -17,7 +17,7 @@ import (
 
 type ctagsCodeParser struct{}
 
-// tagCode runs ctags over the specified code files and parses the generated tags file.
+// TagCode runs ctags over the specified code files and parses the generated tags file.
 // @llr REQ-TRAQ-SWL-8
 func (ctagsCodeParser) TagCode(repoName repos.RepoName, codeFiles []code.CodeFile, compilationDatabase string, compilerArguments []string) (map[code.CodeFile][]*code.Code, error) {
 	r, w := io.Pipe()
