@@ -19,7 +19,7 @@ import (
 
 var (
 	// To detect a line containing low-level requirements
-	reLLRReferenceLine = regexp.MustCompile(`^[ \*\/]*(?:@|\\)llr +(?:REQ-\w+-\w+-\d+[, ]*)+$`)
+	reLLRReferenceLine = regexp.MustCompile(`^[ \*\/-]*(?:@|\\)llr +(?:REQ-\w+-\w+-\d+[, ]*)+$`)
 	// To capture requirements out of the line
 	reLLRReferences = regexp.MustCompile(`(REQ-\w+-\w+-\d+)`)
 	// Blank line to stop search
@@ -222,9 +222,12 @@ func (code *Code) URL() string {
 // SourceCodeFileExtensions are listed by language.
 // To see the available languages, run: ctags --list-languages
 var SourceCodeFileExtensions = map[string][]string{
-	"C":   {".c", ".h"},
-	"C++": {".cc", ".hh"},
-	"GO":  {".go"},
+	"C":             {".c", ".h"},
+	"C++":           {".cc", ".hh"},
+	"GO":            {".go"},
+	"SystemVerilog": {".sv", ".svh"},
+	"Verilog":       {".v", ".vh"},
+	"VHDL":          {".vhd", ".vhdl"},
 }
 
 // parseComments updates the specified tags with the requirement IDs discovered in the codeFiles.
