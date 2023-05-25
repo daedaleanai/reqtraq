@@ -51,7 +51,7 @@ func (ctagsCodeParser) TagCode(repoName repos.RepoName, codeFiles []code.CodeFil
 		"--kinds-C=f",
 		"--kinds-C++=f",
 		"--kinds-GO=f",
-		"--kinds-SystemVerilog=i",
+		"--kinds-SystemVerilog=iAVR",
 		"--kinds-Verilog=i",
 		"--kinds-VHDL=ea",
 		// To see the available fields: ctags --list-fields
