@@ -37,47 +37,11 @@ func (rg ReqGraph) OrdsByPosition() []*Req {
 	return r
 }
 
-// BuildGraph returns the requirements graph at the specified commit, or the graph for the current files if commit
-// is empty. In case the commit is specified, a temporary clone of the repository is created and the path to it is
-// returned.
-// @llr REQ-TRAQ-SWL-17
-func BuildGraph(commit string, reqtraqConfig *config.Config) (*ReqGraph, error) {
-	if commit != "" {
-		// Override the current repository to get a different revision. This will create a clone
-		// of the repo with the specified revision and it will be always used after this call for
-		// the base repo
-		path, err := repos.GetRepo(repos.BaseRepoName(), repos.RemotePath(repos.BaseRepoPath()), commit, true)
-		if err != nil {
-			return nil, err
-		}
-
-		// Also override reqtraq configuration... as they are different repos
-		overridenConfig, err := config.ParseConfig(path)
-		if err != nil {
-			return nil, err
-		}
-
-		// Create the req graph with the new repository
-		rg, err := createReqGraph(&overridenConfig)
-		if err != nil {
-			return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
-		}
-		return rg, nil
-	}
-
-	// Create the req graph with the new repository
-	rg, err := createReqGraph(reqtraqConfig)
-	if err != nil {
-		return rg, errors.Wrap(err, fmt.Sprintf("Failed to create graph"))
-	}
-	return rg, nil
-}
-
-// createReqGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
+// BuildGraph returns a graph resulting from parsing the certdocs. The graph includes a list of
 // errors found while walking the requirements, code, or resolving the graph.
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
-func createReqGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
+func BuildGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	rg := &ReqGraph{make(map[string]*Req, 0), make(map[code.CodeFile][]*code.Code), make([]diagnostics.Issue, 0), reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them

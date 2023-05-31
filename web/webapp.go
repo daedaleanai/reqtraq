@@ -60,7 +60,7 @@ func Serve(cfg *config.Config, addr string) error {
 	reqLinks = reqtraqConfig.GetLinkedSpecs()
 
 	var err error
-	rg, err = reqs.BuildGraph("", &reqtraqConfig)
+	rg, err = reqs.BuildGraph(&reqtraqConfig)
 	if err != nil {
 		return err
 	}
@@ -311,22 +311,20 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return fmt.Errorf("Failed to create filter: %v", err)
 		}
-		// TODO(ja): Remove diffs var
-		var diffs map[string][]string
 		switch r.FormValue("report-type") {
 		case "Bottom Up":
-			if !filter.IsEmpty() || diffs != nil {
-				return report.ReportUpFiltered(rg, w, filter, diffs)
+			if !filter.IsEmpty() {
+				return report.ReportUpFiltered(rg, w, filter)
 			}
 			return report.ReportUp(rg, w)
 		case "Top Down":
-			if !filter.IsEmpty() || diffs != nil {
-				return report.ReportDownFiltered(rg, w, filter, diffs)
+			if !filter.IsEmpty() {
+				return report.ReportDownFiltered(rg, w, filter)
 			}
 			return report.ReportDown(rg, w)
 		case "Issues":
-			if !filter.IsEmpty() || diffs != nil {
-				return report.ReportIssuesFiltered(rg, w, filter, diffs)
+			if !filter.IsEmpty() {
+				return report.ReportIssuesFiltered(rg, w, filter)
 			}
 			return report.ReportIssues(rg, w)
 		}
