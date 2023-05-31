@@ -787,9 +787,9 @@ func (f ReqFilter) IsEmpty() bool {
 		len(f.AttributeRegexp) == 0
 }
 
-// Matches returns true if the requirement matches the filter AND its ID is in the diffs map, if any.
+// Matches returns true if the requirement matches the filter
 // @llr REQ-TRAQ-SWL-19, REQ-TRAQ-SWL-73
-func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
+func (r *Req) Matches(filter *ReqFilter) bool {
 	if filter != nil {
 		if filter.IDRegexp != nil {
 			if !filter.IDRegexp.MatchString(r.ID) {
@@ -825,10 +825,6 @@ func (r *Req) Matches(filter *ReqFilter, diffs map[string][]string) bool {
 				return false
 			}
 		}
-	}
-	if diffs != nil {
-		_, ok := diffs[r.ID]
-		return ok
 	}
 	return true
 }

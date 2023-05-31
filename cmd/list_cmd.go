@@ -67,7 +67,7 @@ func runListCmd(command *cobra.Command, args []string) error {
 // @llr REQ-TRAQ-SWL-33, REQ-TRAQ-SWL-73
 func printConcise(reqs []*reqs.Req, filter reqs.ReqFilter) {
 	for _, r := range reqs {
-		if !filter.IsEmpty() && !r.Matches(&filter, nil) {
+		if !filter.IsEmpty() && !r.Matches(&filter) {
 			continue
 		}
 		body := make([]string, 0)
@@ -98,7 +98,7 @@ func printCsv(reqs []*reqs.Req, schema config.Schema, filter reqs.ReqFilter) {
 	sort.Strings(attributes)
 	csvwriter.Write(append([]string{"Id", "Title", "Body"}, attributes...))
 	for _, r := range reqs {
-		if !filter.IsEmpty() && !r.Matches(&filter, nil) {
+		if !filter.IsEmpty() && !r.Matches(&filter) {
 			continue
 		}
 		row := []string{r.ID, r.Title, r.Body}

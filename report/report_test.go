@@ -37,7 +37,7 @@ func TestReports(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rg, err := reqs.BuildGraph("", &reqtraqConfig)
+	rg, err := reqs.BuildGraph(&reqtraqConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,20 +88,19 @@ func TestReports(t *testing.T) {
 
 // @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-31
 func checkFilteredReports(t *testing.T, rg *reqs.ReqGraph, filter *reqs.ReqFilter) {
-	var diffs map[string][]string
 
 	{
-		if err := ReportDownFiltered(rg, ioutil.Discard, filter, diffs); err != nil {
+		if err := ReportDownFiltered(rg, ioutil.Discard, filter); err != nil {
 			t.Fatal(err)
 		}
 	}
 	{
-		if err := ReportUpFiltered(rg, ioutil.Discard, filter, diffs); err != nil {
+		if err := ReportUpFiltered(rg, ioutil.Discard, filter); err != nil {
 			t.Fatal(err)
 		}
 	}
 	{
-		if err := ReportIssuesFiltered(rg, ioutil.Discard, filter, diffs); err != nil {
+		if err := ReportIssuesFiltered(rg, ioutil.Discard, filter); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -112,76 +111,50 @@ func TestReport_Matches_filter(t *testing.T) {
 	tests := []struct {
 		req     reqs.Req
 		filter  reqs.ReqFilter
-		diffs   map[string][]string
 		matches bool
 	}{
 		{reqs.Req{ID: "REQ-TEST-SWH-1", Body: "thrust control"},
 			reqs.ReqFilter{IDRegexp: regexp.MustCompile("REQ-TEST-SWH-*")},
-			nil,
 			true},
 		{reqs.Req{ID: "REQ-TEST-SWH-1", Title: "The control unit will calculate thrust.", Body: "It will also do much more."},
 			reqs.ReqFilter{TitleRegexp: regexp.MustCompile("thrust")},
-			nil,
 			true},
 		{reqs.Req{ID: "REQ-TEST-SWH-1", Title: "The control unit will calculate vertical take off speed.", Body: "It will also output thrust."},
 			reqs.ReqFilter{TitleRegexp: regexp.MustCompile("thrust")},
-			nil,
 			false},
 		{reqs.Req{ID: "REQ-TEST-SWH-1", Body: "thrust control"},
 			reqs.ReqFilter{BodyRegexp: regexp.MustCompile("thrust")},
-			nil,
 			true},
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Body: "thrust control"},
 			reqs.ReqFilter{IDRegexp: regexp.MustCompile("REQ-*"), BodyRegexp: regexp.MustCompile("thrust")},
-			nil,
 			true},
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Body: "thrust control"},
 			reqs.ReqFilter{IDRegexp: regexp.MustCompile("REQ-DDLN-*"), BodyRegexp: regexp.MustCompile("thrust")},
-			nil,
 			false},
 
 		// filter attributes
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
 			reqs.ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Demo*")},
-			nil,
 			true},
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
 			reqs.ReqFilter{AnyAttributeRegexp: regexp.MustCompile("Test*")},
-			nil,
 			false},
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
 			reqs.ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}},
-			nil,
 			true},
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Attributes: map[string]string{"Color": "Brown"}},
 			reqs.ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Demo*")}},
-			nil,
 			false},
 		{reqs.Req{ID: "REQ-TEST-SWL-14", Attributes: map[string]string{"Verification": "Demonstration"}},
 			reqs.ReqFilter{AttributeRegexp: map[string]*regexp.Regexp{"Verification": regexp.MustCompile("Test*")}},
-			nil,
-			false},
-
-		// diffs
-		{reqs.Req{ID: "REQ-TEST-SWL-14", Body: "thrust control"},
-			reqs.ReqFilter{},
-			map[string][]string{"REQ-TEST-SWL-1": make([]string, 0)},
-			false},
-		{reqs.Req{ID: "REQ-TEST-SWL-14", Body: "thrust control"},
-			reqs.ReqFilter{},
-			map[string][]string{"REQ-TEST-SWL-14": make([]string, 0)},
-			true},
-		{reqs.Req{ID: "REQ-TEST-SWL-14", Body: "thrust control"},
-			reqs.ReqFilter{IDRegexp: regexp.MustCompile("X")},
-			map[string][]string{"REQ-TEST-SWL-14": make([]string, 0)},
 			false},
 	}
 
 	for _, test := range tests {
 		if test.matches {
-			assert.True(t, test.req.Matches(&test.filter, test.diffs), "expected requirement to match: %v filter=%v diffs=%v", test.req, test.filter, test.diffs)
+			assert.True(t, test.req.Matches(&test.filter), "expected requirement to match: %v filter=%v", test.req, test.filter)
 		} else {
-			assert.False(t, test.req.Matches(&test.filter, test.diffs), "expected requirement to not match: %v filter=%v diffs=%v", test.req, test.filter, test.diffs)
+			assert.False(t, test.req.Matches(&test.filter), "expected requirement to not match: %v filter=%v diffs=%v", test.req, test.filter)
 		}
 	}
 }

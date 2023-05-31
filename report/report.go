@@ -53,9 +53,9 @@ func ReportUpFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter) error {
 
 // ReportIssuesFiltered generates a HTML report showing attribute and trace errors, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-31, REQ-TRAQ-SWL-39
-func ReportIssuesFiltered(rg *reqs.ReqGraph, w io.Writer, filter *reqs.ReqFilter) error {
+func ReportIssuesFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter) error {
 	// TODO apply filter in ISSUESFILT template
-	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{*rg, filter, Oncer{}})
+	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{*rg, f, Oncer{}})
 }
 
 // Prints a filter in a nicely formatted manner to be shown in the report
