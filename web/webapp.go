@@ -18,7 +18,6 @@ import (
 	"github.com/alecthomas/chroma/styles"
 	"github.com/daedaleanai/reqtraq/code"
 	"github.com/daedaleanai/reqtraq/config"
-	"github.com/daedaleanai/reqtraq/diff"
 	"github.com/daedaleanai/reqtraq/matrix"
 	"github.com/daedaleanai/reqtraq/report"
 	"github.com/daedaleanai/reqtraq/repos"
@@ -27,6 +26,10 @@ import (
 )
 
 var reqtraqConfig config.Config
+var rg *reqs.ReqGraph
+var attributes map[string]*config.Attribute
+var codeLinks []config.ReqSpec
+var reqLinks []config.LinkSpec
 
 // Serve starts the web server listening on the supplied address:port
 // @llr REQ-TRAQ-SWL-37
@@ -36,6 +39,32 @@ func Serve(cfg *config.Config, addr string) error {
 	if strings.HasPrefix(addr, ":") {
 		addr = "localhost" + addr
 	}
+
+	fmt.Printf("Parsing requirements graph\n")
+
+	attributes = make(map[string]*config.Attribute)
+	codeLinks = []config.ReqSpec{}
+
+	for _, repo := range reqtraqConfig.Repos {
+		for _, document := range repo.Documents {
+			for attributeName, attribute := range document.Schema.Attributes {
+				if _, ok := attributes[attributeName]; !ok {
+					attributes[attributeName] = attribute
+				}
+			}
+			if document.HasImplementation() {
+				codeLinks = append(codeLinks, document.ReqSpec)
+			}
+		}
+	}
+	reqLinks = reqtraqConfig.GetLinkedSpecs()
+
+	var err error
+	rg, err = reqs.BuildGraph("", &reqtraqConfig)
+	if err != nil {
+		return err
+	}
+
 	fmt.Printf("Server started on http://%s\n", addr)
 	return http.ListenAndServe(addr, http.HandlerFunc(handler))
 }
@@ -69,7 +98,10 @@ func Title(str string) string {
 // ReqUrl converts a ReqSpec into a url friendly string for use in the HTML template
 // @llr REQ-TRAQ-SWL-37
 func ReqUrl(req config.ReqSpec) string {
-	return url.QueryEscape(fmt.Sprintf("%s-%s-%s-%s", req.Prefix, req.Level, req.AttrKey, req.AttrVal))
+	if len(req.AttrKey) > 0 && req.AttrVal != nil {
+		return url.QueryEscape(fmt.Sprintf("%s-%s-%s-%s", req.Prefix, req.Level, req.AttrKey, req.AttrVal))
+	}
+	return url.QueryEscape(fmt.Sprintf("%s-%s", req.Prefix, req.Level))
 }
 
 var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"title": Title, "requrl": ReqUrl}).Parse(
@@ -134,18 +166,6 @@ var indexTemplate = template.Must(template.New("index").Funcs(template.FuncMap{"
 <div class="rTableCell"><input name="attribute_filter_{{ title $attrName }}" type="text"></div>
 </div>
 {{ end }}
-<div class="rTableRow">
-<div class="rTableCell">Since:</div>
-<div class="rTableCell"><select name="since_commit">
-<option value="">Beginning</option>
-{{ range .Commits }}<option value="{{ . }}">{{ . }}</option>{{ end }}</select></div>
-</div>
-<div class="rTableRow">
-<div class="rTableCell">At:</div>
-<div class="rTableCell"><select name="at_commit">
-<option value="">Current</option>
-{{ range .Commits }}<option value="{{ . }}">{{ . }}</option>{{ end }}</select></div>
-</div>
 <div class="rTableRow">
 <div class="rTableCell"></div>
 <div class="rTableCell"><input type="reset"></div>
@@ -218,11 +238,14 @@ func parseReqSpecFromRequest(specString string) (config.ReqSpec, error) {
 		return config.ReqSpec{}, fmt.Errorf("Invalid requirement specification `%s`", specString)
 	}
 	reqSpec := config.ReqSpec{
-		Prefix:  config.ReqPrefix(parts[0]),
-		Level:   config.ReqLevel(parts[1]),
-		Re:      regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parts[0], parts[1])),
-		AttrKey: parts[2],
-		AttrVal: regexp.MustCompile(parts[3])}
+		Prefix: config.ReqPrefix(parts[0]),
+		Level:  config.ReqLevel(parts[1]),
+		Re:     regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parts[0], parts[1])),
+	}
+	if len(parts) == 4 {
+		reqSpec.AttrKey = parts[2]
+		reqSpec.AttrVal = regexp.MustCompile(parts[3])
+	}
 	return reqSpec, nil
 }
 
@@ -253,23 +276,6 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		attributes := make(map[string]*config.Attribute)
-		codeLinks := []config.ReqSpec{}
-
-		for _, repo := range reqtraqConfig.Repos {
-			for _, document := range repo.Documents {
-				for attributeName, attribute := range document.Schema.Attributes {
-					if _, ok := attributes[attributeName]; !ok {
-						attributes[attributeName] = attribute
-					}
-				}
-				if document.HasImplementation() {
-					codeLinks = append(codeLinks, document.ReqSpec)
-				}
-			}
-		}
-		reqLinks := reqtraqConfig.GetLinkedSpecs()
-
 		return indexTemplate.Execute(w, indexData{string(repoName), attributes, commits, reqLinks, codeLinks})
 	}
 
@@ -299,32 +305,14 @@ func get(w http.ResponseWriter, r *http.Request) error {
 		return formatter.Format(w, style, iterator)
 	}
 
-	at := r.FormValue("at_commit")
-	var atCommit string
-	if at != "" {
-		atCommit = strings.Split(at, " ")[0]
-	}
-	rg, err := reqs.BuildGraph(atCommit, &reqtraqConfig)
-	if err != nil {
-		return err
-	}
-
 	switch {
 	case reqPath == "/report":
 		filter, err := createFilterFromHttpRequest(r)
 		if err != nil {
 			return fmt.Errorf("Failed to create filter: %v", err)
 		}
-		var prg *reqs.ReqGraph
-		since := r.FormValue("since_commit")
-		if since != "" {
-			sinceCommit := strings.Split(since, " ")[0]
-			prg, err = reqs.BuildGraph(sinceCommit, &reqtraqConfig)
-			if err != nil {
-				return err
-			}
-		}
-		diffs := diff.ChangedSince(rg, prg)
+		// TODO(ja): Remove diffs var
+		var diffs map[string][]string
 		switch r.FormValue("report-type") {
 		case "Bottom Up":
 			if !filter.IsEmpty() || diffs != nil {
