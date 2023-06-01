@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/daedaleanai/cobra"
-	"github.com/daedaleanai/reqtraq/diff"
 	"github.com/daedaleanai/reqtraq/report"
 	"github.com/daedaleanai/reqtraq/reqs"
 )
@@ -16,8 +15,6 @@ var (
 	reportTitleFilter     *string
 	reportBodyFilter      *string
 	reportAttributeFilter *[]string
-	reportAt              *string
-	reportSince           *string
 )
 
 var reportCmd = &cobra.Command{
@@ -54,8 +51,6 @@ func init() {
 	reportTitleFilter = reportCmd.PersistentFlags().String("title", "", "Regular expression to filter by requirement title.")
 	reportBodyFilter = reportCmd.PersistentFlags().String("body", "", "Regular expression to filter by requirement body.")
 	reportAttributeFilter = reportCmd.PersistentFlags().StringSlice("attribute", nil, "Regular expression to filter by requirement attribute.")
-	reportAt = reportCmd.PersistentFlags().String("at", "", "The commit representing the end of the range.")
-	reportSince = reportCmd.PersistentFlags().String("since", "", "The commit representing the start of the range.")
 
 	reportCmd.AddCommand(reportUpCmd)
 	reportCmd.AddCommand(reportDownCmd)
@@ -71,20 +66,10 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	rg, err := reqs.BuildGraph(*reportAt, reqtraqConfig)
+	rg, err := reqs.BuildGraph(reqtraqConfig)
 	if err != nil {
 		return err
 	}
-
-	var prg *reqs.ReqGraph
-	if *reportSince != "" {
-		prg, err = reqs.BuildGraph(*reportSince, reqtraqConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	diffs := diff.ChangedSince(rg, prg)
 
 	of, err := os.Create(*reportPrefix + "down.html")
 	if err != nil {
@@ -100,13 +85,13 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if !filter.IsEmpty() || diffs != nil {
+	if !filter.IsEmpty() {
 		of, err := os.Create(*reportPrefix + "down-filtered.html")
 		if err != nil {
 			return err
 		}
 		log.Print("Creating ", of.Name(), " (this may take a while)...")
-		if err := report.ReportDownFiltered(rg, of, &filter, diffs); err != nil {
+		if err := report.ReportDownFiltered(rg, of, &filter); err != nil {
 			return err
 		}
 		of.Close()
@@ -124,20 +109,10 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	rg, err := reqs.BuildGraph(*reportAt, reqtraqConfig)
+	rg, err := reqs.BuildGraph(reqtraqConfig)
 	if err != nil {
 		return err
 	}
-
-	var prg *reqs.ReqGraph
-	if *reportSince != "" {
-		prg, err = reqs.BuildGraph(*reportSince, reqtraqConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	diffs := diff.ChangedSince(rg, prg)
 
 	of, err := os.Create(*reportPrefix + "issues.html")
 	if err != nil {
@@ -152,13 +127,13 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if !filter.IsEmpty() || diffs != nil {
+	if !filter.IsEmpty() {
 		of, err := os.Create(*reportPrefix + "issues-filtered.html")
 		if err != nil {
 			return err
 		}
 		log.Print("Creating ", of.Name(), " (this may take a while)...")
-		if err := report.ReportIssuesFiltered(rg, of, &filter, diffs); err != nil {
+		if err := report.ReportIssuesFiltered(rg, of, &filter); err != nil {
 			return err
 		}
 		of.Close()
@@ -175,20 +150,10 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 		return err
 	}
 
-	rg, err := reqs.BuildGraph(*reportAt, reqtraqConfig)
+	rg, err := reqs.BuildGraph(reqtraqConfig)
 	if err != nil {
 		return err
 	}
-
-	var prg *reqs.ReqGraph
-	if *reportSince != "" {
-		prg, err = reqs.BuildGraph(*reportSince, reqtraqConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	diffs := diff.ChangedSince(rg, prg)
 
 	of, err := os.Create(*reportPrefix + "up.html")
 	if err != nil {
@@ -204,13 +169,13 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if !filter.IsEmpty() || diffs != nil {
+	if !filter.IsEmpty() {
 		of, err := os.Create(*reportPrefix + "up-filtered.html")
 		if err != nil {
 			return err
 		}
 		log.Print("Creating ", of.Name(), " (this may take a while)...")
-		if err := report.ReportUpFiltered(rg, of, &filter, diffs); err != nil {
+		if err := report.ReportUpFiltered(rg, of, &filter); err != nil {
 			return err
 		}
 		of.Close()

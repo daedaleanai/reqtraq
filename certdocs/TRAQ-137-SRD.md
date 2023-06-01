@@ -126,15 +126,7 @@ Reqtraq SHALL allow the user to trace code and requirements located across multi
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWH-8 Requirement Comparison
-
-Reqtraq SHALL be capable of comparing two versions of a requirements graph and reporting differences between them.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SYS-2
-- Rationale:
-- Verification: Test
-- Safety Impact: None
+#### REQ-TRAQ-SWH-8 DELETED
 
 #### REQ-TRAQ-SWH-9 Requirement History
 
@@ -224,7 +216,7 @@ Reqtraq SHALL differentiate between tests and implementation.
 
 ##### Attributes:
 - Parents:
-- Rationale: This information is useful in order to detect issues with tested requirements that 
+- Rationale: This information is useful in order to detect issues with tested requirements that
 are not implemented and to compute the test coverage of requirements.
 - Verification: Test
 - Safety Impact: None
@@ -243,3 +235,12 @@ Reqtraq SHALL enforce a naming scheme for requirements documents.
 - Verification: Test
 - Safety Impact: None
 
+#### DELETED-8 Requirement Comparison
+
+Reqtraq SHALL be capable of comparing two versions of a requirements graph and reporting differences between them.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SYS-2
+- Rationale:
+- Verification: Test
+- Safety Impact: None

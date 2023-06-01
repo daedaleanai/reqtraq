@@ -19,44 +19,43 @@ type reportData struct {
 	Reqs   reqs.ReqGraph
 	Filter *reqs.ReqFilter
 	Once   Oncer
-	Diffs  map[string][]string
 }
 
 // ReportDown generates a HTML report of top down trace information.
 // @llr REQ-TRAQ-SWL-12, REQ-TRAQ-SWL-39
 func ReportDown(rg *reqs.ReqGraph, w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{*rg, nil, Oncer{}, nil})
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWN", reportData{*rg, nil, Oncer{}})
 }
 
 // ReportUp generates a HTML report of bottom up trace information.
 // @llr REQ-TRAQ-SWL-13, REQ-TRAQ-SWL-39
 func ReportUp(rg *reqs.ReqGraph, w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{*rg, nil, Oncer{}, nil})
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUP", reportData{*rg, nil, Oncer{}})
 }
 
 // ReportIssues generates a HTML report showing attribute and trace errors.
 // @llr REQ-TRAQ-SWL-30, REQ-TRAQ-SWL-39
 func ReportIssues(rg *reqs.ReqGraph, w io.Writer) error {
-	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{*rg, nil, Oncer{}, nil})
+	return reportTmpl.ExecuteTemplate(w, "ISSUES", reportData{*rg, nil, Oncer{}})
 }
 
 // ReportDownFiltered generates a HTML report of top down trace information, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-20, REQ-TRAQ-SWL-39
-func ReportDownFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{*rg, f, Oncer{}, diffs})
+func ReportDownFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter) error {
+	return reportTmpl.ExecuteTemplate(w, "TOPDOWNFILT", reportData{*rg, f, Oncer{}})
 }
 
 // ReportUpFiltered generates a HTML report of bottom up trace information, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-21, REQ-TRAQ-SWL-39
-func ReportUpFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter, diffs map[string][]string) error {
-	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{*rg, f, Oncer{}, diffs})
+func ReportUpFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter) error {
+	return reportTmpl.ExecuteTemplate(w, "BOTTOMUPFILT", reportData{*rg, f, Oncer{}})
 }
 
 // ReportIssuesFiltered generates a HTML report showing attribute and trace errors, which has been filtered by the supplied parameters.
 // @llr REQ-TRAQ-SWL-31, REQ-TRAQ-SWL-39
-func ReportIssuesFiltered(rg *reqs.ReqGraph, w io.Writer, filter *reqs.ReqFilter, diffs map[string][]string) error {
+func ReportIssuesFiltered(rg *reqs.ReqGraph, w io.Writer, f *reqs.ReqFilter) error {
 	// TODO apply filter in ISSUESFILT template
-	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{*rg, filter, Oncer{}, diffs})
+	return reportTmpl.ExecuteTemplate(w, "ISSUESFILT", reportData{*rg, f, Oncer{}})
 }
 
 // Prints a filter in a nicely formatted manner to be shown in the report
@@ -392,11 +391,11 @@ var reportTmplText = `
 	<h3><em>Filter Criteria: {{ .PrintFilter }} </em></h3>
 	<ul style="list-style: none; padding: 0; margin: 0;">
 		{{ range .Reqs.OrdsByPosition }}
-			{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
+			{{ if .Matches $.Filter }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
 			{{ range .Children }}
-				{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
+				{{ if .Matches $.Filter }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
 				{{ range .Children }}
-					{{ if .Matches $.Filter $.Diffs }}
+					{{ if .Matches $.Filter }}
 						{{ with ($.Once.Once .) }}
 							{{ template "REQUIREMENT" . }}
 							{{ template "CODETAGS" .Tags }}
@@ -420,7 +419,7 @@ var reportTmplText = `
 		{{ range . }}
 		{{ if shouldShowTag . $.Reqs }}
 			{{ range listCodeParents .Links $.Reqs }}
-				{{ if .Matches $.Filter $.Diffs }}
+				{{ if .Matches $.Filter }}
 					{{ with ($.Once.Once .) }}
 						{{ template "REQUIREMENT" . }}
 						{{ template "CODETAGS" .Tags }}
@@ -428,9 +427,9 @@ var reportTmplText = `
 					{{ end }}
 				{{ end }}
 				{{ range .Parents }}
-					{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
+					{{ if .Matches $.Filter }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
 						{{ range .Parents }}
-							{{ if .Matches $.Filter $.Diffs }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
+							{{ if .Matches $.Filter }}{{ template "REQUIREMENT" ($.Once.Once .) }}{{ end }}
 						{{ end }}
 				{{ end }}
 			{{ end }}

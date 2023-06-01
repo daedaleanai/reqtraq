@@ -15,7 +15,6 @@ import (
 )
 
 var fValidateStrict *bool
-var fValidateAt *string
 var fValidateJson *string
 
 var validateCmd = &cobra.Command{
@@ -113,8 +112,8 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) {
 
 // validate builds the requirement graph, gathering any errors and prints them out. If the strict flag is set return an error.
 // @llr REQ-TRAQ-SWL-36
-func validate(config *config.Config, at string, strict bool) ([]diagnostics.Issue, error) {
-	rg, err := reqs.BuildGraph(at, config)
+func validate(config *config.Config, strict bool) ([]diagnostics.Issue, error) {
+	rg, err := reqs.BuildGraph(config)
 	if err != nil {
 		return rg.Issues, err
 	}
@@ -146,7 +145,7 @@ func runValidate(command *cobra.Command, args []string) error {
 	if err := setupConfiguration(); err != nil {
 		return err
 	}
-	issues, err := validate(reqtraqConfig, *fValidateAt, *fValidateStrict)
+	issues, err := validate(reqtraqConfig, *fValidateStrict)
 
 	if *fValidateJson != "" {
 		file, fileErr := os.Create(*fValidateJson)
@@ -173,7 +172,6 @@ func runValidate(command *cobra.Command, args []string) error {
 // @llr REQ-TRAQ-SWL-36
 func init() {
 	fValidateStrict = validateCmd.PersistentFlags().Bool("strict", false, "Exit with error if any validation checks fail")
-	fValidateAt = validateCmd.PersistentFlags().String("at", "", "Runs validation at the given commit instead of the current one. This only applies to the current repository")
 	fValidateJson = validateCmd.PersistentFlags().String("json", "", "Outputs a json file with lint messages in addition to a textual representation of the errors")
 	rootCmd.AddCommand(validateCmd)
 }

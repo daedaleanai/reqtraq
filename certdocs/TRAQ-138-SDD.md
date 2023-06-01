@@ -77,7 +77,6 @@ ReqGraph source code is arranged as follows:
 - code/code.go: Handling of code tags. Reqtraq can use ctags or optionally libclang to obtain code references.
 - code/parsers/ctags.go: Reading and parsing source code files using ctags.
 - code/parsers/clang.go: Parsing the AST using libclang and collecting references to implementation and tests.
-- diff/diff.go: Comparison of ReqGraph objects
 - report/report.go: Generating html reports to save to disk or provide to a web server
 - matrix/matrices.go: Generating traceability tables to provide to a web server
 - web/webapp.go: Launch and service a local web server
@@ -167,44 +166,8 @@ Reqtraq SHALL include functions to sort a requirements list by filname tag.
 - Verification: Test
 - Safety Impact: None
 
-### diff/diff.go
-
-Functions which compare two requirements graphs and return a map-of-slice-of-strings structure which describe how they differ.
-
-Reqtraq generates a list of all requirements changed between checked in versions of the project’s documentation, for use as input to the high-to-low and low-to-high tracing functions. The report generation described in REQ-TRAQ-SWL-12 will be able to receive the following inputs:
-
-- no input: in this case Reqtraq will generate a global HTML report listing all the requirements, from system to high level to low level, defined in the project associated with the repository (each project has its own Git repository)
-- a list of requirement IDs (system, high level or low level): in this case the report will be generated for the given requirements, plus all their direct/indirect children. The direct/indirect parent requirements will also be listed, but all children other than the ones requested will be omitted.
-- two git commit IDs (or git refs): in this case the report will contain all requirements that were changed between the given commits. If the 2nd commit id is missing, the current state of the repository is used.
-
-Suggested usage (the directory in which Reqtraq is run determines the project for which the report is generated):
-
-```
-reqtraq report 
-reqtraq report REQ-TRAQ-SWL-OLD-8,REQ-TRAQ-SWL-OLD-9
-reqtraq report d6cd1e2bd19e03a81132a23b2025920577f84e37
-```
-Note: a requirement is considered "changed" if either it was directly edited or one of the child requirements was edited.
-
-#### REQ-TRAQ-SWL-18 Change impact tracing
-
-Reqtraq SHALL compare two requirement graphs by walking them and building a map of changed requirements to descriptions on how they differ.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-8
-- Rationale:
-- Verification: Test
-- Safety Impact: None
-
-#### REQ-TRAQ-SWL-40 Ignore non-letter characters
-
-Reqtraq SHALL not report differences to non letter characters when comparing requirements.
-
-##### Attributes:
-- Parents:
-- Rationale: Squelching non-letter characters provides a meaningful report of differences between requirements.
-- Verification: Test
-- Safety Impact: None
+#### REQ-TRAQ-SWL-18 DELETED
+#### REQ-TRAQ-SWL-40 DELETED
 
 ### repos/repos.go
 
@@ -565,7 +528,7 @@ Reqtraq SHALL create a report mapping top-level system requirements down to chil
 Reqtraq SHALL allow the user to filter the top down report by ID, title, body, attributes (parents, rationale, verification, safety impact).
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-8
+- Parents: REQ-TRAQ-SWH-4
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -585,7 +548,7 @@ Reqtraq SHALL create a report mapping implementation up to child requirements an
 Reqtraq SHALL allow the user to filter the bottom up report by ID, title, body, attributes (parents, rationale, verification, safety impact).
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-8
+- Parents: REQ-TRAQ-SWH-4
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -607,7 +570,7 @@ Reqtraq SHALL allow the user to create a report showing issues with:
 Reqtraq SHALL allow the user to filter the issue report.
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-8, REQ-TRAQ-SWH-14
+- Parents: REQ-TRAQ-SWH-14
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -631,7 +594,7 @@ Reqtraq SHALL allow filtering of the report by matching a regular expression aga
 - requirement attribute
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-4, REQ-TRAQ-SWH-8
+- Parents: REQ-TRAQ-SWH-4
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -785,15 +748,7 @@ Reqtraq SHALL include functions to sort a requirements list by ID number.
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-17 Checkout alternative version
-
-Reqtraq SHALL create a temporary version of an old version of the requirements documents to allow them to be loaded.
-
-##### Attributes:
-- Parents: REQ-TRAQ-SWH-8
-- Rationale:
-- Verification: Test
-- Safety Impact: None
+#### REQ-TRAQ-SWL-17 DELETED
 
 ### web/webapp.go
 
@@ -1256,6 +1211,36 @@ Reqtraq SHALL load a schema file 'attributes.json' which describes the valid ran
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-13
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### DELETED-18 Change impact tracing
+
+Reqtraq SHALL compare two requirement graphs by walking them and building a map of changed requirements to descriptions on how they differ.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-8
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### DELETED-40 Ignore non-letter characters
+
+Reqtraq SHALL not report differences to non letter characters when comparing requirements.
+
+##### Attributes:
+- Parents:
+- Rationale: Squelching non-letter characters provides a meaningful report of differences between requirements.
+- Verification: Test
+- Safety Impact: None
+
+#### DELETED-17 Checkout alternative version
+
+Reqtraq SHALL create a temporary version of an old version of the requirements documents to allow them to be loaded.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-8
 - Rationale:
 - Verification: Test
 - Safety Impact: None
