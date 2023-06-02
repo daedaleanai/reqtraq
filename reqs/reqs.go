@@ -235,6 +235,51 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, sym
 	return issues, getParentIdsForSymbolInDocument
 }
 
+var shallRegExp = regexp.MustCompile("(?i)\\bshall\\b")
+
+func (r *Req) checkShallViolations() []diagnostics.Issue {
+	issues := make([]diagnostics.Issue, 0)
+
+	// Validate body (exactly 1 shall statement)
+	matchesInBody := shallRegExp.FindAllString(r.Body, -1)
+	if len(matchesInBody) == 0 && r.Variant == ReqVariantRequirement {
+		issues = append(issues, diagnostics.Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Requirement `%s` in document `%s` does not contain a SHALL statement in its body", r.ID, r.Document.Path),
+			Severity: diagnostics.IssueSeverityNote,
+			Type:     diagnostics.IssueTypeNoShallInBody,
+		})
+	} else if len(matchesInBody) > 1 {
+		issues = append(issues, diagnostics.Issue{
+			Line:     r.Position,
+			Path:     r.Document.Path,
+			RepoName: r.RepoName,
+			Error:    fmt.Errorf("Requirement `%s` in document `%s` contains multiple SHALL statements in its body", r.ID, r.Document.Path),
+			Severity: diagnostics.IssueSeverityMajor,
+			Type:     diagnostics.IssueTypeManyShallInBody,
+		})
+	}
+
+	// Validate rationale
+	if rationale, ok := r.Attributes["RATIONALE"]; ok {
+		matchesInRationale := shallRegExp.FindAllString(rationale, -1)
+		if len(matchesInRationale) != 0 {
+			issues = append(issues, diagnostics.Issue{
+				Line:     r.Position,
+				Path:     r.Document.Path,
+				RepoName: r.RepoName,
+				Error:    fmt.Errorf("Requirement `%s` in document `%s` contains SHALL statements in its rationale", r.ID, r.Document.Path),
+				Severity: diagnostics.IssueSeverityMajor,
+				Type:     diagnostics.IssueTypeShallInRationale,
+			})
+		}
+	}
+
+	return issues
+}
+
 // TODO(ja): Make this more modular and resolve diagnostics at multiple levels (we already know some of these diagnostics just by parsing code)
 // Resolve walks the requirements graph and resolves the links between different levels of requirements
 // and with code tags. References to requirements within requirements text is checked as well as validity
@@ -265,6 +310,7 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 
 		// Validate attributes
 		issues = append(issues, req.checkAttributes()...)
+		issues = append(issues, req.checkShallViolations()...)
 
 		// Validate parent links of requirements
 		for _, parentID := range req.ParentIds {

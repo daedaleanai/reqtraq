@@ -6,7 +6,7 @@ This file is used as a test input for the reqtraq tool.
 
 ### REQ-TEST-SYS-1 Section 1
 
-Body of requirement 1.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: Rationale 1
@@ -15,7 +15,7 @@ Body of requirement 1.
 
 ### REQ-TEST-SYS-2 Section 2
 
-Body of requirement 2.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: Rationale 2

@@ -6,7 +6,7 @@ This is a test file for Reqtraq.
 
 ### REQ-TEST-SWH-1 [OK] Good
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -16,7 +16,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWH-2 DELETED [OK] deleted and deleted parent
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -26,7 +26,8 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWH-3 [NOT OK] Reference to nonexistent req
 
-This is just a test. This text does not mean anything. See REQ-TEST-SYS-22.
+See REQ-TEST-SYS-22.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -36,7 +37,8 @@ This is just a test. This text does not mean anything. See REQ-TEST-SYS-22.
 
 ### REQ-TEST-SWH-4 [NOT OK] Reference to deleted req
 
-This is just a test. This text does not mean anything. See REQ-TEST-SYS-2.
+See REQ-TEST-SYS-2.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -46,7 +48,7 @@ This is just a test. This text does not mean anything. See REQ-TEST-SYS-2.
 
 ### REQ-TEST-SWH-5 [OK] Good
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -56,7 +58,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWH-6 [NOT OK] Missing attribute verification
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -65,7 +67,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWH-7 [NOT OK] Missing attribute safety impact
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -74,7 +76,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWH-8 [NOT OK] Wrong value of attribute verification
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.

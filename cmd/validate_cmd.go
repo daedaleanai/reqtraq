@@ -94,6 +94,15 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) {
 		case diagnostics.IssueTypeReqNotTested:
 			name = "Requirement not tested"
 			code = "REQ11"
+		case diagnostics.IssueTypeNoShallInBody:
+			name = "No shall statement in body"
+			code = "REQ12"
+		case diagnostics.IssueTypeManyShallInBody:
+			name = "Multiple shall statements in body"
+			code = "REQ13"
+		case diagnostics.IssueTypeShallInRationale:
+			name = "Shall statement in rationale attribute"
+			code = "REQ14"
 		default:
 			log.Fatal("Unhandled IssueType: %r", issue.Type)
 		}

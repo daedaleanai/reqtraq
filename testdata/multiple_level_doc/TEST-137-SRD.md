@@ -6,7 +6,7 @@ This file is used as a test input for the reqtraq tool.
 
 ### REQ-TEST-SWH-1 VALID High-level requirement, no parent
 
-Derived high-level requirement
+Derived high-level requirement. SHALL
 
 ###### Attributes:
 - Parents:
@@ -14,7 +14,7 @@ Derived high-level requirement
 
 ### REQ-TEST-SWH-2 VALID High-level requirement, component parent
 
-Links to a component-level requirement
+Links to a component-level requirement. SHALL
 
 ###### Attributes:
 - Parents: REQ-TEST-SYS-4
@@ -24,7 +24,7 @@ Links to a component-level requirement
 
 ### REQ-TEST-SWH-3 INVALID High-level requirement, system parent
 
-Links to a system-level requirement
+Links to a system-level requirement SHALL.
 
 ###### Attributes:
 - Parents: REQ-TEST-SYS-1
