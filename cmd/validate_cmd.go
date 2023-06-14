@@ -16,6 +16,7 @@ import (
 
 var fValidateStrict *bool
 var fValidateJson *string
+var fOnlyErrors *bool
 
 var validateCmd = &cobra.Command{
 	Use:   "validate",
@@ -131,6 +132,8 @@ func validate(config *config.Config, strict bool) ([]diagnostics.Issue, error) {
 	for _, issue := range rg.Issues {
 		if issue.Severity != diagnostics.IssueSeverityNote {
 			hasCriticalErrors = true
+		} else if *fOnlyErrors {
+			continue
 		}
 		fmt.Println(issue.Error)
 	}
@@ -182,5 +185,6 @@ func runValidate(command *cobra.Command, args []string) error {
 func init() {
 	fValidateStrict = validateCmd.PersistentFlags().Bool("strict", false, "Exit with error if any validation checks fail")
 	fValidateJson = validateCmd.PersistentFlags().String("json", "", "Outputs a json file with lint messages in addition to a textual representation of the errors")
+	fOnlyErrors = validateCmd.PersistentFlags().Bool("only-errors", false, "Only outputs actual errors")
 	rootCmd.AddCommand(validateCmd)
 }
