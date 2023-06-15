@@ -130,52 +130,54 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc stri
 	// Sometimes this means they may be different definitions for the same symbols even within the
 	// same project linking to different requirements.
 
-	// Map of parentIds each document and symbol. First key is the document, second key is the symbol
-	linksMap := map[string]map[code.CodeType]map[string][]string{}
-	llrLoc := map[string]map[code.CodeType]map[string]*code.Code{}
+	type key struct {
+		docName  string
+		codeType code.CodeType
+		symbol   string
+	}
+
+	// Map of parentIds each document, code type and symbol.
+	linksMap := map[key][]string{}
+	llrLoc := map[key]*code.Code{}
 
 	getParentIdsForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string) []string {
-		if _, ok := linksMap[doc]; !ok {
-			linksMap[doc] = make(map[code.CodeType]map[string][]string)
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
-		if _, ok := linksMap[doc][codeType]; !ok {
-			linksMap[doc][codeType] = make(map[string][]string)
-		}
-		return linksMap[doc][codeType][symbol]
+		return linksMap[curKey]
 	}
 
 	setParentIdsForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string, links []code.ReqLink) {
-		if _, ok := linksMap[doc]; !ok {
-			linksMap[doc] = make(map[code.CodeType]map[string][]string)
-		}
-		if _, ok := linksMap[doc][codeType]; !ok {
-			linksMap[doc][codeType] = make(map[string][]string)
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
 		ids := []string{}
 		for _, link := range links {
 			ids = append(ids, link.Id)
 		}
-		linksMap[doc][codeType][symbol] = ids
+		linksMap[curKey] = ids
 	}
 
 	getLlrLocForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string) *code.Code {
-		if _, ok := llrLoc[doc]; !ok {
-			llrLoc[doc] = make(map[code.CodeType]map[string]*code.Code)
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
-		if _, ok := llrLoc[doc][codeType]; !ok {
-			llrLoc[doc][codeType] = make(map[string]*code.Code)
-		}
-		return llrLoc[doc][codeType][symbol]
+		return llrLoc[curKey]
 	}
 
 	setLlrLocForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string, loc *code.Code) {
-		if _, ok := llrLoc[doc]; !ok {
-			llrLoc[doc] = make(map[code.CodeType]map[string]*code.Code)
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
-		if _, ok := llrLoc[doc][codeType]; !ok {
-			llrLoc[doc][codeType] = make(map[string]*code.Code)
-		}
-		llrLoc[doc][codeType][symbol] = loc
+		llrLoc[curKey] = loc
 	}
 
 	// linksMatch compares an array of requirement IDs with the given array of ReqLink's and matches
