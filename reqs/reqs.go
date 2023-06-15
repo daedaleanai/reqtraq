@@ -117,52 +117,67 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 }
 
 // Code may be declared many times and defined at least once per binary. To avoid having to repeat
-// the same llr in all declarations and definitions this function deduplicates entries and keeps
+// the same llr in all declarations and definitions this function deduplicates entries and
 // makes sure that all code tags use the same llr. If more than one tag with the same symbol uses a
 // different LLR this triggers an issue that is reported.
 // @llr REQ-TRAQ-SWL-10, REQ-TRAQ-SWL-11, REQ-TRAQ-SWL-67, REQ-TRAQ-SWL-69
-func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, symbol string) []string) {
+func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc string, codeType code.CodeType, symbol string) []string) {
 	issues := make([]diagnostics.Issue, 0)
 
-	// Deduplication must only happen per requirement document. One document may provide a declaration,
-	// which links a requirement in that document, while a different item may provide a definition and
-	// use a different requirements. Sometimes this means they may be different definitions for the
-	// same symbols even within the same project linking to different requirements.
+	// Deduplication must only happen per requirement document and independently for tests and implementation.
+	// One document may provide a declaration, which links a requirement in that document, while a
+	// different item may provide a definition and use a different requirements.
+	// Sometimes this means they may be different definitions for the same symbols even within the
+	// same project linking to different requirements.
 
-	// Map of parentIds each document and symbol. First key is the document, second key is the symbol
-	linksMap := map[string]map[string][]string{}
-	llrLoc := map[string]map[string]*code.Code{}
-
-	getParentIdsForSymbolInDocument := func(doc, symbol string) []string {
-		if _, ok := linksMap[doc]; !ok {
-			linksMap[doc] = make(map[string][]string)
-		}
-		return linksMap[doc][symbol]
+	type key struct {
+		docName  string
+		codeType code.CodeType
+		symbol   string
 	}
 
-	setParentIdsForSymbolInDocument := func(doc, symbol string, links []code.ReqLink) {
-		if _, ok := linksMap[doc]; !ok {
-			linksMap[doc] = make(map[string][]string)
+	// Map of parentIds each document, code type and symbol.
+	linksMap := map[key][]string{}
+	llrLoc := map[key]*code.Code{}
+
+	getParentIdsForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string) []string {
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
+		}
+		return linksMap[curKey]
+	}
+
+	setParentIdsForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string, links []code.ReqLink) {
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
 		ids := []string{}
 		for _, link := range links {
 			ids = append(ids, link.Id)
 		}
-		linksMap[doc][symbol] = ids
+		linksMap[curKey] = ids
 	}
 
-	getLlrLocForSymbolInDocument := func(doc, symbol string) *code.Code {
-		if _, ok := llrLoc[doc]; !ok {
-			llrLoc[doc] = make(map[string]*code.Code)
+	getLlrLocForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string) *code.Code {
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
-		return llrLoc[doc][symbol]
+		return llrLoc[curKey]
 	}
 
-	setLlrLocForSymbolInDocument := func(doc, symbol string, loc *code.Code) {
-		if _, ok := llrLoc[doc]; !ok {
-			llrLoc[doc] = make(map[string]*code.Code)
+	setLlrLocForSymbolInDocument := func(doc string, codeType code.CodeType, symbol string, loc *code.Code) {
+		curKey := key{
+			docName:  doc,
+			codeType: codeType,
+			symbol:   symbol,
 		}
-		llrLoc[doc][symbol] = loc
+		llrLoc[curKey] = loc
 	}
 
 	// linksMatch compares an array of requirement IDs with the given array of ReqLink's and matches
@@ -193,7 +208,7 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, sym
 	// Walk the code tags, resolving links and looking for errors
 	for _, tags := range rg.CodeTags {
 		for _, code := range tags {
-			links := getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
+			links := getParentIdsForSymbolInDocument(code.Document.Path, code.CodeFile.Type, code.Symbol)
 
 			if len(code.Links) == 0 {
 				continue
@@ -204,12 +219,12 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, sym
 			}
 
 			if len(links) == 0 {
-				setParentIdsForSymbolInDocument(code.Document.Path, code.Symbol, code.Links)
-				setLlrLocForSymbolInDocument(code.Document.Path, code.Symbol, code)
+				setParentIdsForSymbolInDocument(code.Document.Path, code.CodeFile.Type, code.Symbol, code.Links)
+				setLlrLocForSymbolInDocument(code.Document.Path, code.CodeFile.Type, code.Symbol, code)
 				continue
 			}
 
-			prevLoc := getLlrLocForSymbolInDocument(code.Document.Path, code.Symbol)
+			prevLoc := getLlrLocForSymbolInDocument(code.Document.Path, code.CodeFile.Type, code.Symbol)
 
 			if !linksMatch(links, code.Links) {
 				var errorMessage error
@@ -346,7 +361,7 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 		for _, code := range tags {
 			parentIds := []string{}
 			if code.Symbol != "" {
-				parentIds = getParentIdsForSymbolInDocument(code.Document.Path, code.Symbol)
+				parentIds = getParentIdsForSymbolInDocument(code.Document.Path, code.CodeFile.Type, code.Symbol)
 			} else {
 				for _, link := range code.Links {
 					parentIds = append(parentIds, link.Id)
