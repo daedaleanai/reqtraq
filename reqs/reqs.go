@@ -237,6 +237,10 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc, sym
 
 var shallRegExp = regexp.MustCompile("(?i)\\bshall\\b")
 
+// Checks the wording of requirements to make sure that they contain exactly 1 shall statement,
+// and that shall is not used as part of the rationale. Note that assumptions are
+// not required to contain a shall statement.
+// @llr REQ-TRAQ-SWL-77
 func (r *Req) checkShallViolations() []diagnostics.Issue {
 	issues := make([]diagnostics.Issue, 0)
 
@@ -248,7 +252,7 @@ func (r *Req) checkShallViolations() []diagnostics.Issue {
 			Path:     r.Document.Path,
 			RepoName: r.RepoName,
 			Error:    fmt.Errorf("Requirement `%s` in document `%s` does not contain a SHALL statement in its body", r.ID, r.Document.Path),
-			Severity: diagnostics.IssueSeverityNote,
+			Severity: diagnostics.IssueSeverityMajor,
 			Type:     diagnostics.IssueTypeNoShallInBody,
 		})
 	} else if len(matchesInBody) > 1 {

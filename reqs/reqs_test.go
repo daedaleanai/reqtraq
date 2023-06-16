@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// @llr REQ-TRAQ-SWL-45
+// @llr REQ-TRAQ-SWL-45, REQ-TRAQ-SWL-77
 func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
