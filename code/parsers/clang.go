@@ -182,6 +182,36 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 	return codeMap
 }
 
+// Translates a compilation command to a string array, removing arguments that
+// are not needed for parsing and only affect the output (-MD and -MF)
+// @llr REQ-TRAQ-SWL-61
+func translateCommand(command *clang.CompileCommand) []string {
+	cmdline := []string{}
+	if command == nil {
+		return cmdline
+	}
+
+	skipNext := false
+	for i := uint32(0); i < command.NumArgs(); i++ {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+
+		if command.Arg(i) == "-MF" {
+			skipNext = true
+			continue
+		}
+
+		if command.Arg(i) == "-MD" {
+			continue
+		}
+
+		cmdline = append(cmdline, command.Arg(i))
+	}
+	return cmdline
+}
+
 // Parses a single file as a translation unit, providing tags from all included files that are listed in the file map
 // @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63
 func parseSingleFile(index *clang.Index, codeFile code.CodeFile, commands clang.CompileCommands, compilerArgs []string, fileMap map[string]code.CodeFile) (map[string]map[uint]*code.Code, error) {
@@ -204,13 +234,10 @@ func parseSingleFile(index *clang.Index, codeFile code.CodeFile, commands clang.
 		return map[string]map[uint]*code.Code{}, err
 	}
 
-	cmdline := []string{}
 	command := findMatchingCommand(pathInRepo, commands)
+	cmdline := translateCommand(command)
 	buildDir := absRepoPath
 	if command != nil {
-		for i := uint32(0); i < command.NumArgs(); i++ {
-			cmdline = append(cmdline, command.Arg(i))
-		}
 		buildDir = command.Directory()
 	}
 
