@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// @llr REQ-TRAQ-SWL-45
+// @llr REQ-TRAQ-SWL-45, REQ-TRAQ-SWL-77
 func TestReqGraph_OrdsByPosition(t *testing.T) {
 	rg := ReqGraph{Reqs: make(map[string]*Req)}
 
@@ -27,10 +27,10 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 		},
 	}
 
-	r := &Req{ID: "REQ-TEST-SYS-2", Position: 1, Document: &sysDoc}
+	r := &Req{ID: "REQ-TEST-SYS-2", Position: 1, Document: &sysDoc, Body: "Shall"}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-TEST-SYS-1", Position: 2, Document: &sysDoc}
+	r = &Req{ID: "REQ-TEST-SYS-1", Position: 2, Document: &sysDoc, Body: "Shall shall"}
 	rg.Reqs[r.ID] = r
 
 	srdDoc := config.Document{
@@ -61,17 +61,21 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 		},
 	}
 
-	r = &Req{ID: "REQ-TEST-SWH-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
+	r = &Req{ID: "REQ-TEST-SWH-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc, Body: "SHALL"}
 	rg.Reqs[r.ID] = r
 
-	r = &Req{ID: "REQ-UIEM-SYS-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc}
+	r = &Req{ID: "REQ-UIEM-SYS-1", ParentIds: []string{"REQ-TEST-SYS-1"}, Document: &srdDoc, Body: ""}
 	rg.Reqs[r.ID] = r
 
 	reqIssues := rg.Resolve()
-	assert.Equal(t, len(reqIssues), 2)
+	assert.Equal(t, len(reqIssues), 4)
 	assert.Equal(t, reqIssues[0].Error.Error(),
-		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")
+		"Requirement `REQ-TEST-SYS-1` in document `path/to/sys.md` contains multiple SHALL statements in its body")
 	assert.Equal(t, reqIssues[1].Error.Error(),
+		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")
+	assert.Equal(t, reqIssues[2].Error.Error(),
+		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not contain a SHALL statement in its body")
+	assert.Equal(t, reqIssues[3].Error.Error(),
 		"Requirement 'REQ-UIEM-SYS-1' has invalid parent link ID 'REQ-TEST-SYS-1'.")
 
 	reqs := rg.OrdsByPosition()

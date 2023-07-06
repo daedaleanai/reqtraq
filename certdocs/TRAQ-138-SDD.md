@@ -686,6 +686,17 @@ Reqtraq SHALL generate a list of all changelists that touched the definition or 
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-77 Validate requirements
+
+Reqtraq SHALL validate requirements according to the Daedalean Requirements Standard, reporting
+any issues it finds.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-1
+- Rationale: It is helpful to automatically detect issues early, reducing the potential for human error.
+- Verification: Test
+- Safety Impact: None
+
 #### REQ-TRAQ-SWL-29 DELETED
 
 #### REQ-TRAQ-SWL-25 Uniform requirement ID format
@@ -935,9 +946,8 @@ that share a parent/child relationship.
 
 #### REQ-TRAQ-SWL-56 Find code and test files
 
-Reqtraq SHALL provide a method to find code and test files in each associated document.
-The configuration shall allow to specify folders where code and tests are located, as well as
-positive and negative filtering criteria for the files within those folders.
+Reqtraq SHALL provide a method to find code and test files in each associated document as defined
+by the configuration, which can provide additional filtering criteria.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-18

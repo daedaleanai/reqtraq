@@ -6,7 +6,7 @@ This file is used as a test input for the reqtraq tool.
 
 ### REQ-TST-SWL-1 Section 1
 
-Body of requirement 1.
+Body of requirement 1. Shall!
 
 ###### Attributes:
 - Parents: REQ-TEST-SWH-1
@@ -17,7 +17,7 @@ Body of requirement 1.
 
 ### REQ-TST-SWL-2 Section 2
 
-Body of requirement 2.
+Body of requirement 2. Shall!
 
 ###### Attributes:
 - Parents: REQ-TEST-SWH-1
@@ -27,7 +27,7 @@ Body of requirement 2.
 
 ### REQ-TST-SWL-3 Section 3
 
-Body of requirement 3.
+Body of requirement 3. Shall!
 
 ###### Attributes:
 - Parents: REQ-TEST-SWH-2

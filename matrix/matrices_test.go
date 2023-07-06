@@ -70,11 +70,13 @@ func TestMatrix_createMatrix(t *testing.T) {
 		ID:       "REQ-TEST-SYS-1",
 		IDNumber: 1,
 		Document: &sysDoc,
+		Body:     "Shall!",
 	}
 	rg.Reqs["REQ-TEST-SYS-2"] = &reqs.Req{
 		ID:       "REQ-TEST-SYS-2",
 		IDNumber: 2,
 		Document: &sysDoc,
+		Body:     "Shall!",
 	}
 
 	srdDoc := config.Document{
@@ -107,18 +109,21 @@ func TestMatrix_createMatrix(t *testing.T) {
 		ID:       "REQ-TEST-SWH-1",
 		IDNumber: 1,
 		Document: &srdDoc,
+		Body:     "Shall!",
 	}
 	rg.Reqs["REQ-TEST-SWH-2"] = &reqs.Req{
 		ID:        "REQ-TEST-SWH-2",
 		IDNumber:  2,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
 		Document:  &srdDoc,
+		Body:      "Shall!",
 	}
 	rg.Reqs["REQ-TEST-SWH-3"] = &reqs.Req{
 		ID:        "REQ-TEST-SWH-3",
 		IDNumber:  3,
 		ParentIds: []string{"REQ-TEST-SYS-1"},
 		Document:  &srdDoc,
+		Body:      "Shall!",
 	}
 
 	sddDoc := config.Document{
@@ -152,6 +157,7 @@ func TestMatrix_createMatrix(t *testing.T) {
 		IDNumber:  1,
 		ParentIds: []string{"REQ-TEST-SWH-2"},
 		Document:  &sddDoc,
+		Body:      "Shall!",
 	}
 	rg.Reqs["REQ-TEST-SWL-2"] = &reqs.Req{
 		ID:       "REQ-TEST-SWL-2",
@@ -161,12 +167,14 @@ func TestMatrix_createMatrix(t *testing.T) {
 			"REQ-TEST-SWH-2",
 		},
 		Document: &sddDoc,
+		Body:     "Shall!",
 	}
 	rg.Reqs["REQ-TEST-SWL-3"] = &reqs.Req{
 		ID:        "REQ-TEST-SWL-3",
 		IDNumber:  3,
 		ParentIds: []string{},
 		Document:  &sddDoc,
+		Body:      "Shall!",
 	}
 
 	// TODO(ja): Resolve should be private and this test should exercise BuildGraph instead.

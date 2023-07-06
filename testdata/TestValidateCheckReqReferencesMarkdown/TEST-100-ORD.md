@@ -6,7 +6,7 @@ This is a test file for Reqtraq.
 
 ### REQ-TEST-SYS-1 [OK] Good
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -15,7 +15,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SYS-2 DELETED [OK] Deleted
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -24,7 +24,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SYS-3 [OK] Good
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, but must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.

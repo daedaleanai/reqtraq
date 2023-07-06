@@ -16,6 +16,9 @@ const (
 	IssueTypeReqTestedButNotImplemented
 	IssueTypeReqNotImplemented
 	IssueTypeReqNotTested
+	IssueTypeNoShallInBody
+	IssueTypeManyShallInBody
+	IssueTypeShallInRationale
 )
 
 type IssueSeverity uint

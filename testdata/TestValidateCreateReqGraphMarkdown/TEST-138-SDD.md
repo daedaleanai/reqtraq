@@ -6,7 +6,7 @@ This is a test file for Reqtraq.
 
 ### REQ-TEST-SWL-1 [OK] Good
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -16,7 +16,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWL-2 [NOT OK] Deleted Parent
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -26,7 +26,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWL-3 DELETED [OK] deleted and deleted parent
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
@@ -37,7 +37,7 @@ This is just a test. This text does not mean anything.
 
 ### REQ-TEST-SWL-04 [NOT OK] Cannot start with leading zero
 
-This is just a test. This text does not mean anything.
+This is just a test. This text does not mean anything, must contain SHALL.
 
 ###### Attributes:
 - Rationale: This is just a test. This text does not mean anything.
