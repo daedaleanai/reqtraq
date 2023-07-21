@@ -69,14 +69,22 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 
 	reqIssues := rg.Resolve()
 	assert.Equal(t, len(reqIssues), 4)
-	assert.Equal(t, reqIssues[0].Error.Error(),
-		"Requirement `REQ-TEST-SYS-1` in document `path/to/sys.md` contains multiple SHALL statements in its body")
-	assert.Equal(t, reqIssues[1].Error.Error(),
-		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")
-	assert.Equal(t, reqIssues[2].Error.Error(),
-		"Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not contain a SHALL statement in its body")
-	assert.Equal(t, reqIssues[3].Error.Error(),
-		"Requirement 'REQ-UIEM-SYS-1' has invalid parent link ID 'REQ-TEST-SYS-1'.")
+
+	assertIssueExists := func(message string) {
+		found := false
+		for _, error := range reqIssues {
+			if error.Error.Error() == message {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Did not find issue: ", message)
+	}
+
+	assertIssueExists("Requirement `REQ-TEST-SYS-1` in document `path/to/sys.md` contains multiple SHALL statements in its body")
+	assertIssueExists("Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not match required regexp `REQ-TEST-SWH-(\\d+)`")
+	assertIssueExists("Requirement `REQ-UIEM-SYS-1` in document `path/to/srd.md` does not contain a SHALL statement in its body")
+	assertIssueExists("Requirement 'REQ-UIEM-SYS-1' has invalid parent link ID 'REQ-TEST-SYS-1'.")
 
 	reqs := rg.OrdsByPosition()
 	assert.Len(t, reqs, 2)
@@ -173,9 +181,20 @@ func TestParsing(t *testing.T) {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
 	assert.Equal(t, 3, len(rg.Issues))
-	assert.Contains(t, rg.Issues[0].Error.Error(), "Incorrect project abbreviation for requirement REQ-NAN1-SYS-1. Expected NAM1, got NAN1.")
-	assert.Contains(t, rg.Issues[1].Error.Error(), "Incorrect requirement type for requirement REQ-NAM1-SWH-2. Expected SYS, got SWH.")
-	assert.Contains(t, rg.Issues[2].Error.Error(), "Requirement number cannot begin with a 0: REQ-NAM1-SYS-03. Got 03.")
+
+	assertIssueExists := func(message string) {
+		found := false
+		for _, error := range rg.Issues {
+			if error.Error.Error() == message {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Did not find issue: ", message)
+	}
+	assertIssueExists("Incorrect project abbreviation for requirement REQ-NAN1-SYS-1. Expected NAM1, got NAN1.")
+	assertIssueExists("Incorrect requirement type for requirement REQ-NAM1-SWH-2. Expected SYS, got SWH.")
+	assertIssueExists("Requirement number cannot begin with a 0: REQ-NAM1-SYS-03. Got 03.")
 
 	// an invalid requirements document containing sequence errors
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
@@ -193,8 +212,8 @@ func TestParsing(t *testing.T) {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
 	assert.Equal(t, 2, len(rg.Issues))
-	assert.Contains(t, rg.Issues[0].Error.Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-3: missing requirements in between. Expected ID Number 2.")
-	assert.Contains(t, rg.Issues[1].Error.Error(), "Invalid requirement sequence number for REQ-GAP1-SYS-6: missing requirements in between. Expected ID Number 5.")
+	assertIssueExists("Invalid requirement sequence number for REQ-GAP1-SYS-3: missing requirements in between. Expected ID Number 2.")
+	assertIssueExists("Invalid requirement sequence number for REQ-GAP1-SYS-6: missing requirements in between. Expected ID Number 5.")
 
 	// an invalid requirements document containing duplicates
 	rg = &ReqGraph{Reqs: make(map[string]*Req)}
@@ -212,9 +231,9 @@ func TestParsing(t *testing.T) {
 		t.Errorf("parseCertdocToGraph: %v", err)
 	}
 	assert.Equal(t, 3, len(rg.Issues))
-	assert.Contains(t, rg.Issues[0].Error.Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-1, is duplicate.")
-	assert.Contains(t, rg.Issues[1].Error.Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-2, is duplicate.")
-	assert.Contains(t, rg.Issues[2].Error.Error(), "Invalid requirement sequence number for REQ-DUP1-SYS-3, is duplicate.")
+	assertIssueExists("Invalid requirement sequence number for REQ-DUP1-SYS-1, is duplicate.")
+	assertIssueExists("Invalid requirement sequence number for REQ-DUP1-SYS-2, is duplicate.")
+	assertIssueExists("Invalid requirement sequence number for REQ-DUP1-SYS-3, is duplicate.")
 }
 
 // @llr REQ-TRAQ-SWL-23
