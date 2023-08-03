@@ -232,7 +232,7 @@ body
 
 ###### Attributes:
 - Rationale: This is why.
-- Parents: REQ-TEST-SYS-1.
+- Parents: REQ-TEST-SYS-1
 - Attribute which will never exist: exists
 `)
 	assert.Nil(t, err)
@@ -347,6 +347,36 @@ body
 - Parents: REQ-TEST-SWH-1 and REQ-TEST-SWH-2
 `)
 	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: " and " in "REQ-TEST-SWH-1 and REQ-TEST-SWH-2"`)
+}
+
+// @llr REQ-TRAQ-SWL-3
+func TestParseReq_InvalidParents2(t *testing.T) {
+	_, err := parseReq(`REQ-TEST-SWL-1 title
+body
+## Attributes:
+- Parents: TODO
+`)
+	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: "TODO"`)
+}
+
+// @llr REQ-TRAQ-SWL-3
+func TestParseReq_InvalidParents3(t *testing.T) {
+	_, err := parseReq(`REQ-TEST-SWL-1 title
+body
+## Attributes:
+- Parents: REQ-VXS-SYS-123, TODO
+`)
+	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: ", TODO" in "REQ-VXS-SYS-123, TODO"`)
+}
+
+// @llr REQ-TRAQ-SWL-3
+func TestParseReq_InvalidParents4(t *testing.T) {
+	_, err := parseReq(`REQ-TEST-SWL-1 title
+body
+## Attributes:
+- Parents: REQ-VXS-SYS-123, REQ-VXS-456
+`)
+	assert.EqualError(t, err, `requirement REQ-TEST-SWL-1 parents: unparseable as list of requirement ids: ", REQ-VXS-456" in "REQ-VXS-SYS-123, REQ-VXS-456"`)
 }
 
 // @llr REQ-TRAQ-SWL-5

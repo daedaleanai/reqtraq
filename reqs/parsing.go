@@ -117,6 +117,9 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 			// If we're currently parsing a requirement, and just read the start of a new requirement (cf rules for ending a requirement), close it
 			if (inReq != None) && (headingHasReqID || level < reqLevel) {
 				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
+				if err != nil {
+					return nil, err
+				}
 				inReq = None
 			}
 
@@ -453,8 +456,20 @@ func parseParents(r *Req) error {
 			if strings.TrimFunc(sep, isPunctOrSpace) != "" {
 				return fmt.Errorf("requirement %s parents: unparseable as list of requirement ids: %q in %q", r.ID, sep, parents)
 			}
+		} else if i == len(parmatch)-1 {
+			// Check if there is any text after the last match
+			if len(strings.TrimSpace(parents[ids[1]:])) != 0 {
+				return fmt.Errorf("requirement %s parents: unparseable as list of requirement ids: %q in %q", r.ID, parents[ids[1]:], parents)
+			}
 		}
 	}
+
+	// The case where there are no matches but there is some text in parents does not mean that the validation is ok.
+	// Only if the text is empty and there are no matches the text is correct.
+	if len(parmatch) == 0 && len(strings.TrimSpace(parents)) != 0 {
+		return fmt.Errorf("requirement %s parents: unparseable as list of requirement ids: %q", r.ID, parents)
+	}
+
 	r.ParentIds = parentIDs
 	return nil
 }
