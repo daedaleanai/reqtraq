@@ -11,7 +11,7 @@ var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "Starts a local web server to facilitate interaction with reqtraq",
 	Long:  "Starts a local web server to facilitate interaction with reqtraq",
-	RunE:  runWebCmd,
+	RunE:  RunAndHandleError(runWebCmd),
 }
 
 // Starts the web server listening on the supplied address:port

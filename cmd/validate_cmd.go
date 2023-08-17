@@ -22,7 +22,7 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validates the requirement documents",
 	Long:  `Runs the validation checks for the requirement documents`,
-	RunE:  runValidate,
+	RunE:  RunAndHandleError(runValidate),
 }
 
 type LintMessage struct {
@@ -157,6 +157,7 @@ func runValidate(command *cobra.Command, args []string) error {
 	if err := setupConfiguration(); err != nil {
 		return err
 	}
+
 	issues, err := validate(reqtraqConfig, *fValidateStrict)
 
 	if *fValidateJson != "" {
@@ -170,14 +171,7 @@ func runValidate(command *cobra.Command, args []string) error {
 		buildJsonIssues(issues, jsonWriter)
 	}
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// The return error is used when the issued command is not valid, not in the
-	// case the command actually fails to run. Since no args are used by this command,
-	// we can always return nil
-	return nil
+	return err
 }
 
 // Registers the validate command
