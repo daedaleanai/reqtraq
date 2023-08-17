@@ -26,7 +26,7 @@ var (
 )
 
 var listCmd = &cobra.Command{
-	Use:               "list [CertdocPath]",
+	Use:               "list CERTDOC_PATH",
 	Short:             "Parses and lists the requirements found in certification documents",
 	Long:              `Parses and lists the requirements found in certification documents. Takes a certdoc path as a single argument`,
 	Args:              cobra.ExactValidArgs(1),
