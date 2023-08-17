@@ -1,5 +1,5 @@
 /*
-   Functions for creating and servicing a web interface.
+Functions for creating and servicing a web interface.
 */
 package web
 
@@ -309,7 +309,7 @@ func get(w http.ResponseWriter, r *http.Request) error {
 	case reqPath == "/report":
 		filter, err := createFilterFromHttpRequest(r)
 		if err != nil {
-			return fmt.Errorf("Failed to create filter: %v", err)
+			return errors.Wrap(err, "failed to create filter")
 		}
 		switch r.FormValue("report-type") {
 		case "Bottom Up":

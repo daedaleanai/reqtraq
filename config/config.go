@@ -274,7 +274,7 @@ func readJsonConfigFromRepo(repoPath repos.RepoPath) (jsonConfig, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&config); err != nil {
-		return jsonConfig{}, fmt.Errorf("Error while parsing configuration file `%s`: %s", configPath, err)
+		return jsonConfig{}, errors.Wrapf(err, "Error while parsing configuration file `%s`", configPath)
 	}
 	return config, nil
 }
@@ -426,7 +426,7 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 
 	_, err = repos.PathInRepo(repoName, doc.Path)
 	if err != nil {
-		return fmt.Errorf("Document with path `%s` in repo `%s` cannot be read: %s", doc.Path, repoName, err)
+		return errors.Wrapf(err, "Document with path `%s` in repo `%s` cannot be read", doc.Path, repoName)
 	}
 
 	parsedDoc.ReqSpec = ReqSpec{Prefix: doc.Prefix, Level: doc.Level}
@@ -597,7 +597,7 @@ func (config *Config) parseConfigFile(jsonConfig jsonConfig, commonAttributes *m
 
 	parentRepoPath, err := repos.GetRepo(jsonConfig.ParentRepo.RepoName, jsonConfig.ParentRepo.RemotePath, "", false)
 	if err != nil {
-		return fmt.Errorf("Error getting repository with path: %s. %s", jsonConfig.ParentRepo, err)
+		return errors.Wrapf(err, "Error getting repository with path: %s", jsonConfig.ParentRepo)
 	}
 
 	parentConfig, err := readJsonConfigFromRepo(parentRepoPath)

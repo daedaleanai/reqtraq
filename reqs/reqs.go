@@ -82,7 +82,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	var reqs []*Req
 	var err error
 	if reqs, err = ParseMarkdown(repoName, documentConfig); err != nil {
-		return fmt.Errorf("Error parsing `%s` in repo `%s`: %v", documentConfig.Path, repoName, err)
+		return errors.Wrapf(err, "Error parsing `%s` in repo `%s`", documentConfig.Path, repoName)
 	}
 	if len(reqs) == 0 {
 		return nil

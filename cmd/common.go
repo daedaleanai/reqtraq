@@ -10,6 +10,7 @@ import (
 	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/daedaleanai/reqtraq/util"
+	"github.com/pkg/errors"
 )
 
 var rootCmd = &cobra.Command{
@@ -33,7 +34,7 @@ func setupConfiguration() error {
 
 	cfg, err := config.ParseConfig(baseRepoPath)
 	if err != nil {
-		return fmt.Errorf("Error parsing `reqtraq_config.json` file in current repo: %v", err)
+		return errors.Wrap(err, "Error parsing `reqtraq_config.json` file in current repo")
 	}
 
 	reqtraqConfig = &cfg
