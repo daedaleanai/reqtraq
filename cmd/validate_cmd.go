@@ -2,21 +2,20 @@ package cmd
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/daedaleanai/cobra"
-	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/diagnostics"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/daedaleanai/reqtraq/reqs"
+	"github.com/pkg/errors"
 )
 
 var fValidateStrict *bool
 var fValidateJson *string
-var fOnlyErrors *bool
+var fPrintOnlyErrors *bool
 
 var validateCmd = &cobra.Command{
 	Use:   "validate",
@@ -52,7 +51,7 @@ func translateSeverityCode(severity diagnostics.IssueSeverity) string {
 // Builds a Json file with the issues found after parsing the requirements and code. It only collects
 // information for the base repository.
 // @llr REQ-TRAQ-SWL-66
-func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) {
+func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) error {
 	for _, issue := range issues {
 		// Only report issues for the current repository
 		if issue.RepoName != repos.BaseRepoName() {
@@ -108,7 +107,7 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) {
 			log.Fatal("Unhandled IssueType: %r", issue.Type)
 		}
 
-		jsonWriter.Encode(LintMessage{
+		message := LintMessage{
 			Name:        name,
 			Code:        code,
 			Severity:    translateSeverityCode(issue.Severity),
@@ -116,69 +115,80 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) {
 			Line:        issue.Line,
 			Char:        0,
 			Description: issue.Error.Error(),
-		})
+		}
+		if err := jsonWriter.Encode(message); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-// validate builds the requirement graph, gathering any errors and prints them out. If the strict flag is set return an error.
+// createIssuesReport writes the specified requirements issues to a JSON file.
 // @llr REQ-TRAQ-SWL-36
-func validate(config *config.Config, strict bool) ([]diagnostics.Issue, error) {
-	rg, err := reqs.BuildGraph(config)
+func createIssuesReport(issues []diagnostics.Issue, filePath string) error {
+	file, err := os.Create(filePath)
 	if err != nil {
-		return rg.Issues, err
+		return err
 	}
+	defer file.Close()
 
-	hasCriticalErrors := false
-	for _, issue := range rg.Issues {
-		if issue.Severity != diagnostics.IssueSeverityNote {
-			hasCriticalErrors = true
-		} else if *fOnlyErrors {
-			continue
+	jsonWriter := json.NewEncoder(file)
+	return buildJsonIssues(issues, jsonWriter)
+}
+
+// validate prints the issues detected in the requirements graph.
+// Returns the count of critical issues and the count of lint messages.
+// @llr REQ-TRAQ-SWL-36
+func validate(issues []diagnostics.Issue, onlyErrors bool) (int, int) {
+	criticalErrorsCount := 0
+	lintErrorsCount := 0
+	for _, issue := range issues {
+		if issue.Severity == diagnostics.IssueSeverityNote {
+			lintErrorsCount += 1
+			if onlyErrors {
+				continue
+			}
+		} else {
+			criticalErrorsCount += 1
 		}
 		fmt.Println(issue.Error)
 	}
 
-	if hasCriticalErrors {
-		if strict {
-			return rg.Issues, errors.New("ERROR. Validation failed")
-		} else {
-			fmt.Println("WARNING. Validation failed")
-		}
-	} else {
-		fmt.Println("Validation passed")
-	}
-
-	return rg.Issues, nil
+	return criticalErrorsCount, lintErrorsCount
 }
 
 // the run command for validate
 // @llr REQ-TRAQ-SWL-36
 func runValidate(command *cobra.Command, args []string) error {
 	if err := setupConfiguration(); err != nil {
-		return err
+		return errors.Wrap(err, "setup configuration")
 	}
 
-	issues, err := validate(reqtraqConfig, *fValidateStrict)
+	rg, err := reqs.BuildGraph(reqtraqConfig)
+	if err != nil {
+		return errors.Wrap(err, "build graph")
+	}
 
 	if *fValidateJson != "" {
-		file, fileErr := os.Create(*fValidateJson)
-		if fileErr != nil {
-			log.Fatalf("Could not create json file %v\n", fileErr)
+		if err := createIssuesReport(rg.Issues, *fValidateJson); err != nil {
+			return errors.Wrap(err, "create report")
 		}
-		defer file.Close()
-
-		jsonWriter := json.NewEncoder(file)
-		buildJsonIssues(issues, jsonWriter)
 	}
 
-	return err
+	criticalErrorsCount, _ := validate(rg.Issues, *fPrintOnlyErrors)
+	if *fValidateStrict && criticalErrorsCount > 0 {
+		return fmt.Errorf("validation failed: %d critical issues", criticalErrorsCount)
+	}
+
+	fmt.Println("Validation passed!")
+	return nil
 }
 
 // Registers the validate command
 // @llr REQ-TRAQ-SWL-36
 func init() {
-	fValidateStrict = validateCmd.PersistentFlags().Bool("strict", false, "Exit with error if any validation checks fail")
-	fValidateJson = validateCmd.PersistentFlags().String("json", "", "Outputs a json file with lint messages in addition to a textual representation of the errors")
-	fOnlyErrors = validateCmd.PersistentFlags().Bool("only-errors", false, "Only outputs actual errors")
+	fValidateStrict = validateCmd.PersistentFlags().Bool("strict", false, "Exit with error if any validation issues are found. Only issues with severity 'minor' or 'normal' are counted, linting messages are ignored.")
+	fValidateJson = validateCmd.PersistentFlags().String("json", "", "Additionally, create a JSON file with all errors and lint messages")
+	fPrintOnlyErrors = validateCmd.PersistentFlags().Bool("only-errors", false, "Only output actual errors, skipping the lint messages")
 	rootCmd.AddCommand(validateCmd)
 }
