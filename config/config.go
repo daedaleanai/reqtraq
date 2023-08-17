@@ -252,7 +252,7 @@ func LoadBaseRepoInfo() {
 
 	config, err := readJsonConfigFromRepo(basePath)
 	if err != nil {
-		log.Fatalf("Error reading configuration in path: %s, %v", basePath, err)
+		log.Fatalf("Error reading configuration in path `%s`: %v", basePath, err)
 	}
 
 	repos.SetBaseRepoInfo(basePath, config.RepoName)
