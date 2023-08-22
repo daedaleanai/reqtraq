@@ -24,22 +24,23 @@ Reqtraq has two main use-cases:
   * [go 1.17+](https://golang.org/doc/install)
   * [pandoc](https://pandoc.org/installing.html)
   * [universal-ctags](https://github.com/universal-ctags/ctags/blob/master/README.md#the-latest-build-and-package) *Note there is also the unmaintained exuberant-ctags which should be avoided.*
-  * [llvm-14](https://github.com/llvm/llvm-project/releases/tag/llvmorg-14.0.0) *Note this is only needed if reqtraq is built with support for libclang.*
+  * [clang+llvm-14](https://github.com/llvm/llvm-project/releases/tag/llvmorg-14.0.0), *only needed for building reqtraq with support for libclang.*
 
 ### Installation
+Basic installation can be done with:
 ```
 $ go install github.com/daedaleanai/reqtraq@latest 
 $ export PATH=$PATH:$GOPATH/bin
 ```
 
-If you would like to build reqtraq with support for libclang, you can instead use:
+For repos having requirements documents defined in `reqtraq_config.json` with `"codeParser": "clang"` reqtraq needs libclang support. Install the `libclang-14-dev` package on Ubuntu, or download clang+llvm-14 from their release page and unpack it somewhere. Set `LLVM_LIB` accordingly and build reqtraq enabling the "clang" tag:
 ```
-$ export CGO_LDFLAGS="-L${PATH_TO_LLVM_LIB} -Wl,-rpath=${PATH_TO_LLVM_LIB}"
+$ LLVM_LIB=/usr/lib/llvm-14/lib
+$ LLVM_LIB=~/clang+llvm-14.0.0-x86_64-linux-gnu-ubuntu-18.04/lib
+$ export CGO_LDFLAGS="-L${LLVM_LIB} -Wl,-rpath=${LLVM_LIB}"
 $ go install --tags clang github.com/daedaleanai/reqtraq@latest 
 $ export PATH=$PATH:$GOPATH/bin
 ```
-Before running the installation, make sure to download llvm-14 and replace `${PATH_TO_LLVM_LIB}` with
-the path to the `lib` folder inside the llvm release where `libclang.so` can be found.
 
 ## Using Reqtraq
 Reqtraq is tightly integrated with Git. See the certification documents in the `certdocs` directory for some good examples.
