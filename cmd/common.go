@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
+	"reflect"
+	"runtime"
 	"strings"
 
 	"github.com/daedaleanai/cobra"
@@ -10,6 +13,7 @@ import (
 	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/daedaleanai/reqtraq/repos"
 	"github.com/daedaleanai/reqtraq/util"
+	"github.com/pkg/errors"
 )
 
 var rootCmd = &cobra.Command{
@@ -33,7 +37,7 @@ func setupConfiguration() error {
 
 	cfg, err := config.ParseConfig(baseRepoPath)
 	if err != nil {
-		return fmt.Errorf("Error parsing `reqtraq_config.json` file in current repo: %v", err)
+		return errors.Wrap(err, "Error parsing `reqtraq_config.json` file in current repo")
 	}
 
 	reqtraqConfig = &cfg
@@ -68,9 +72,32 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&config.DirectDependenciesOnly, "direct-deps", "d", false, "Only checks the current repository and parents")
 }
 
-// Runs the root command and defers the cleanup of the temporary directories until it exits
+// Runs the root command and defers the cleanup of the temporary directories
+// until it exits.
 // @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-59
 func RunRootCommand() error {
 	defer repos.CleanupTemporaryDirectories()
 	return rootCmd.Execute()
+}
+
+// RunAndHandleError returns a RunE function that runs the specified RunE
+// function and exits if it returns an error.
+// @llr REQ-TRAQ-SWL-59
+func RunAndHandleError(runE func(cmd *cobra.Command, args []string) error) func(*cobra.Command, []string) error {
+	// Wrap the specified runE func in a new func with the same signature.
+	return func(cmd *cobra.Command, args []string) error {
+		// At some place in Cobra they lose track of whether the error is
+		// returned by a RunE function or it's an arguments parsing error.
+		// That's why we need to handle our errors ourselves and exit with an
+		// appropriate error code.
+		// See https://github.com/spf13/cobra/issues/914
+		if errRun := runE(cmd, args); errRun != nil {
+			// For example: "github.com/daedaleanai/reqtraq/cmd.runValidate"
+			s := runtime.FuncForPC(reflect.ValueOf(runE).Pointer()).Name()
+			s = s[strings.LastIndex(s, "/")+1:]
+			fmt.Println(errors.Wrap(errRun, s))
+			os.Exit(1)
+		}
+		return nil
+	}
 }

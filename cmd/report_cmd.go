@@ -27,20 +27,20 @@ var reportDownCmd = &cobra.Command{
 	Use:   "down",
 	Short: "Creates an HTML traceability report from system requirements down to code",
 	Long:  "Creates an HTML traceability report from system requirements down to code",
-	RunE:  runReportDownCmd,
+	RunE:  RunAndHandleError(runReportDownCmd),
 }
 var reportUpCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements",
 	Long:  "Creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements",
-	RunE:  runReportUpCmd,
+	RunE:  RunAndHandleError(runReportUpCmd),
 }
 
 var reportIssuesCmd = &cobra.Command{
 	Use:   "issues",
 	Short: "Creates an HTML report with all issues found in the requirement documents",
 	Long:  "Creates an HTML report with all issues found in the requirement documents",
-	RunE:  runReportIssuesCmd,
+	RunE:  RunAndHandleError(runReportIssuesCmd),
 }
 
 // Registers the report commands

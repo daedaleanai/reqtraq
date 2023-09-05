@@ -12,6 +12,7 @@ import (
 	"github.com/daedaleanai/reqtraq/code/parsers"
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/reqs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,20 +32,22 @@ func TestMain(m *testing.M) {
 }
 
 // @llr REQ-TRAQ-SWL-36
-func RunValidate(t *testing.T, config *config.Config) (string, error) {
+func RunValidate(t *testing.T, config *config.Config, onlyErrors bool) (string, int, int, error) {
 	// prepare capture of stdout
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
+	// create requirements graph
+	rg, err := reqs.BuildGraph(config)
+	assert.Empty(t, err, "Unexpected error when building requirements graph")
 	// run the command
-	_, err := validate(config, false)
-	assert.Empty(t, err, "Got unexpected error")
+	criticalCount, lintCount := validate(rg.Issues, onlyErrors)
 	// save stdout data and reset
 	w.Close()
 	buf, _ := ioutil.ReadAll(r)
 	os.Stdout = rescueStdout
 
-	return string(buf), err
+	return string(buf), criticalCount, lintCount, err
 }
 
 // @llr REQ-TRAQ-SWL-36
@@ -161,9 +164,6 @@ func TestValidateMarkdown(t *testing.T) {
 		},
 	}
 
-	actual, err := RunValidate(t, &config)
-	assert.Empty(t, err, "Got unexpected error")
-
 	expected := `Incorrect requirement type for requirement REQ-TEST-SWH-3. Expected SYS, got SWH.
 Incorrect project abbreviation for requirement REQ-TSET-SYS-5. Expected TEST, got TSET.
 Invalid requirement sequence number for REQ-TEST-SYS-1, is duplicate.
@@ -185,10 +185,9 @@ Requirement 'REQ-TEST-SWH-6' is missing at least one of the attributes 'PARENTS,
 Requirement 'REQ-TEST-SWH-8' is missing attribute 'VERIFICATION'.
 Requirement 'REQ-TEST-SWH-10' has invalid value 'None.' in attribute 'VERIFICATION'.
 Requirement 'REQ-TEST-SWH-10' is missing attribute 'SAFETY IMPACT'.
-Requirement 'REQ-TEST-SWH-14' has unknown attribute 'RANDOM'.
-WARNING. Validation failed`
+Requirement 'REQ-TEST-SWH-14' has unknown attribute 'RANDOM'.`
 
-	checkValidateError(t, actual, expected)
+	checkValidate(t, &config, expected, "")
 }
 
 // @llr REQ-TRAQ-SWL-36
@@ -269,40 +268,55 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 		},
 	}
 
-	actual, err := RunValidate(t, &config)
-	assert.Empty(t, err, "Got unexpected error")
-
 	expected := `Invalid reference to non existent requirement REQ-TEST-SYS-22 in body of REQ-TEST-SWH-3.
 Invalid reference to deleted requirement REQ-TEST-SYS-2 in body of REQ-TEST-SWH-4.
 Requirement 'REQ-TEST-SWH-6' is missing attribute 'VERIFICATION'.
 Requirement 'REQ-TEST-SWH-8' has invalid value 'gibberish.' in attribute 'VERIFICATION'.
-Requirement 'REQ-TEST-SWH-7' is missing attribute 'SAFETY IMPACT'.
-WARNING. Validation failed`
+Requirement 'REQ-TEST-SWH-7' is missing attribute 'SAFETY IMPACT'.`
 
-	checkValidateError(t, actual, expected)
+	checkValidate(t, &config, expected, "")
 }
 
-// @llr REQ-TRAQ-SWL-36
-func checkValidateError(t *testing.T, validate_errors string, expected string) {
-	errs := strings.Split(validate_errors, "\n")
-	for i, e := range errs {
-		if e == "" {
-			errs = append(errs[:i], errs[i+1:]...)
+func splitLines(s string) (ret []string) {
+	for _, s := range strings.Split(s, "\n") {
+		if s != "" {
+			ret = append(ret, s)
 		}
 	}
-	for _, m := range strings.Split(expected, "\n") {
+	return
+}
+
+// checkValidate returns an error if validation behaves unexpectedly.
+// @llr REQ-TRAQ-SWL-36
+func checkValidate(t *testing.T, config *config.Config, expectedCriticalRaw, expectedLintRaw string) {
+	expectedCritical := splitLines(expectedCriticalRaw)
+	expectedLint := splitLines(expectedLintRaw)
+
+	checkValidateOutput(t, config, true, expectedCritical, []string{})
+	checkValidateOutput(t, config, false, expectedCritical, expectedLint)
+}
+
+func checkValidateOutput(t *testing.T, config *config.Config, onlyErrors bool, expectedCritical, expectedLint []string) {
+	output, criticalCount, lintCount, err := RunValidate(t, config, onlyErrors)
+	assert.Empty(t, err, "Failed to validate")
+	assert.Equal(t, criticalCount, len(expectedCritical), "Got an unexpected number of requirements errors")
+	assert.Equal(t, lintCount, len(expectedLint), "Got an unexpected number of requirements lint issues")
+
+	reportedErrors := splitLines(output)
+	expected := append(expectedCritical, expectedLint...)
+	for _, m := range expected {
 		found := false
-		for i, e := range errs {
+		for i, e := range reportedErrors {
 			if e == m {
-				errs = append(errs[:i], errs[i+1:]...)
+				reportedErrors = append(reportedErrors[:i], reportedErrors[i+1:]...)
 				found = true
 				break
 			}
 		}
-		assert.Truef(t, found, "Expected error is missing: `%s` from:\n%s", m, validate_errors)
+		assert.Truef(t, found, "One of the expected errors `%s` is missing from the reported errors:\n%s", m, output)
 	}
 
-	assert.Empty(t, errs, "Got unexpected errors")
+	assert.Empty(t, reportedErrors, "Got unexpected errors")
 }
 
 // @llr REQ-TRAQ-SWL-36
@@ -319,15 +333,11 @@ func TestValidateMultipleRepos(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actual, err := RunValidate(t, &config)
-	assert.Empty(t, err, "Got unexpected error")
-
 	expected := `Requirement 'ASM-TEST-SWH-3' is missing attribute 'VALIDATION'.
 Requirement 'ASM-TEST-SWH-3' has unknown attribute 'VERIFICATION'.
-Requirement 'ASM-TEST-SWH-2' has invalid value 'REQ-TEST-SYS-2' in attribute 'PARENTS'.
-WARNING. Validation failed`
+Requirement 'ASM-TEST-SWH-2' has invalid value 'REQ-TEST-SYS-2' in attribute 'PARENTS'.`
 
-	checkValidateError(t, actual, expected)
+	checkValidate(t, &config, expected, "")
 }
 
 // @llr REQ-TRAQ-SWL-36
@@ -342,13 +352,9 @@ func TestValidateMultipleLevelDoc(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actual, err := RunValidate(t, &config)
-	assert.Empty(t, err, "Got unexpected error")
-
 	expected := `Requirement 'REQ-TEST-SYS-6' has invalid parent link ID 'REQ-TEST-SYS-1'.
 Requirement 'REQ-TEST-SYS-7' has invalid parent link ID 'REQ-TEST-SYS-3' with attribute value 'COMPONENT ALLOCATION'=='Component1'.
-Requirement 'REQ-TEST-SWH-3' has invalid parent link ID 'REQ-TEST-SYS-1' with attribute value 'COMPONENT ALLOCATION'=='System'.
-WARNING. Validation failed`
+Requirement 'REQ-TEST-SWH-3' has invalid parent link ID 'REQ-TEST-SYS-1' with attribute value 'COMPONENT ALLOCATION'=='System'.`
 
-	checkValidateError(t, actual, expected)
+	checkValidate(t, &config, expected, "")
 }

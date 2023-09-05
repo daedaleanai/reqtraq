@@ -26,7 +26,7 @@ type IssueSeverity uint
 const (
 	IssueSeverityMajor IssueSeverity = iota
 	IssueSeverityMinor
-	IssueSeverityNote
+	IssueSeverityNote // Lint errors
 )
 
 type Issue struct {

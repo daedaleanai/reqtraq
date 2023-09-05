@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/daedaleanai/reqtraq/linepipes"
+	"github.com/pkg/errors"
 )
 
 // A reference to a remote repository that can be one of:
@@ -24,6 +25,7 @@ import (
 //   - A ssh url referencing a remote git repository
 //   - A git url referencing a remote git repository
 //   - A local repository that will be cloned
+//
 // TODO(ja): Allow the user to specify a custom branch/git ref in this path
 type RemotePath string
 
@@ -233,7 +235,7 @@ func PathInRepo(repoName RepoName, path string) (string, error) {
 
 	actualPath := filepath.Join(string(repoPath), path)
 	if _, err := os.Stat(actualPath); err != nil {
-		return "", fmt.Errorf("Path `%s` does not seem to be accessible from the user: %s", actualPath, err)
+		return "", errors.Wrapf(err, "Path `%s` does not seem to be accessible", actualPath)
 	}
 
 	return actualPath, nil
@@ -252,7 +254,7 @@ func AllCommits(repoName RepoName) ([]string, error) {
 	commits := make([]string, 0)
 	lines, err := linepipes.All(linepipes.Run("git", "-C", string(repoPath), "log", `--pretty=format:%h %cd`, "--date=short"))
 	if err != nil {
-		return commits, fmt.Errorf("Failed to get the list of commits: %s", err)
+		return commits, errors.Wrap(err, "Failed to get the list of commits")
 	}
 
 	for _, line := range strings.Split(lines, "\n") {

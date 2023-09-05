@@ -10,12 +10,12 @@ import (
 )
 
 var nextIdCmd = &cobra.Command{
-	Use:               "nextid [CertdocPath]",
+	Use:               "nextid CERTDOC_PATH",
 	Short:             "Generates the next requirement id for the given document",
 	Long:              "Generates the next requirement id for the given document. Takes a certdoc path as a single argument",
 	Args:              cobra.ExactValidArgs(1),
 	ValidArgsFunction: completeCertdocFilename,
-	RunE:              runNextId,
+	RunE:              RunAndHandleError(runNextId),
 }
 
 // runNextId parses a single markdown document for requirements and returns the next available ID

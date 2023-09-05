@@ -21,6 +21,7 @@ func init() {
 // @llr REQ-TRAQ-SWL-59
 func main() {
 	if cmd.RunRootCommand() != nil {
-		os.Exit(1)
+		// Errors that get to this point should be arguments parsing errors.
+		os.Exit(2)
 	}
 }
