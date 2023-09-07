@@ -25,7 +25,7 @@ var (
 	// Blank line to stop search
 	reBlankLine = regexp.MustCompile(`^\s*$`)
 	// List of supported code parsers. ctags is always built-in. Other parsers will be registered
-	// during runtime by calling registerCodeParser
+	// during runtime by calling RegisterCodeParser
 	codeParsers = map[string]CodeParser{}
 )
 
@@ -189,7 +189,7 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 
 	codeParser, ok := codeParsers[document.Implementation.CodeParser]
 	if !ok {
-		return nil, fmt.Errorf("Code parser not found: `%s`\n\tAvailable parsers: %v", document.Implementation.CodeParser, availableCodeParsers())
+		return nil, fmt.Errorf("No built-in support for code parser `%s`. Try maybe `go install --tags %s`. flag\n\tAvailable parsers: %s", document.Implementation.CodeParser, document.Implementation.CodeParser, strings.Join(availableCodeParsers(), ", "))
 	}
 
 	tags, err = codeParser.TagCode(repoName, codeFiles,
