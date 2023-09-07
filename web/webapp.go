@@ -40,11 +40,9 @@ func Serve(cfg *config.Config, addr string) error {
 		addr = "localhost" + addr
 	}
 
-	fmt.Printf("Parsing requirements graph\n")
-
+	fmt.Printf("Detecting requirements levels..\n")
 	attributes = make(map[string]*config.Attribute)
 	codeLinks = []config.ReqSpec{}
-
 	for _, repo := range reqtraqConfig.Repos {
 		for _, document := range repo.Documents {
 			for attributeName, attribute := range document.Schema.Attributes {
