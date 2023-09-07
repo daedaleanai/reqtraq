@@ -60,7 +60,7 @@ func Serve(cfg *config.Config, addr string) error {
 	var err error
 	rg, err = reqs.BuildGraph(&reqtraqConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "build graph")
 	}
 
 	fmt.Printf("Server started on http://%s\n", addr)

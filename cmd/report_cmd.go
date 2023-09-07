@@ -7,6 +7,7 @@ import (
 	"github.com/daedaleanai/cobra"
 	"github.com/daedaleanai/reqtraq/report"
 	"github.com/daedaleanai/reqtraq/reqs"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -68,7 +69,7 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 
 	rg, err := reqs.BuildGraph(reqtraqConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "build graph")
 	}
 
 	of, err := os.Create(*reportPrefix + "down.html")
@@ -111,7 +112,7 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 
 	rg, err := reqs.BuildGraph(reqtraqConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "build graph")
 	}
 
 	of, err := os.Create(*reportPrefix + "issues.html")
@@ -152,7 +153,7 @@ func runReportUpCmd(command *cobra.Command, args []string) error {
 
 	rg, err := reqs.BuildGraph(reqtraqConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "build graph")
 	}
 
 	of, err := os.Create(*reportPrefix + "up.html")
