@@ -983,7 +983,7 @@ but ignore children repositories.
 
 ### cmd/completion_cmd.go
 
-The completion command takes advantage of the underlying cobra infrastructure to print completion
+The `completion` command takes advantage of the underlying cobra infrastructure to print completion
 scripts for different shells. Supported shells are `bash`, `zsh` and `fish`.
 
 #### REQ-TRAQ-SWL-57 Generate shell completions
@@ -996,9 +996,23 @@ Reqtraq SHALL provide a subcommand to generate shell completions.
 - Verification: Test
 - Safety Impact: None
 
+### cmd/export_cmd.go
+
+The `export` command exports the requirements graph parsed from the certification documents as a JSON file.
+
+#### REQ-TRAQ-SWL-78 Export requirements graph
+
+Reqtraq SHALL provide a subcommand to export the requirements graph as JSON.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale: Parsing the requirements documents and code can be slow. Being able to use the exported requirements graph represents a form of caching. Additionally, it allows quick custom analysis of the requirements graph.
+- Verification: Test
+- Safety Impact: None
+
 ### cmd/list_cmd.go
 
-The list command implements the CLI for listing all requirements in a given certification document
+The `list` command implements the CLI for listing all requirements in a given certification document.
 
 #### REQ-TRAQ-SWL-33 CLI list requirements
 
@@ -1036,7 +1050,7 @@ Reqtraq SHALL allow the user to output the list in csv format.
 
 ### cmd/nextid_cmd.go
 
-The nextid command implements the CLI for displaying the next requirement ID in a given certification document.
+The `nextid` command implements the CLI for displaying the next requirement ID in a given certification document.
 
 #### REQ-TRAQ-SWL-34 CLI next ID
 
@@ -1050,7 +1064,7 @@ Reqtraq SHALL provide a command line option to provide the user with the next av
 
 ### cmd/report_cmd.go
 
-The report command implements the CLI for creating HTML reports with requirement trees or issues.
+The `report` command implements the CLI for creating HTML reports with requirement trees or issues.
 
 #### REQ-TRAQ-SWL-35 CLI reports
 
@@ -1064,7 +1078,7 @@ Reqtraq SHALL provide a command line options to generate reports showing top-dow
 
 ### cmd/validate_cmd.go
 
-The validate command implements the CLI for validating requirement graphs.
+The `validate` command implements the CLI for validating requirement graphs.
 
 #### REQ-TRAQ-SWL-36 CLI validate
 
@@ -1089,7 +1103,7 @@ compatible with Phabricator.
 
 ### cmd/web_cmd.go
 
-The validate command implements the CLI for validating requirement graphs.
+The `web` command starts a local web server for browsing the requirements and the reports.
 
 #### REQ-TRAQ-SWL-58 CLI web
 

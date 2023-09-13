@@ -142,9 +142,10 @@ type RepoConfig struct {
 	Documents []Document
 }
 
-// A global configuration structure for all repositories that compose the system.
+// A global configuration structure for a repo, its parents and its children.
 type Config struct {
-	Repos map[repos.RepoName]RepoConfig
+	TargetRepo repos.RepoName
+	Repos      map[repos.RepoName]RepoConfig
 }
 
 // Selects whether all children of the parent repositories should be traversed as part of the
@@ -160,7 +161,8 @@ func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 	}
 
 	config := Config{
-		Repos: make(map[repos.RepoName]RepoConfig),
+		TargetRepo: jsonConfig.RepoName,
+		Repos:      make(map[repos.RepoName]RepoConfig),
 	}
 
 	commonAttributes := make(map[string]*Attribute)
