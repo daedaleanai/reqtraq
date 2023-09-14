@@ -358,7 +358,7 @@ The requirement attributes are formatted one per line:
     - NAME1: VALUE1
     - NAME2: VALUE2
 
-Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in the configuration file `reqtraq_config.json` file in the root of the repository. For more information about the format of the configuration file see the [Config](#config/config.go) section.
+Attributes can be optional or mandatory. Each attribute has a name. Each attribute may have an associated regular expression to test for validity. Attributes are specified in the configuration file `reqtraq_config.json` file in the root of the repository. For more information about the format of the configuration file see the [Config](#configconfiggo) section.
 Attributes are specified per document or globally as common attributes that apply to any requirements found in any document.
 
 Reqtraq reads the attributes of each requirement held in a requirement table from each column of the table. The first row of the table contains the attribute name for each column, the first column being "ID" to represent requirement ID. The second row is a delimiter. The third row onward contains the requirement ID and associated attribute text as shown:
