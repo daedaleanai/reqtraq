@@ -120,14 +120,46 @@ Reqtraq is configured using a `reqtraq_config.json` file in the root of the repo
                 "level": "SWH"
             },
             "implementation": {
+                "archs": {
+                    "armv6m": {
+                        "compilationDatabase": "",
+                        "compilerArguments": ["--target=thumbv6m-linux-eabi"]
+                    },
+                    "linux-x64": {
+                        "compilationDatabase": "/BUILD/OUTPUT/compile_commands.json",
+                        "compilerArguments": []
+                    }
+                },
                 "code": {
                     "paths": ["."],
                     "matchingPattern": ".*\\.go$",
-                    "ignoredPatterns": [".*_test\\.go$"]
+                    "ignoredPatterns": [".*_test\\.go$"],
+                    "archPatterns": {
+                        "armv6m": {
+                            "paths": ["src", "include"],
+                            "matchingPattern": ".*/armv6m/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                            "ignoredPatterns": [".*_test\\.cc$"]
+                        },
+                        "linux-x64": {
+                            "paths": ["src", "include"],
+                            "matchingPattern": ".*/linux-x64/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                            "ignoredPatterns": [".*_test\\.cc$"]
+                        }
+                    }
                 },
                 "tests": {
                     "paths": ["."],
-                    "matchingPattern": ".*_test\\.go$"
+                    "matchingPattern": ".*_test\\.go$",
+                     "archPatterns": {
+                        "armv6m": {
+                            "paths": ["src"],
+                            "matchingPattern": ".*/armv6m/.*_test\\.cc$"
+                        },
+                        "linux-x64": {
+                            "paths": ["src"],
+                            "matchingPattern": ".*/linux-x64/.*_test\\.cc$"
+                        }
+                    }
                 }
             }
         }
@@ -166,15 +198,47 @@ Child repository configuration:
                 }
             ],
             "implementation": {
+                "archs": {
+                    "armv6m": {
+                        "compilationDatabase": "",
+                        "compilerArguments": ["--target=thumbv6m-linux-eabi"]
+                    },
+                    "linux-x64": {
+                        "compilationDatabase": "/BUILD/OUTPUT/compile_commands.json",
+                        "compilerArguments": []
+                    }
+                },
                 "code": {
                     "paths": ["code"],
                     "matchingPattern": ".*\\.(cc|c|h|hh)$",
-                    "ignoredPatterns": [".*_test\\.(cc|c|h|hh)$"]
+                    "ignoredPatterns": [".*_test\\.(cc|c|h|hh)$"],
+                    "archPatterns": {
+                        "armv6m": {
+                            "paths": ["src", "include"],
+                            "matchingPattern": ".*/armv6m/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                            "ignoredPatterns": [".*_test\\.cc$"]
+                        },
+                        "linux-x64": {
+                            "paths": ["src", "include"],
+                            "matchingPattern": ".*/linux-x64/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                            "ignoredPatterns": [".*_test\\.cc$"]
+                        }
+                    }
                 },
                 "tests": {
                     "paths": ["."],
                     "matchingPattern": ".*_test\\.(cc|c|h|hh)$",
-                    "ignoredPatterns": []
+                    "ignoredPatterns": [],
+                     "archPatterns": {
+                        "armv6m": {
+                            "paths": ["src"],
+                            "matchingPattern": ".*/armv6m/.*_test\\.cc$"
+                        },
+                        "linux-x64": {
+                            "paths": ["src"],
+                            "matchingPattern": ".*/linux-x64/.*_test\\.cc$"
+                        }
+                    }
                 }
             }
         }

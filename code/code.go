@@ -152,31 +152,87 @@ func (a byFilenameTag) Less(i, j int) bool {
 	return false
 }
 
-// ParseCode is the entry point for the code related functions. It parses all tags found in the
-// implementation for the given document. The return value is a map from each discovered source code
-// file to a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-69
-func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
-	// Create a list with all the files to parse
-	codeFiles := make([]CodeFile, 0)
-	codeFilePaths := make([]string, 0)
-	for _, implFile := range document.Implementation.CodeFiles {
-		codeFiles = append(codeFiles, CodeFile{
-			RepoName: repoName,
-			Path:     implFile,
-			Type:     CodeTypeImplementation,
-		})
-		codeFilePaths = append(codeFilePaths, implFile)
-	}
-	for _, testFile := range document.Implementation.TestFiles {
-		codeFiles = append(codeFiles, CodeFile{
-			RepoName: repoName,
-			Path:     testFile,
-			Type:     CodeTypeTests,
-		})
-		codeFilePaths = append(codeFilePaths, testFile)
+// Extract all the code and test files that match the rules of an architecture specified
+// in the document implementation. The functions returns a map from each architecture to a slice
+// of CodeFile structs, and a slice of CodeFile structs for files that match the default matching rules,
+// but no architecture-specific rule
+// @llr REQ-TRAQ-SWL-78
+func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[config.Arch][]CodeFile, []CodeFile, error) {
+	archFilesMap := make(map[config.Arch][]CodeFile)
+	fileToArchMap := make(map[string]config.Arch)
+	for arch := range document.Implementation.Archs {
+		archFiles := make([]CodeFile, 0)
+		var otherArch config.Arch
+		var exists bool
+
+		for _, implFile := range document.Implementation.Archs[arch].CodeFiles {
+			otherArch, exists = fileToArchMap[implFile]
+			if exists {
+				message := fmt.Sprintf("The file %q is matched both by the rules of %q and %q", implFile, arch, otherArch)
+				return nil, nil, errors.New(message)
+			}
+
+			fileToArchMap[implFile] = arch
+			archFiles = append(archFiles, CodeFile{
+				RepoName: repoName,
+				Path:     implFile,
+				Type:     CodeTypeImplementation,
+			})
+		}
+
+		for _, testFile := range document.Implementation.Archs[arch].TestFiles {
+			otherArch, exists = fileToArchMap[testFile]
+			if exists {
+				message := fmt.Sprintf("The file %q is matched both by the rules of %q and %q", testFile, arch, otherArch)
+				return nil, nil, errors.New(message)
+			}
+
+			fileToArchMap[testFile] = arch
+			archFiles = append(archFiles, CodeFile{
+				RepoName: repoName,
+				Path:     testFile,
+				Type:     CodeTypeTests,
+			})
+		}
+
+		archFilesMap[arch] = archFiles
 	}
 
+	// Do the same thing for the arch-unaware matching rules
+	noArchFiles := make([]CodeFile, 0)
+	for _, implFile := range document.Implementation.CodeFiles {
+		var exists bool
+		_, exists = fileToArchMap[implFile]
+		if !exists {
+			noArchFiles = append(noArchFiles, CodeFile{
+				RepoName: repoName,
+				Path:     implFile,
+				Type:     CodeTypeImplementation,
+			})
+		}
+	}
+
+	for _, testFile := range document.Implementation.TestFiles {
+		var exists bool
+		_, exists = fileToArchMap[testFile]
+		if !exists {
+			noArchFiles = append(noArchFiles, CodeFile{
+				RepoName: repoName,
+				Path:     testFile,
+				Type:     CodeTypeTests,
+			})
+		}
+	}
+
+	return archFilesMap, noArchFiles, nil
+}
+
+// This function is used by ParseCode to parse all the tags found in the document implementation
+// for a given target architecture identified by code files, a compilation database, and compiler arguments.
+// The return value is the same as the one of ParseCode, a map from each discovered source code file to
+// a slice of Code structs representing the functions found within.
+// @llr REQ-TRAQ-SWL-78
+func parseCodeForArch(repoName repos.RepoName, document *config.Document, codeFiles []CodeFile, compDb string, compArgs []string) (map[CodeFile][]*Code, error) {
 	if len(codeFiles) == 0 {
 		// In order to avoid calling TagCode and having the default ctags parser
 		// check that ctags is installed we can simply return here.
@@ -192,8 +248,7 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 		return nil, fmt.Errorf("No built-in support for code parser `%s`. Try maybe `go install --tags %s`. flag\n\tAvailable parsers: %s", document.Implementation.CodeParser, document.Implementation.CodeParser, strings.Join(availableCodeParsers(), ", "))
 	}
 
-	tags, err = codeParser.TagCode(repoName, codeFiles,
-		document.Implementation.CompilationDatabase, document.Implementation.CompilerArguments)
+	tags, err = codeParser.TagCode(repoName, codeFiles, compDb, compArgs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to tag code")
 	}
@@ -207,6 +262,47 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 		for tagIdx := range tags[codeFile] {
 			tags[codeFile][tagIdx].Document = document
 		}
+	}
+
+	return tags, nil
+}
+
+// ParseCode is the entry point for the code related functions. It parses all tags found in the
+// implementation for the given document. The return value is a map from each discovered source code
+// file to a slice of Code structs representing the functions found within.
+// @llr REQ-TRAQ-SWL-8 REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-69
+func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile][]*Code, error) {
+	var archCodeFiles map[config.Arch][]CodeFile
+	var noArchCodeFiles []CodeFile
+	var err error
+
+	archCodeFiles, noArchCodeFiles, err = extractCodeFiles(repoName, document)
+	if err != nil {
+		return nil, err
+	}
+
+	tags := make(map[CodeFile][]*Code)
+	var archTags map[CodeFile][]*Code
+	var noArchTags map[CodeFile][]*Code
+
+	// First parse architecture specific code
+	for arch := range document.Implementation.Archs {
+		archTags, err = parseCodeForArch(repoName, document, archCodeFiles[arch], document.Implementation.Archs[arch].CompilationDatabase, document.Implementation.Archs[arch].CompilerArguments)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range archTags {
+			tags[k] = v
+		}
+	}
+
+	// Do the same thing for code that is independent of the architecture
+	noArchTags, err = parseCodeForArch(repoName, document, noArchCodeFiles, document.Implementation.CompilationDatabase, document.Implementation.CompilerArguments)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range noArchTags {
+		tags[k] = v
 	}
 
 	return tags, nil

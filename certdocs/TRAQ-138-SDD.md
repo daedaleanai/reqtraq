@@ -1194,6 +1194,17 @@ raise an error if multiple different parent links declaration present.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-79 Support architecture dependent codebases
+
+Reqtraq SHALL support the use of different compilation databases and compiler argumnets, depending 
+on the architecture of the source code.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-2
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 ## Appendix
 
 ### Deleted Requirements

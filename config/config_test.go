@@ -65,11 +65,14 @@ func TestConfig_ParseConfig(t *testing.T) {
 				},
 			},
 			Implementation: Implementation{
-				CodeFiles:           []string{},
-				TestFiles:           []string{},
-				CodeParser:          "ctags",
-				CompilationDatabase: "",
-				CompilerArguments:   []string{},
+				ArchImplementation: ArchImplementation{
+					CodeFiles:           []string{},
+					TestFiles:           []string{},
+					CompilationDatabase: "",
+					CompilerArguments:   []string{},
+				},
+				CodeParser: "ctags",
+				Archs:      make(map[Arch]ArchImplementation),
 			},
 		},
 		{
@@ -117,11 +120,14 @@ func TestConfig_ParseConfig(t *testing.T) {
 				},
 			},
 			Implementation: Implementation{
-				CodeFiles:           []string{},
-				TestFiles:           []string{},
-				CodeParser:          "ctags",
-				CompilationDatabase: "",
-				CompilerArguments:   []string{},
+				ArchImplementation: ArchImplementation{
+					CodeFiles:           []string{},
+					TestFiles:           []string{},
+					CompilationDatabase: "",
+					CompilerArguments:   []string{},
+				},
+				CodeParser: "ctags",
+				Archs:      make(map[Arch]ArchImplementation),
 			},
 		},
 	})
@@ -280,11 +286,14 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 				},
 			},
 			Implementation: Implementation{
-				CodeFiles:           []string{},
-				TestFiles:           []string{},
-				CodeParser:          "ctags",
-				CompilationDatabase: "",
-				CompilerArguments:   []string{},
+				ArchImplementation: ArchImplementation{
+					CodeFiles:           []string{},
+					TestFiles:           []string{},
+					CompilationDatabase: "",
+					CompilerArguments:   []string{},
+				},
+				CodeParser: "ctags",
+				Archs:      make(map[Arch]ArchImplementation),
 			},
 		},
 		{
@@ -332,11 +341,14 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 				},
 			},
 			Implementation: Implementation{
-				CodeFiles:           []string{},
-				TestFiles:           []string{},
-				CodeParser:          "ctags",
-				CompilationDatabase: "",
-				CompilerArguments:   []string{},
+				ArchImplementation: ArchImplementation{
+					CodeFiles:           []string{},
+					TestFiles:           []string{},
+					CompilationDatabase: "",
+					CompilerArguments:   []string{},
+				},
+				CodeParser: "ctags",
+				Archs:      make(map[Arch]ArchImplementation),
 			},
 		},
 	})
@@ -444,11 +456,14 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 				},
 			},
 			Implementation: Implementation{
-				CodeFiles:           []string{},
-				TestFiles:           []string{},
-				CodeParser:          "ctags",
-				CompilationDatabase: "",
-				CompilerArguments:   []string{},
+				ArchImplementation: ArchImplementation{
+					CodeFiles:           []string{},
+					TestFiles:           []string{},
+					CompilationDatabase: "",
+					CompilerArguments:   []string{},
+				},
+				CodeParser: "ctags",
+				Archs:      make(map[Arch]ArchImplementation),
 			},
 		})
 
@@ -494,11 +509,14 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 				},
 			},
 			Implementation: Implementation{
-				CodeFiles:           []string{},
-				TestFiles:           []string{},
-				CodeParser:          "ctags",
-				CompilationDatabase: "",
-				CompilerArguments:   []string{},
+				ArchImplementation: ArchImplementation{
+					CodeFiles:           []string{},
+					TestFiles:           []string{},
+					CompilationDatabase: "",
+					CompilerArguments:   []string{},
+				},
+				CodeParser: "ctags",
+				Archs:      make(map[Arch]ArchImplementation),
 			},
 		})
 

@@ -19,6 +19,7 @@ import (
 
 type ReqLevel string
 type ReqPrefix string
+type Arch string
 
 /// Internal types for parsing json files
 
@@ -33,18 +34,29 @@ type jsonAttribute struct {
 	Value    string `json:"value"`
 }
 
-type jsonFileQuery struct {
+type jsonFileQueryBase struct {
 	Paths           []string `json:"paths"`
 	MatchingPattern string   `json:"matchingPattern"`
 	IgnoredPatterns []string `json:"ignoredPatterns"`
 }
 
+type jsonFileQuery struct {
+	jsonFileQueryBase
+	ArchPatterns map[Arch]jsonFileQueryBase `json:"archPatterns"`
+}
+
+type jsonArchCompilerData struct {
+	CompilationDatabase string   `json:"compilationDatabase"`
+	CompilerArguments   []string `json:"compilerArguments"`
+}
+
 type jsonImplementation struct {
-	Code                jsonFileQuery `json:"code"`
-	Tests               jsonFileQuery `json:"tests"`
-	CodeParser          string        `json:"codeParser"`
-	CompilationDatabase string        `json:"compilationDatabase"`
-	CompilerArguments   []string      `json:"compilerArguments"`
+	Archs               map[Arch]jsonArchCompilerData `json:"archs"`
+	Code                jsonFileQuery                 `json:"code"`
+	Tests               jsonFileQuery                 `json:"tests"`
+	CodeParser          string                        `json:"codeParser"`
+	CompilationDatabase string                        `json:"compilationDatabase"`
+	CompilerArguments   []string                      `json:"compilerArguments"`
 }
 
 type jsonParent struct {
@@ -96,13 +108,20 @@ type Attribute struct {
 	Value *regexp.Regexp
 }
 
-// A structure describing the implementation for a given certification document.
-type Implementation struct {
+// A structure describing the implementation for a given certification document,
+// for architecture-dependent codebases
+type ArchImplementation struct {
 	CodeFiles           []string
 	TestFiles           []string
-	CodeParser          string
 	CompilationDatabase string
 	CompilerArguments   []string
+}
+
+// A structure describing the implementation for a given certification document.
+type Implementation struct {
+	ArchImplementation
+	CodeParser string
+	Archs      map[Arch]ArchImplementation
 }
 
 // The schema for requirements inside a certification document
@@ -380,11 +399,30 @@ func parseParent(rawParent jsonParent, childPrefix ReqPrefix, childLevel ReqLeve
 
 // Finds all matching files for the given query under the given repository.
 // @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56
-func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([]string, error) {
+func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName, arch ...Arch) ([]string, error) {
+	var queryMatchingPattern string
+	var queryIgnoredPatterns []string
+	var queryPaths []string
+
+	if len(arch) == 0 {
+		queryMatchingPattern = fileQuery.MatchingPattern
+		queryIgnoredPatterns = fileQuery.IgnoredPatterns
+		queryPaths = fileQuery.Paths
+	} else {
+		_, ok := fileQuery.ArchPatterns[arch[0]]
+		if !ok {
+			return []string{}, nil
+		}
+
+		queryMatchingPattern = fileQuery.ArchPatterns[arch[0]].MatchingPattern
+		queryIgnoredPatterns = fileQuery.ArchPatterns[arch[0]].IgnoredPatterns
+		queryPaths = fileQuery.ArchPatterns[arch[0]].Paths
+	}
+
 	var matchingPattern *regexp.Regexp = nil
-	if fileQuery.MatchingPattern != "" {
+	if queryMatchingPattern != "" {
 		var err error
-		matchingPattern, err = regexp.Compile(fileQuery.MatchingPattern)
+		matchingPattern, err = regexp.Compile(queryMatchingPattern)
 		if err != nil {
 			return []string{}, err
 		}
@@ -393,7 +431,7 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 	var collectedFiles = []string{}
 
 	var ignoredPatterns []*regexp.Regexp
-	for _, pattern := range fileQuery.IgnoredPatterns {
+	for _, pattern := range queryIgnoredPatterns {
 		compiledPattern, err := regexp.Compile(pattern)
 		if err != nil {
 			return []string{}, fmt.Errorf("Unable to parse `%s` as a regular expression", pattern)
@@ -401,7 +439,7 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName) ([
 		ignoredPatterns = append(ignoredPatterns, compiledPattern)
 	}
 
-	for _, path := range fileQuery.Paths {
+	for _, path := range queryPaths {
 		matched_files, err := repos.FindFilesInDirectory(repoName, path, matchingPattern, ignoredPatterns)
 		if err != nil {
 			return []string{}, err
@@ -487,6 +525,46 @@ The parents attribute for assumptions is implicit and refers to requirements in 
 	parsedDoc.Schema.AsmAttributes["PARENTS"] = &Attribute{
 		Type:  AttributeRequired,
 		Value: regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parsedDoc.ReqSpec.Prefix, parsedDoc.ReqSpec.Level)),
+	}
+
+	if parsedDoc.Implementation.Archs == nil {
+		parsedDoc.Implementation.Archs = map[Arch]ArchImplementation{}
+	}
+
+	// Trigger a warning for every arch with matching rules
+	// that has no compilation database or arguments defined
+	for arch := range doc.Implementation.Code.ArchPatterns {
+		var exists bool
+		_, exists = doc.Implementation.Archs[arch]
+		if !exists {
+			fmt.Printf("Warning: %q has matching rules for code, but it is not mentioned in the top level `archs` field, so it will not actually be used for matching its files.\n", arch)
+		}
+	}
+
+	for arch := range doc.Implementation.Tests.ArchPatterns {
+		var exists bool
+		_, exists = doc.Implementation.Archs[arch]
+		if !exists {
+			fmt.Printf("Warning: %q has matching rules for tests, but it is not mentioned in the top level `archs` field, so it will not actually be used for matching its files.\n", arch)
+		}
+	}
+
+	for arch := range doc.Implementation.Archs {
+		var newArchEntry ArchImplementation
+		newArchEntry.CompilationDatabase = doc.Implementation.Archs[arch].CompilationDatabase
+		newArchEntry.CompilerArguments = doc.Implementation.Archs[arch].CompilerArguments
+
+		newArchEntry.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName, arch)
+		if err != nil {
+			return err
+		}
+
+		newArchEntry.TestFiles, err = doc.Implementation.Tests.findAllMatchingFiles(repoName, arch)
+		if err != nil {
+			return err
+		}
+
+		parsedDoc.Implementation.Archs[arch] = newArchEntry
 	}
 
 	parsedDoc.Implementation.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName)
