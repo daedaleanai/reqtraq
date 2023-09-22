@@ -233,9 +233,9 @@ func parseSingleFile(index *clang.Index, codeFile code.CodeFile, commands clang.
 	if err != nil {
 		return map[string]map[uint]*code.Code{}, err
 	}
+	fmt.Printf("Processing file: %s\n", pathInRepo)
 
 	command := findMatchingCommand(pathInRepo, commands)
-	cmdline := translateCommand(command)
 	buildDir := absRepoPath
 	if command != nil {
 		buildDir = command.Directory()
@@ -254,6 +254,7 @@ func parseSingleFile(index *clang.Index, codeFile code.CodeFile, commands clang.
 
 	var tu clang.TranslationUnit
 	var clangErr clang.ErrorCode
+	cmdline := translateCommand(command)
 	if len(cmdline) != 0 {
 		clangErr = index.ParseTranslationUnit2FullArgv("", cmdline, nil, 0, &tu)
 	} else {

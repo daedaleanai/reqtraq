@@ -33,13 +33,13 @@ func TestMain(m *testing.M) {
 
 // @llr REQ-TRAQ-SWL-36
 func RunValidate(t *testing.T, config *config.Config, onlyErrors bool) (string, int, int, error) {
+	// create requirements graph
+	rg, err := reqs.BuildGraph(config)
+	assert.Empty(t, err, "Unexpected error when building requirements graph")
 	// prepare capture of stdout
 	rescueStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
-	// create requirements graph
-	rg, err := reqs.BuildGraph(config)
-	assert.Empty(t, err, "Unexpected error when building requirements graph")
 	// run the command
 	criticalCount, lintCount := validate(rg.Issues, onlyErrors)
 	// save stdout data and reset

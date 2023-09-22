@@ -42,16 +42,20 @@ func (rg ReqGraph) OrdsByPosition() []*Req {
 // The separate returned error indicates if reading the certdocs and code failed.
 // @llr REQ-TRAQ-SWL-1
 func BuildGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
+	fmt.Printf("Building requirements graph..\n")
 	rg := &ReqGraph{make(map[string]*Req, 0), make(map[code.CodeFile][]*code.Code), make([]diagnostics.Issue, 0), reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them
 	for repoName := range reqtraqConfig.Repos {
+		fmt.Printf("Processing repo: %s\n", repoName)
 		for docIdx := range reqtraqConfig.Repos[repoName].Documents {
 			doc := &reqtraqConfig.Repos[repoName].Documents[docIdx]
+			fmt.Printf("Processing doc: %s\n", doc.Path)
 			if err := rg.addCertdocToGraph(repoName, doc); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing certdocs")
 			}
 
+			fmt.Printf("Processing code: %s\n", doc.Path)
 			if codeTags, err := code.ParseCode(repoName, doc); err != nil {
 				return rg, errors.Wrap(err, "Failed parsing implementation")
 			} else {
