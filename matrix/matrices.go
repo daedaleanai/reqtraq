@@ -197,10 +197,12 @@ func codeOrderInfo(rg *reqs.ReqGraph) (info CodeOrderInfo) {
 			for _, link := range codeTag.Links {
 				if _, ok := rg.Reqs[link.Id]; ok {
 					hasParents = true
+					break
 				}
 			}
-			if codeTag.Optional && hasParents {
-				// Ignore optional tags with no linked requirements
+			if codeTag.Optional && !hasParents {
+				// This code does not link to any requirement and it doesn't
+				// even have to, so we ignore it.
 				continue
 			}
 			if info.fileIndexFactor < codeTag.Line {

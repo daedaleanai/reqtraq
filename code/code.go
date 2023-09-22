@@ -122,7 +122,7 @@ type Code struct {
 	Links []ReqLink
 	// Link back to its parent document. Used to validate the requirements belong to this document
 	Document *config.Document
-	// Whether the code MUST link to a requirement or simply CAN link to a requirement
+	// Whether the code CAN link to a requirement, but does not have to.
 	Optional bool
 }
 
