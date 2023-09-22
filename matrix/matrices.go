@@ -239,8 +239,9 @@ func createCodeSWLMatrix(rg *reqs.ReqGraph, reqSpec config.ReqSpec, codeType cod
 					}
 				}
 			}
-			// Ignore optional tags with no linked requirements
 			if count == 0 && !codeTag.Optional {
+				// This code procedure does not link to any requirement matching
+				// the reqSpec. Display it with a gap.
 				row := TableRow{newCodeTableCell(codeTag), nil}
 				items = append(items, row)
 			}
