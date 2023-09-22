@@ -83,8 +83,9 @@ func availableCodeParsers() []string {
 
 type CodeFile struct {
 	RepoName repos.RepoName
-	Path     string
-	Type     CodeType
+	// Path relative to the repo root.
+	Path string
+	Type CodeType
 }
 
 // Returns a string with the name of the repository and the path in it where the code file can be found

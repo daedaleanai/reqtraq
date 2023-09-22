@@ -175,24 +175,26 @@ func newReqTableCell(req *reqs.Req) *TableCell {
 	return item
 }
 
-// CodeOrderInfo contains everything needed to set the order number of a TableCell containing a code item.
+// CodeOrderInfo contains everything needed to set the order number of a
+// TableCell mapping a code item. We need to be able to order the code items
+// first by repo and file name alphabetically and finally by line number.
 type CodeOrderInfo struct {
-	// filesIndex maps the code filename to an index of it's order alphabetically
-	filesIndex map[string]int
-	// fileIndexFactor holds the maximum line number of any function in any file
+	// filesIndex maps the code file to an index of it's order alphabetically.
+	filesIndex map[code.CodeFile]int
+	// fileIndexFactor holds the maximum line number of any function in any
+	// file plus one.
 	fileIndexFactor int
 }
 
 // codeOrderInfo returns the info needed for sorting TableCells by code.
 // @llr REQ-TRAQ-SWL-44
 func codeOrderInfo(rg *reqs.ReqGraph) (info CodeOrderInfo) {
-	info.filesIndex = make(map[string]int, len(rg.CodeTags))
-	files := make([]string, 0, len(rg.CodeTags))
+	filesSet := make(map[code.CodeFile]bool)
 	info.fileIndexFactor = 0
 	// build a list of filenames and find the function with the highest line number
-	for file, tags := range rg.CodeTags {
-		files = append(files, file.String())
+	for _, tags := range rg.CodeTags {
 		for _, codeTag := range tags {
+			filesSet[codeTag.CodeFile] = true
 			hasParents := false
 			for _, link := range codeTag.Links {
 				if _, ok := rg.Reqs[link.Id]; ok {
@@ -210,12 +212,24 @@ func codeOrderInfo(rg *reqs.ReqGraph) (info CodeOrderInfo) {
 			}
 		}
 	}
-	// sort the filenames and store the indexes
-	sort.Strings(files)
-	for i, file := range files {
-		info.filesIndex[file] = i
-	}
 	info.fileIndexFactor++
+
+	// sort the filenames and store the indexes
+	files := make([]code.CodeFile, 0, len(filesSet))
+	for repoFile := range filesSet {
+		files = append(files, repoFile)
+	}
+	sort.Slice(files, func(i, j int) bool {
+		a := &files[i]
+		b := &files[j]
+		return a.RepoName < b.RepoName || (a.RepoName == b.RepoName && a.Path < b.Path)
+	})
+
+	info.filesIndex = make(map[code.CodeFile]int)
+	for i, f := range files {
+		info.filesIndex[f] = i
+	}
+
 	return
 }
 
@@ -345,16 +359,20 @@ func reqsWithSpec(rg *reqs.ReqGraph, spec config.ReqSpec) map[string]*reqs.Req {
 func sortMatrices(rg *reqs.ReqGraph, matrices ...[]TableRow) {
 	codeOrderInfo := codeOrderInfo(rg)
 	for _, matrix := range matrices {
-		// Update each item's OrderNumber.
 		for _, row := range matrix {
+			// We calculate the OrderNumber of both cells of the row because we
+			// display the rows both A->B and B->A.
 			for _, item := range row {
 				if item != nil {
-					// Updated order number
 					if item.req != nil {
-						// requirements sorted by ID number
+						// When a column has requirement IDs, we assume all of
+						// them originate in the same certdoc. Then we can
+						// simply order them by requirement numerical ID.
 						item.OrderNumber = item.req.IDNumber
 					} else if item.code != nil {
-						if fileIdx, ok := codeOrderInfo.filesIndex[item.code.CodeFile.String()]; ok {
+						// When a column has code procedures, we need to order
+						// them first by file and then by line number.
+						if fileIdx, ok := codeOrderInfo.filesIndex[item.code.CodeFile]; ok {
 							item.OrderNumber = fileIdx*codeOrderInfo.fileIndexFactor + item.code.Line
 						} else {
 							panic("Code file could not be found in filesIndex. This is a bug")

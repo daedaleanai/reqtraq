@@ -12,6 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var fExportRaw *bool
+
 var exportCmd = &cobra.Command{
 	Use:   "export OUT_DIR",
 	Args:  cobra.ExactArgs(1),
@@ -64,8 +66,7 @@ func newExportedReqsGraph(reqs *reqs.ReqGraph) exportedReqsGraph {
 
 // exportReqsGraph writes the specified requirements graph as JSON file.
 // @llr REQ-TRAQ-SWL-78
-func exportReqsGraph(reqs *reqs.ReqGraph, dirPath string) error {
-	filePath := path.Join(dirPath, string(reqs.ReqtraqConfig.TargetRepo)+".json")
+func exportReqsGraph(reqs *reqs.ReqGraph, filePath string, raw bool) error {
 	fmt.Println("Exporting to:", filePath)
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -73,9 +74,15 @@ func exportReqsGraph(reqs *reqs.ReqGraph, dirPath string) error {
 	}
 	jsonWriter := json.NewEncoder(file)
 	jsonWriter.SetIndent("", "  ")
-	data := newExportedReqsGraph(reqs)
-	if err := jsonWriter.Encode(data); err != nil {
-		return errors.Wrap(err, "JSON encoding")
+	if raw {
+		if err := jsonWriter.Encode(reqs); err != nil {
+			return errors.Wrap(err, "raw graph JSON encoding")
+		}
+	} else {
+		data := newExportedReqsGraph(reqs)
+		if err := jsonWriter.Encode(data); err != nil {
+			return errors.Wrap(err, "processed graph JSON encoding")
+		}
 	}
 	return file.Close()
 }
@@ -93,7 +100,8 @@ func runExport(command *cobra.Command, args []string) error {
 	}
 
 	exportDir := args[0]
-	if err := exportReqsGraph(rg, exportDir); err != nil {
+	filePath := path.Join(exportDir, string(rg.ReqtraqConfig.TargetRepo)+".json")
+	if err := exportReqsGraph(rg, filePath, *fExportRaw); err != nil {
 		return errors.Wrap(err, "export requirements graph")
 	}
 
@@ -103,5 +111,6 @@ func runExport(command *cobra.Command, args []string) error {
 // Registers the export command
 // @llr REQ-TRAQ-SWL-78
 func init() {
+	fExportRaw = exportCmd.PersistentFlags().Bool("raw", false, "Export the raw ReqGraph so it can be aggregated with others. UNSTABLE API! Future reqtraq versions will fail to read it.")
 	rootCmd.AddCommand(exportCmd)
 }

@@ -43,7 +43,11 @@ func (rg ReqGraph) OrdsByPosition() []*Req {
 // @llr REQ-TRAQ-SWL-1
 func BuildGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	fmt.Printf("Building requirements graph..\n")
-	rg := &ReqGraph{make(map[string]*Req, 0), make(map[code.CodeFile][]*code.Code), make([]diagnostics.Issue, 0), reqtraqConfig}
+	rg := &ReqGraph{
+		make(map[string]*Req, 0),
+		make(map[repos.RepoName][]*code.Code),
+		make([]diagnostics.Issue, 0),
+		reqtraqConfig}
 
 	// For each repository, we walk through the documents and parse them
 	for repoName := range reqtraqConfig.Repos {
@@ -70,12 +74,23 @@ func BuildGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	return rg, nil
 }
 
-// Merges all tags from the given map into the ReqGraph instance, potentially replacing them if they
-// are already in the requirements graph
+// Appends all code tags from the given map into the ReqGraph instance.
+// Duplicates are skipped.
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9
-func (rg *ReqGraph) mergeTags(tags *map[code.CodeFile][]*code.Code) {
-	for tagKey := range *tags {
-		rg.CodeTags[tagKey] = (*tags)[tagKey]
+func (rg *ReqGraph) mergeTags(tagsByFile *map[code.CodeFile][]*code.Code) {
+	for _, tags := range *tagsByFile {
+		for _, codeTag := range tags {
+			alreadyAdded := false
+			for _, t := range rg.CodeTags[codeTag.CodeFile.RepoName] {
+				if t == codeTag {
+					alreadyAdded = true
+					break
+				}
+			}
+			if !alreadyAdded {
+				rg.CodeTags[codeTag.CodeFile.RepoName] = append(rg.CodeTags[codeTag.CodeFile.RepoName], codeTag)
+			}
+		}
 	}
 }
 
