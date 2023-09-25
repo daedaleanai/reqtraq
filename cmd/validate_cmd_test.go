@@ -299,8 +299,8 @@ func checkValidate(t *testing.T, config *config.Config, expectedCriticalRaw, exp
 func checkValidateOutput(t *testing.T, config *config.Config, onlyErrors bool, expectedCritical, expectedLint []string) {
 	output, criticalCount, lintCount, err := RunValidate(t, config, onlyErrors)
 	assert.Empty(t, err, "Failed to validate")
-	assert.Equal(t, criticalCount, len(expectedCritical), "Got an unexpected number of requirements errors")
-	assert.Equal(t, lintCount, len(expectedLint), "Got an unexpected number of requirements lint issues")
+	assert.Equal(t, criticalCount, len(expectedCritical), output)
+	assert.Equal(t, lintCount, len(expectedLint), output)
 
 	reportedErrors := splitLines(output)
 	expected := append(expectedCritical, expectedLint...)
