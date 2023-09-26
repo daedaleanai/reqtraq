@@ -12,6 +12,7 @@ import (
 	"github.com/daedaleanai/reqtraq/config"
 	"github.com/daedaleanai/reqtraq/linepipes"
 	"github.com/daedaleanai/reqtraq/repos"
+	"github.com/daedaleanai/reqtraq/reqs"
 	"github.com/daedaleanai/reqtraq/util"
 	"github.com/pkg/errors"
 )
@@ -42,6 +43,30 @@ func setupConfiguration() error {
 
 	reqtraqConfig = &cfg
 	return nil
+}
+
+// loadReqGraph loads the requirements graph from the current repository or
+// from the specified paths of previously exported requirement graphs.
+// @llr REQ-TRAQ-SWL-1, REQ-TRAQ-SWL-80
+func loadReqGraph(graphs_paths []string) (*reqs.ReqGraph, error) {
+	var rg *reqs.ReqGraph
+	var err error
+	if len(graphs_paths) == 0 {
+		if err = setupConfiguration(); err != nil {
+			return nil, errors.Wrap(err, "setup configuration")
+		}
+
+		rg, err = reqs.BuildGraph(reqtraqConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "build graph")
+		}
+	} else {
+		rg, err = reqs.LoadGraphs(graphs_paths)
+		if err != nil {
+			return nil, errors.Wrap(err, "load graphs")
+		}
+	}
+	return rg, nil
 }
 
 // Provides completions for certdocs

@@ -177,9 +177,8 @@ func TestMatrix_createMatrix(t *testing.T) {
 		Body:      "Shall!",
 	}
 
-	// TODO(ja): Resolve should be private and this test should exercise BuildGraph instead.
-	errs := rg.Resolve()
-	assert.Equal(t, 0, len(errs))
+	// TODO(ja): PrepareForUsage should be private and this test should exercise BuildGraph instead.
+	rg.PrepareForUsage()
 
 	assert.Equal(t,
 		[]string{

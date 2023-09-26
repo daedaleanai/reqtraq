@@ -11,7 +11,11 @@
 package reqs
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -71,7 +75,99 @@ func BuildGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	// Call Resolve to check links between requirements and code
 	rg.Issues = append(rg.Issues, rg.Resolve()...)
 
+	rg.PrepareForUsage()
+
 	return rg, nil
+}
+
+// LoadGraphs loads the specified previously exported requirements graphs and
+// merges them into one.
+// @llr REQ-TRAQ-SWL-80
+func LoadGraphs(graphs_paths []string) (*ReqGraph, error) {
+	var rg *ReqGraph = &ReqGraph{
+		make(map[string]*Req, 0),
+		make(map[repos.RepoName][]*code.Code),
+		make([]diagnostics.Issue, 0),
+		nil,
+	}
+	for _, p := range graphs_paths {
+		jsonFile, err := os.Open(p)
+		if err != nil {
+			return nil, errors.Wrap(err, "open")
+		}
+		data, err := io.ReadAll(jsonFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "reading json file")
+		}
+
+		var g *ReqGraph = &ReqGraph{Reqs: make(map[string]*Req)}
+		err = json.Unmarshal(data, g)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal")
+		}
+
+		err = rg.mergeGraph(g)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed merging req graphs")
+		}
+	}
+
+	rg.PrepareForUsage()
+
+	return rg, nil
+}
+
+// mergeGraph merges the specified graph into this one.
+// @llr REQ-TRAQ-SWL-80
+func (rg *ReqGraph) mergeGraph(other *ReqGraph) error {
+	for reqId, r := range other.Reqs {
+		if existing, ok := rg.Reqs[reqId]; ok {
+			if existing != r {
+				return fmt.Errorf("different version of same requirement found: %s", reqId)
+			}
+		}
+		rg.Reqs[reqId] = r
+	}
+
+	for _, codeTags := range other.CodeTags {
+		for _, codeTag := range codeTags {
+			alreadyAdded := false
+			for _, t := range rg.CodeTags[codeTag.CodeFile.RepoName] {
+				if reflect.DeepEqual(t, codeTag) {
+					alreadyAdded = true
+					break
+				}
+			}
+			if !alreadyAdded {
+				rg.CodeTags[codeTag.CodeFile.RepoName] = append(rg.CodeTags[codeTag.CodeFile.RepoName], codeTag)
+			}
+		}
+	}
+
+	for _, issue := range other.Issues {
+		alreadyAdded := false
+		for _, addedIssue := range rg.Issues {
+			if addedIssue == issue {
+				alreadyAdded = true
+				break
+			}
+		}
+		if !alreadyAdded {
+			rg.Issues = append(rg.Issues, issue)
+		}
+	}
+
+	if rg.ReqtraqConfig == nil {
+		rg.ReqtraqConfig = other.ReqtraqConfig
+	} else {
+		rg.ReqtraqConfig.TargetRepo = repos.RepoName(fmt.Sprintf("%s, %s", rg.ReqtraqConfig.TargetRepo, other.ReqtraqConfig.TargetRepo))
+		for name, repoConfig := range other.ReqtraqConfig.Repos {
+			// Overwrite already added repo configs, assuming they are the same.
+			rg.ReqtraqConfig.Repos[name] = repoConfig
+		}
+	}
+
+	return nil
 }
 
 // Appends all code tags from the given map into the ReqGraph instance.
@@ -378,8 +474,6 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 						issues = append(issues, issue)
 					}
 				}
-				parent.Children = append(parent.Children, req)
-				req.Parents = append(req.Parents, parent)
 			} else {
 				issue := diagnostics.Issue{
 					Line:        req.Position,
@@ -555,12 +649,27 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 		return issues
 	}
 
+	return nil
+}
+
+// PrepareForUsage prepares some redundant data to make it easier to use the
+// ReqGraph.
+// @llr REQ-TRAQ-SWL-1, REQ-TRAQ-SWL-46
+func (rg *ReqGraph) PrepareForUsage() {
+	for _, req := range rg.Reqs {
+		for _, parentID := range req.ParentIds {
+			parent := rg.Reqs[parentID]
+			if parent == nil {
+				continue
+			}
+			parent.Children = append(parent.Children, req)
+			req.Parents = append(req.Parents, parent)
+		}
+	}
 	for _, req := range rg.Reqs {
 		sort.Sort(byPosition(req.Parents))
 		sort.Sort(byPosition(req.Children))
 	}
-
-	return nil
 }
 
 // Changelists generates a list of Phabicator revisions that have affected a requirement
