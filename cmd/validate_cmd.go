@@ -114,7 +114,7 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) error
 			Path:        issue.Path,
 			Line:        issue.Line,
 			Char:        0,
-			Description: issue.Error.Error(),
+			Description: issue.Description,
 		}
 		if err := jsonWriter.Encode(message); err != nil {
 			return err
@@ -151,7 +151,7 @@ func validate(issues []diagnostics.Issue, onlyErrors bool) (int, int) {
 		} else {
 			criticalErrorsCount += 1
 		}
-		fmt.Println(issue.Error)
+		fmt.Println(issue.Description)
 	}
 
 	return criticalErrorsCount, lintErrorsCount

@@ -375,7 +375,7 @@ var reportTmplText = `
 	<ul>
 	{{ range .Reqs.Issues }}
 		<li>
-			{{ .Error }}
+			{{ .Description }}
 		</li>
 	{{ else }}
 		<li class="text-success">No basic errors found.</li>
@@ -448,7 +448,7 @@ var reportTmplText = `
 	<ul>
 	{{ range .Reqs.Issues }}
 		<li>
-			{{ .Error }}
+			{{ .Description }}
 		</li>
 	{{ end }}
 	</ul>

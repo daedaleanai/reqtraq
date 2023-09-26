@@ -73,7 +73,7 @@ func TestReqGraph_OrdsByPosition(t *testing.T) {
 	assertIssueExists := func(message string) {
 		found := false
 		for _, error := range reqIssues {
-			if error.Error.Error() == message {
+			if error.Description == message {
 				found = true
 				break
 			}
@@ -185,7 +185,7 @@ func TestParsing(t *testing.T) {
 	assertIssueExists := func(message string) {
 		found := false
 		for _, error := range rg.Issues {
-			if error.Error.Error() == message {
+			if error.Description == message {
 				found = true
 				break
 			}

@@ -30,10 +30,10 @@ const (
 )
 
 type Issue struct {
-	RepoName repos.RepoName
-	Path     string
-	Line     int
-	Error    error
-	Severity IssueSeverity
-	Type     IssueType
+	RepoName    repos.RepoName
+	Path        string
+	Line        int
+	Description string
+	Severity    IssueSeverity
+	Type        IssueType
 }

@@ -231,21 +231,21 @@ func (rg *ReqGraph) deduplicateCodeSymbols() ([]diagnostics.Issue, func(doc stri
 			prevLoc := getLlrLocForSymbolInDocument(code.Document.Path, code.CodeFile.Type, code.Symbol)
 
 			if !linksMatch(links, code.Links) {
-				var errorMessage error
+				var description string
 				if prevLoc.CodeFile.Path > code.CodeFile.Path || (prevLoc.CodeFile.Path == code.CodeFile.Path && prevLoc.Line >= code.Line) {
-					errorMessage = fmt.Errorf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
+					description = fmt.Sprintf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
 						prevLoc.Tag, prevLoc.CodeFile.Path, prevLoc.Line, code.Tag, code.CodeFile.Path, code.Line)
 				} else {
-					errorMessage = fmt.Errorf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
+					description = fmt.Sprintf("LLR declarations differ in %s@%s:%d and %s@%s:%d.",
 						code.Tag, code.CodeFile.Path, code.Line, prevLoc.Tag, prevLoc.CodeFile.Path, prevLoc.Line)
 				}
 				issue := diagnostics.Issue{
-					Line:     code.Line,
-					Path:     code.CodeFile.Path,
-					RepoName: code.CodeFile.RepoName,
-					Error:    errorMessage,
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeInvalidRequirementInCode,
+					Line:        code.Line,
+					Path:        code.CodeFile.Path,
+					RepoName:    code.CodeFile.RepoName,
+					Description: description,
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidRequirementInCode,
 				}
 				issues = append(issues, issue)
 			}
@@ -267,21 +267,21 @@ func (r *Req) checkShallViolations() []diagnostics.Issue {
 	matchesInBody := shallRegExp.FindAllString(r.Body, -1)
 	if len(matchesInBody) == 0 && r.Variant == ReqVariantRequirement {
 		issues = append(issues, diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Requirement `%s` in document `%s` does not contain a SHALL statement in its body", r.ID, r.Document.Path),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeNoShallInBody,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Requirement `%s` in document `%s` does not contain a SHALL statement in its body", r.ID, r.Document.Path),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeNoShallInBody,
 		})
 	} else if len(matchesInBody) > 1 {
 		issues = append(issues, diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Requirement `%s` in document `%s` contains multiple SHALL statements in its body", r.ID, r.Document.Path),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeManyShallInBody,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Requirement `%s` in document `%s` contains multiple SHALL statements in its body", r.ID, r.Document.Path),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeManyShallInBody,
 		})
 	}
 
@@ -290,12 +290,12 @@ func (r *Req) checkShallViolations() []diagnostics.Issue {
 		matchesInRationale := shallRegExp.FindAllString(rationale, -1)
 		if len(matchesInRationale) != 0 {
 			issues = append(issues, diagnostics.Issue{
-				Line:     r.Position,
-				Path:     r.Document.Path,
-				RepoName: r.RepoName,
-				Error:    fmt.Errorf("Requirement `%s` in document `%s` contains SHALL statements in its rationale", r.ID, r.Document.Path),
-				Severity: diagnostics.IssueSeverityMajor,
-				Type:     diagnostics.IssueTypeShallInRationale,
+				Line:        r.Position,
+				Path:        r.Document.Path,
+				RepoName:    r.RepoName,
+				Description: fmt.Sprintf("Requirement `%s` in document `%s` contains SHALL statements in its rationale", r.ID, r.Document.Path),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeShallInRationale,
 			})
 		}
 	}
@@ -321,12 +321,12 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 		// Validate requirement Id
 		if !req.Document.Schema.Requirements.MatchString(req.ID) {
 			issue := diagnostics.Issue{
-				Line:     req.Position,
-				Path:     req.Document.Path,
-				RepoName: req.RepoName,
-				Error:    fmt.Errorf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements),
-				Severity: diagnostics.IssueSeverityMajor,
-				Type:     diagnostics.IssueTypeInvalidRequirementId,
+				Line:        req.Position,
+				Path:        req.Document.Path,
+				RepoName:    req.RepoName,
+				Description: fmt.Sprintf("Requirement `%s` in document `%s` does not match required regexp `%s`", req.ID, req.Document.Path, req.Document.Schema.Requirements),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeInvalidRequirementId,
 			}
 			issues = append(issues, issue)
 		}
@@ -341,24 +341,24 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 			if parent != nil {
 				if parent.IsDeleted() {
 					issue := diagnostics.Issue{
-						Line:     req.Position,
-						Path:     req.Document.Path,
-						RepoName: req.RepoName,
-						Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted."),
-						Severity: diagnostics.IssueSeverityMajor,
-						Type:     diagnostics.IssueTypeInvalidParent,
+						Line:        req.Position,
+						Path:        req.Document.Path,
+						RepoName:    req.RepoName,
+						Description: fmt.Sprintf("Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted."),
+						Severity:    diagnostics.IssueSeverityMajor,
+						Type:        diagnostics.IssueTypeInvalidParent,
 					}
 					issues = append(issues, issue)
 				}
 				if req.Variant == ReqVariantRequirement {
-					if err := req.validateLink(parent); err != nil {
+					if description := req.validateLink(parent); description != "" {
 						issue := diagnostics.Issue{
-							Line:     req.Position,
-							Path:     req.Document.Path,
-							RepoName: req.RepoName,
-							Error:    err,
-							Severity: diagnostics.IssueSeverityMajor,
-							Type:     diagnostics.IssueTypeInvalidParent,
+							Line:        req.Position,
+							Path:        req.Document.Path,
+							RepoName:    req.RepoName,
+							Description: description,
+							Severity:    diagnostics.IssueSeverityMajor,
+							Type:        diagnostics.IssueTypeInvalidParent,
 						}
 						issues = append(issues, issue)
 					}
@@ -367,12 +367,12 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 				req.Parents = append(req.Parents, parent)
 			} else {
 				issue := diagnostics.Issue{
-					Line:     req.Position,
-					Path:     req.Document.Path,
-					RepoName: req.RepoName,
-					Error:    errors.New("Invalid parent of requirement " + req.ID + ": " + parentID + " does not exist."),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeInvalidParent,
+					Line:        req.Position,
+					Path:        req.Document.Path,
+					RepoName:    req.RepoName,
+					Description: fmt.Sprintf("Invalid parent of requirement %s: %s does not exist.", req.ID, parentID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidParent,
 				}
 				issues = append(issues, issue)
 			}
@@ -384,22 +384,22 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 			v, reqFound := rg.Reqs[reqID]
 			if !reqFound {
 				issue := diagnostics.Issue{
-					Line:     req.Position,
-					Path:     req.Document.Path,
-					RepoName: req.RepoName,
-					Error:    fmt.Errorf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeInvalidRequirementReference,
+					Line:        req.Position,
+					Path:        req.Document.Path,
+					RepoName:    req.RepoName,
+					Description: fmt.Sprintf("Invalid reference to non existent requirement %s in body of %s.", reqID, req.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidRequirementReference,
 				}
 				issues = append(issues, issue)
 			} else if v.IsDeleted() {
 				issue := diagnostics.Issue{
-					Line:     req.Position,
-					Path:     req.Document.Path,
-					RepoName: req.RepoName,
-					Error:    fmt.Errorf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeInvalidRequirementReference,
+					Line:        req.Position,
+					Path:        req.Document.Path,
+					RepoName:    req.RepoName,
+					Description: fmt.Sprintf("Invalid reference to deleted requirement %s in body of %s.", reqID, req.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidRequirementReference,
 				}
 				issues = append(issues, issue)
 			}
@@ -424,12 +424,12 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 
 			if len(parentIds) == 0 && !code.Optional {
 				issue := diagnostics.Issue{
-					Line:     code.Line,
-					Path:     code.CodeFile.Path,
-					RepoName: code.CodeFile.RepoName,
-					Error:    fmt.Errorf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeMissingRequirementInCode,
+					Line:        code.Line,
+					Path:        code.CodeFile.Path,
+					RepoName:    code.CodeFile.RepoName,
+					Description: fmt.Sprintf("Function %s@%s:%d has no parents.", code.Tag, code.CodeFile.String(), code.Line),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeMissingRequirementInCode,
 				}
 				issues = append(issues, issue)
 			}
@@ -439,7 +439,7 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 						Line:     code.Line,
 						Path:     code.CodeFile.Path,
 						RepoName: code.CodeFile.RepoName,
-						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
+						Description: fmt.Sprintf("Invalid reference in function %s@%s:%d in repo `%s`, `%s` does not match requirement format in document `%s`.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID, code.Document.Path),
 						Severity: diagnostics.IssueSeverityMajor,
 						Type:     diagnostics.IssueTypeInvalidRequirementInCode,
@@ -454,7 +454,7 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 							Line:     code.Line,
 							Path:     code.CodeFile.Path,
 							RepoName: code.CodeFile.RepoName,
-							Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
+							Description: fmt.Sprintf("Invalid reference in function %s@%s:%d in repo `%s`, %s is deleted.",
 								code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
 							Severity: diagnostics.IssueSeverityMajor,
 							Type:     diagnostics.IssueTypeInvalidRequirementInCode,
@@ -468,7 +468,7 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 						Line:     code.Line,
 						Path:     code.CodeFile.Path,
 						RepoName: code.CodeFile.RepoName,
-						Error: fmt.Errorf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
+						Description: fmt.Sprintf("Invalid reference in function %s@%s:%d in repo `%s`, %s does not exist.",
 							code.Tag, code.CodeFile.Path, code.Line, code.CodeFile.RepoName, parentID),
 						Severity: diagnostics.IssueSeverityMajor,
 						Type:     diagnostics.IssueTypeInvalidRequirementInCode,
@@ -503,34 +503,34 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 		if !implemented {
 			if tested {
 				issue := diagnostics.Issue{
-					Line:     req.Position,
-					Path:     req.Document.Path,
-					RepoName: req.RepoName,
-					Error:    fmt.Errorf("Requirement %s is tested, but it is not implemented.", req.ID),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeReqTestedButNotImplemented,
+					Line:        req.Position,
+					Path:        req.Document.Path,
+					RepoName:    req.RepoName,
+					Description: fmt.Sprintf("Requirement %s is tested, but it is not implemented.", req.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeReqTestedButNotImplemented,
 				}
 				issues = append(issues, issue)
 			} else {
 				issue := diagnostics.Issue{
-					Line:     req.Position,
-					Path:     req.Document.Path,
-					RepoName: req.RepoName,
-					Error:    fmt.Errorf("Requirement %s is not implemented.", req.ID),
-					Severity: diagnostics.IssueSeverityNote,
-					Type:     diagnostics.IssueTypeReqNotImplemented,
+					Line:        req.Position,
+					Path:        req.Document.Path,
+					RepoName:    req.RepoName,
+					Description: fmt.Sprintf("Requirement %s is not implemented.", req.ID),
+					Severity:    diagnostics.IssueSeverityNote,
+					Type:        diagnostics.IssueTypeReqNotImplemented,
 				}
 				issues = append(issues, issue)
 
 			}
 		} else if !tested {
 			issue := diagnostics.Issue{
-				Line:     req.Position,
-				Path:     req.Document.Path,
-				RepoName: req.RepoName,
-				Error:    fmt.Errorf("Requirement %s is not tested.", req.ID),
-				Severity: diagnostics.IssueSeverityNote,
-				Type:     diagnostics.IssueTypeReqNotTested,
+				Line:        req.Position,
+				Path:        req.Document.Path,
+				RepoName:    req.RepoName,
+				Description: fmt.Sprintf("Requirement %s is not tested.", req.ID),
+				Severity:    diagnostics.IssueSeverityNote,
+				Type:        diagnostics.IssueTypeReqNotTested,
 			}
 			issues = append(issues, issue)
 		}
@@ -590,12 +590,12 @@ func (r *Req) checkAttributes() []diagnostics.Issue {
 
 		if !reqValuePresent && attribute.Type == config.AttributeRequired {
 			issue := diagnostics.Issue{
-				Line:     r.Position,
-				Path:     r.Document.Path,
-				RepoName: r.RepoName,
-				Error:    fmt.Errorf("Requirement '%s' is missing attribute '%s'.", r.ID, name),
-				Severity: diagnostics.IssueSeverityMajor,
-				Type:     diagnostics.IssueTypeMissingAttribute,
+				Line:        r.Position,
+				Path:        r.Document.Path,
+				RepoName:    r.RepoName,
+				Description: fmt.Sprintf("Requirement '%s' is missing attribute '%s'.", r.ID, name),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeMissingAttribute,
 			}
 			issues = append(issues, issue)
 		} else if reqValuePresent {
@@ -605,12 +605,12 @@ func (r *Req) checkAttributes() []diagnostics.Issue {
 
 			if !attribute.Value.MatchString(reqValue) {
 				issue := diagnostics.Issue{
-					Line:     r.Position,
-					Path:     r.Document.Path,
-					RepoName: r.RepoName,
-					Error:    fmt.Errorf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeInvalidAttributeValue,
+					Line:        r.Position,
+					Path:        r.Document.Path,
+					RepoName:    r.RepoName,
+					Description: fmt.Sprintf("Requirement '%s' has invalid value '%s' in attribute '%s'.", r.ID, reqValue, name),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidAttributeValue,
 				}
 				issues = append(issues, issue)
 			}
@@ -620,12 +620,12 @@ func (r *Req) checkAttributes() []diagnostics.Issue {
 	if len(anyAttributes) > 0 && anyCount == 0 {
 		sort.Strings(anyAttributes)
 		issue := diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeMissingAttribute,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Requirement '%s' is missing at least one of the attributes '%s'.", r.ID, strings.Join(anyAttributes, ",")),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeMissingAttribute,
 		}
 		issues = append(issues, issue)
 	}
@@ -634,12 +634,12 @@ func (r *Req) checkAttributes() []diagnostics.Issue {
 	for name := range r.Attributes {
 		if _, present := schemaAttributes[strings.ToUpper(name)]; !present {
 			issue := diagnostics.Issue{
-				Line:     r.Position,
-				Path:     r.Document.Path,
-				RepoName: r.RepoName,
-				Error:    fmt.Errorf("Requirement '%s' has unknown attribute '%s'.", r.ID, name),
-				Severity: diagnostics.IssueSeverityMajor,
-				Type:     diagnostics.IssueTypeUnknownAttribute,
+				Line:        r.Position,
+				Path:        r.Document.Path,
+				RepoName:    r.RepoName,
+				Description: fmt.Sprintf("Requirement '%s' has unknown attribute '%s'.", r.ID, name),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeUnknownAttribute,
 			}
 			issues = append(issues, issue)
 		}
@@ -650,7 +650,7 @@ func (r *Req) checkAttributes() []diagnostics.Issue {
 
 // validateLink iterates through the link options for the requirement and checks if the parent ID is valid
 // @llr REQ-TRAQ-SWL-76
-func (r *Req) validateLink(parent *Req) error {
+func (r *Req) validateLink(parent *Req) string {
 	for _, link := range r.Document.LinkSpecs {
 		if !link.Child.Re.MatchString(r.ID) {
 			// link option doesn't apply to this requirement
@@ -673,14 +673,14 @@ func (r *Req) validateLink(parent *Req) error {
 		if link.Parent.AttrKey != "" {
 			value, present := parent.Attributes[link.Parent.AttrKey]
 			if !present || !link.Parent.AttrVal.MatchString(value) {
-				return fmt.Errorf("Requirement '%s' has invalid parent link ID '%s' with attribute value '%s'=='%s'.", r.ID, parent.ID, link.Parent.AttrKey, value)
+				return fmt.Sprintf("Requirement '%s' has invalid parent link ID '%s' with attribute value '%s'=='%s'.", r.ID, parent.ID, link.Parent.AttrKey, value)
 			}
 		}
 
-		return nil
+		return ""
 	}
 
-	return fmt.Errorf("Requirement '%s' has invalid parent link ID '%s'.", r.ID, parent.ID)
+	return fmt.Sprintf("Requirement '%s' has invalid parent link ID '%s'.", r.ID, parent.ID)
 }
 
 // checkID verifies that the requirement is not duplicated
@@ -691,34 +691,34 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 	// check requirement name, no need to check prefix because it would not have been parsed otherwise
 	if reqIDComps[1] != string(document.ReqSpec.Prefix) {
 		issue := diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeInvalidRequirementId,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Incorrect project abbreviation for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Prefix, reqIDComps[1]),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	}
 	if reqIDComps[2] != string(document.ReqSpec.Level) {
 		issue := diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeInvalidRequirementId,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Incorrect requirement type for requirement %s. Expected %s, got %s.", r.ID, document.ReqSpec.Level, reqIDComps[2]),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	}
 	if reqIDComps[3][0] == '0' {
 		issue := diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeInvalidRequirementId,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Requirement number cannot begin with a 0: %s. Got %s.", r.ID, reqIDComps[3]),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	}
@@ -726,45 +726,45 @@ func (r *Req) checkID(document *config.Document, expectedIDNumber int, isReqPres
 	currentID, err2 := strconv.Atoi(reqIDComps[3])
 	if err2 != nil {
 		issue := diagnostics.Issue{
-			Line:     r.Position,
-			Path:     r.Document.Path,
-			RepoName: r.RepoName,
-			Error:    fmt.Errorf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]),
-			Severity: diagnostics.IssueSeverityMajor,
-			Type:     diagnostics.IssueTypeInvalidRequirementId,
+			Line:        r.Position,
+			Path:        r.Document.Path,
+			RepoName:    r.RepoName,
+			Description: fmt.Sprintf("Invalid requirement sequence number for %s (failed to parse): %s", r.ID, reqIDComps[3]),
+			Severity:    diagnostics.IssueSeverityMajor,
+			Type:        diagnostics.IssueTypeInvalidRequirementId,
 		}
 		issues = append(issues, issue)
 	} else {
 		if currentID < 1 {
 			issue := diagnostics.Issue{
-				Line:     r.Position,
-				Path:     r.Document.Path,
-				RepoName: r.RepoName,
-				Error:    fmt.Errorf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID),
-				Severity: diagnostics.IssueSeverityMajor,
-				Type:     diagnostics.IssueTypeInvalidRequirementId,
+				Line:        r.Position,
+				Path:        r.Document.Path,
+				RepoName:    r.RepoName,
+				Description: fmt.Sprintf("Invalid requirement sequence number for %s: first requirement has to start with 001.", r.ID),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeInvalidRequirementId,
 			}
 			issues = append(issues, issue)
 		} else {
 			if isReqPresent[currentID-1] {
 				issue := diagnostics.Issue{
-					Line:     r.Position,
-					Path:     r.Document.Path,
-					RepoName: r.RepoName,
-					Error:    fmt.Errorf("Invalid requirement sequence number for %s, is duplicate.", r.ID),
-					Severity: diagnostics.IssueSeverityMajor,
-					Type:     diagnostics.IssueTypeInvalidRequirementId,
+					Line:        r.Position,
+					Path:        r.Document.Path,
+					RepoName:    r.RepoName,
+					Description: fmt.Sprintf("Invalid requirement sequence number for %s, is duplicate.", r.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidRequirementId,
 				}
 				issues = append(issues, issue)
 			} else {
 				if currentID != expectedIDNumber {
 					issue := diagnostics.Issue{
-						Line:     r.Position,
-						Path:     r.Document.Path,
-						RepoName: r.RepoName,
-						Error:    fmt.Errorf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber),
-						Severity: diagnostics.IssueSeverityMajor,
-						Type:     diagnostics.IssueTypeInvalidRequirementId,
+						Line:        r.Position,
+						Path:        r.Document.Path,
+						RepoName:    r.RepoName,
+						Description: fmt.Sprintf("Invalid requirement sequence number for %s: missing requirements in between. Expected ID Number %d.", r.ID, expectedIDNumber),
+						Severity:    diagnostics.IssueSeverityMajor,
+						Type:        diagnostics.IssueTypeInvalidRequirementId,
 					}
 					issues = append(issues, issue)
 				}
