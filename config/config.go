@@ -253,10 +253,10 @@ func (config *Config) GetLinkedSpecs() []LinkSpec {
 }
 
 // Loads the information for the base repository from git
-// @llr REQ-TRAQ-SWL-53
-func LoadBaseRepoInfo() {
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-81
+func LoadBaseRepoInfo(repoPath string) {
 	// See details about "working directory" in https://git-scm.com/docs/githooks
-	bare, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--is-bare-repository"))
+	bare, err := linepipes.Single(linepipes.Run("git", "-C", repoPath, "rev-parse", "--is-bare-repository"))
 	if err != nil {
 		log.Fatalf("Failed to check Git repository type. Are you running reqtraq in a Git repo?\n%s", err)
 	}
@@ -264,7 +264,8 @@ func LoadBaseRepoInfo() {
 		log.Fatal("Reqtraq cannot be used in bare checkouts")
 	}
 
-	toplevel, err := linepipes.Single(linepipes.Run("git", "rev-parse", "--show-toplevel"))
+	// Get the absolute path to the repo.
+	toplevel, err := linepipes.Single(linepipes.Run("git", "-C", repoPath, "rev-parse", "--show-toplevel"))
 	if err != nil {
 		log.Fatal(err)
 	}

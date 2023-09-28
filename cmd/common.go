@@ -17,6 +17,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// The base repo path specified in the command line.
+var fRepoPath *string
+
 var rootCmd = &cobra.Command{
 	Use:   "reqtraq",
 	Short: "Reqtraq is a requirements tracer.",
@@ -30,7 +33,7 @@ var reqtraqConfig *config.Config
 // Sets up the global reqtraqConfig variable and registers the base repository
 // @llr REQ-TRAQ-SWL-60
 func setupConfiguration() error {
-	config.LoadBaseRepoInfo()
+	config.LoadBaseRepoInfo(*fRepoPath)
 
 	// Register BaseRepository so that it is always accessible afterwards
 	baseRepoPath := repos.BaseRepoPath()
@@ -49,13 +52,13 @@ func setupConfiguration() error {
 // from the specified paths of previously exported requirement graphs.
 // @llr REQ-TRAQ-SWL-1, REQ-TRAQ-SWL-80
 func loadReqGraph(graphs_paths []string) (*reqs.ReqGraph, error) {
-	var rg *reqs.ReqGraph
 	var err error
-	if len(graphs_paths) == 0 {
-		if err = setupConfiguration(); err != nil {
-			return nil, errors.Wrap(err, "setup configuration")
-		}
+	if err = setupConfiguration(); err != nil {
+		return nil, errors.Wrap(err, "setup configuration")
+	}
 
+	var rg *reqs.ReqGraph
+	if len(graphs_paths) == 0 {
 		rg, err = reqs.BuildGraph(reqtraqConfig)
 		if err != nil {
 			return nil, errors.Wrap(err, "build graph")
@@ -91,8 +94,9 @@ func completeCertdocFilename(cmd *cobra.Command, args []string, toComplete strin
 }
 
 // Initializes the root command flags
-// @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-59
+// @llr REQ-TRAQ-SWL-32, REQ-TRAQ-SWL-59, REQ-TRAQ-SWL-81
 func init() {
+	fRepoPath = rootCmd.PersistentFlags().String("repo", ".", "Where from to get the config file.")
 	rootCmd.PersistentFlags().BoolVarP(&linepipes.Verbose, "verbose", "v", false, "Enable verbose logs.")
 	rootCmd.PersistentFlags().BoolVarP(&config.DirectDependenciesOnly, "direct-deps", "d", false, "Only checks the current repository and parents")
 }

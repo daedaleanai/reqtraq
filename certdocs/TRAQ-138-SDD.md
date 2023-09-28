@@ -347,6 +347,16 @@ before any command tries to access it.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-81 Base repository
+
+The root command SHALL allow specifying the path to the git repository to be processed.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 ### code/parsing.go
 
 Functions for parsing requirements out of markdown documents.
