@@ -2,9 +2,9 @@
 Functions for parsing requirements out of markdown documents.
 
 The entry point is ParseMarkdown which in turns calls other functions as follows:
-- parseMarkdown: Scans file one line at a time looking for requirements that either formatted within ATX headings
-                 or held in tables. For each ATX requirement or table calls:
-- parseMarkdownFragment: Depending on the type of requirement calls one of the following functions.
+  - parseMarkdown: Scans file one line at a time looking for requirements that either formatted within ATX headings
+    or held in tables. For each ATX requirement or table calls:
+  - parseMarkdownFragment: Depending on the type of requirement calls one of the following functions.
 
 - parseReq: Parses ATX heading requirements into the Req structure and returns it.
 - parseReqTable: Parses a requirements table and reads each row into a Req structure, returned in a slice.
@@ -203,15 +203,16 @@ func parseMarkdownFragment(reqType ReqFormatType, txt string, reqLine int, reqs 
 // parseReq finds the first REQ-XXX tag and the reserved words and distills a Req from it.
 //
 // parseReq parses according to the 'soft' format defined in the SRS:
-//            REQ-ID (text)
-//            [Rationale:....]
-//            [Parent[s]: REQ-ID[, REQ-ID...]]
-//            [Safety Impact:...]
-//            [Verification:...]
-//            [Urgent:...]
-//            [Important:...]
-//            [Mode:...]
-//            [Provenance:...]
+//
+//	REQ-ID (text)
+//	[Rationale:....]
+//	[Parent[s]: REQ-ID[, REQ-ID...]]
+//	[Safety Impact:...]
+//	[Verification:...]
+//	[Urgent:...]
+//	[Important:...]
+//	[Mode:...]
+//	[Provenance:...]
 //
 // parseReq does NOT validate the values or check if the mandatory attributes are set; use
 // the Req.Check() method for that.
