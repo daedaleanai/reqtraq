@@ -232,7 +232,7 @@ func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[c
 // for a given target architecture identified by code files, a compilation database, and compiler arguments.
 // The return value is the same as the one of ParseCode, a map from each discovered source code file to
 // a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-78
+// @llr REQ-TRAQ-SWL-79
 func parseCodeForArch(repoName repos.RepoName, document *config.Document, codeFiles []CodeFile, compDb string, compArgs []string) (map[CodeFile][]*Code, error) {
 	if len(codeFiles) == 0 {
 		// In order to avoid calling TagCode and having the default ctags parser
