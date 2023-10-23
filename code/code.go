@@ -83,8 +83,9 @@ func availableCodeParsers() []string {
 
 type CodeFile struct {
 	RepoName repos.RepoName
-	Path     string
-	Type     CodeType
+	// Path relative to the repo root.
+	Path string
+	Type CodeType
 }
 
 // Returns a string with the name of the repository and the path in it where the code file can be found
@@ -122,7 +123,7 @@ type Code struct {
 	Links []ReqLink
 	// Link back to its parent document. Used to validate the requirements belong to this document
 	Document *config.Document
-	// Whether the code MUST link to a requirement or simply CAN link to a requirement
+	// Whether the code CAN link to a requirement, but does not have to.
 	Optional bool
 }
 
@@ -231,7 +232,7 @@ func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[c
 // for a given target architecture identified by code files, a compilation database, and compiler arguments.
 // The return value is the same as the one of ParseCode, a map from each discovered source code file to
 // a slice of Code structs representing the functions found within.
-// @llr REQ-TRAQ-SWL-78
+// @llr REQ-TRAQ-SWL-79
 func parseCodeForArch(repoName repos.RepoName, document *config.Document, codeFiles []CodeFile, compDb string, compArgs []string) (map[CodeFile][]*Code, error) {
 	if len(codeFiles) == 0 {
 		// In order to avoid calling TagCode and having the default ctags parser

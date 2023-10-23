@@ -20,4 +20,9 @@ void TestDoMoreThings() {}
  */
 void TestAllReqsCovered() {}
 
+/*
+ * \brief even more stuff to do
+ */
+void TestMethodDoesNotNeedRequirement() {}
+
 }  // namespace na::nb::nc

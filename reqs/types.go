@@ -16,9 +16,8 @@ import (
 type ReqGraph struct {
 	// Reqs contains the requirements by ID.
 	Reqs map[string]*Req
-	// CodeTags contains the source code functions per file.
-	// The keys are paths relative to the git repo path.
-	CodeTags map[code.CodeFile][]*code.Code
+	// CodeTags contains the source code functions per repo.
+	CodeTags map[repos.RepoName][]*code.Code
 	// Issues which have been found while analyzing the graph.
 	// This is extended in multiple places.
 	Issues []diagnostics.Issue
@@ -36,14 +35,16 @@ const (
 
 // Req represents a requirement node in the graph of requirements.
 type Req struct {
-	ID        string // e.g. REQ-TEST-SWL-1
-	Variant   ReqVariant
-	IDNumber  int // e.g. 1
+	ID       string // e.g. REQ-TEST-SWL-1
+	Variant  ReqVariant
+	IDNumber int // e.g. 1
+	// ParentIds holds the IDs of the parent requirements.
 	ParentIds []string
-	// Parents holds the parent requirements.
-	Parents []*Req
-	// Children holds the children requirements.
-	Children []*Req
+	// Parents holds the parent requirements readily available, for convenience.
+	Parents []*Req `json:"-"`
+	// Children holds the children requirements readily available, for
+	// convenience.
+	Children []*Req `json:"-"`
 	// Tags holds the associated code functions.
 	Tags  []*code.Code
 	Title string

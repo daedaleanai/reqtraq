@@ -25,20 +25,20 @@ var reportCmd = &cobra.Command{
 }
 
 var reportDownCmd = &cobra.Command{
-	Use:   "down",
+	Use:   "down [graph.json ...]",
 	Short: "Creates an HTML traceability report from system requirements down to code",
 	Long:  "Creates an HTML traceability report from system requirements down to code",
 	RunE:  RunAndHandleError(runReportDownCmd),
 }
 var reportUpCmd = &cobra.Command{
-	Use:   "up",
+	Use:   "up [graph.json ...]",
 	Short: "Creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements",
 	Long:  "Creates an HTML traceability report from code, to LLRs, to HLRs and to system requirements",
 	RunE:  RunAndHandleError(runReportUpCmd),
 }
 
 var reportIssuesCmd = &cobra.Command{
-	Use:   "issues",
+	Use:   "issues [graph.json ...]",
 	Short: "Creates an HTML report with all issues found in the requirement documents",
 	Long:  "Creates an HTML report with all issues found in the requirement documents",
 	RunE:  RunAndHandleError(runReportIssuesCmd),
@@ -63,13 +63,9 @@ func init() {
 // generates a top-down html report, showing the implementation for each top-level requirement
 // @llr REQ-TRAQ-SWL-35
 func runReportDownCmd(command *cobra.Command, args []string) error {
-	if err := setupConfiguration(); err != nil {
-		return err
-	}
-
-	rg, err := reqs.BuildGraph(reqtraqConfig)
+	rg, err := loadReqGraph(args)
 	if err != nil {
-		return errors.Wrap(err, "build graph")
+		return errors.Wrap(err, "load req graph")
 	}
 
 	of, err := os.Create(*reportPrefix + "down.html")
@@ -106,13 +102,9 @@ func runReportDownCmd(command *cobra.Command, args []string) error {
 // generates an issues html report, showing any validation problems
 // @llr REQ-TRAQ-SWL-36
 func runReportIssuesCmd(command *cobra.Command, args []string) error {
-	if err := setupConfiguration(); err != nil {
-		return err
-	}
-
-	rg, err := reqs.BuildGraph(reqtraqConfig)
+	rg, err := loadReqGraph(args)
 	if err != nil {
-		return errors.Wrap(err, "build graph")
+		return errors.Wrap(err, "load req graph")
 	}
 
 	of, err := os.Create(*reportPrefix + "issues.html")
@@ -147,13 +139,9 @@ func runReportIssuesCmd(command *cobra.Command, args []string) error {
 // generates a bottom-up html report, showing the top-level requirement for each implemented function
 // @llr REQ-TRAQ-SWL-35
 func runReportUpCmd(command *cobra.Command, args []string) error {
-	if err := setupConfiguration(); err != nil {
-		return err
-	}
-
-	rg, err := reqs.BuildGraph(reqtraqConfig)
+	rg, err := loadReqGraph(args)
 	if err != nil {
-		return errors.Wrap(err, "build graph")
+		return errors.Wrap(err, "load req graph")
 	}
 
 	of, err := os.Create(*reportPrefix + "up.html")

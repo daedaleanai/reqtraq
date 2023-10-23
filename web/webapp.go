@@ -33,12 +33,9 @@ var reqLinks []config.LinkSpec
 
 // Serve starts the web server listening on the supplied address:port
 // @llr REQ-TRAQ-SWL-37
-func Serve(cfg *config.Config, addr string) error {
+func Serve(cfg *config.Config, rg_ *reqs.ReqGraph, addr string) error {
 	reqtraqConfig = *cfg
-
-	if strings.HasPrefix(addr, ":") {
-		addr = "localhost" + addr
-	}
+	rg = rg_
 
 	fmt.Printf("Detecting requirements levels..\n")
 	attributes = make(map[string]*config.Attribute)
@@ -57,12 +54,9 @@ func Serve(cfg *config.Config, addr string) error {
 	}
 	reqLinks = reqtraqConfig.GetLinkedSpecs()
 
-	var err error
-	rg, err = reqs.BuildGraph(&reqtraqConfig)
-	if err != nil {
-		return errors.Wrap(err, "build graph")
+	if strings.HasPrefix(addr, ":") {
+		addr = "localhost" + addr
 	}
-
 	fmt.Printf("Server started on http://%s\n", addr)
 	return http.ListenAndServe(addr, http.HandlerFunc(handler))
 }

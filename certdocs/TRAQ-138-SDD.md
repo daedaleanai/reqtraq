@@ -240,6 +240,16 @@ Reqtraq SHALL provide a command line option to show tool usage.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-80 Ability to use exported requirements graph
+
+Reqtraq SHALL allow loading exported requirements graphs instead of parsing certdocs.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-18
+- Rationale: The requirements of a system can be split between multiple repos. The parent-child relationship between the repos forms a tree. We call the repos with no children "leaf" repos. If the tree has a single leaf repo, its requirements graph includes the requirements of all its parents, providing a complete view of the system. Being able to merge the graphs of _multiple_ leaf repos into one allows having a complete view of a system with two or more leaf repos.
+- Verification: Test
+- Safety Impact: None
+
 ### matrix/matrices.go
 
 Functions which generate trace matrix tables between different requirements and source code.
@@ -334,6 +344,16 @@ before any command tries to access it.
 ##### Attributes:
 - Parents:
 - Rationale: To ensure that the configuration is loaded for all commands.
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-81 Base repository
+
+The root command SHALL allow specifying the path to the git repository to be processed.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-16
+- Rationale:
 - Verification: Test
 - Safety Impact: None
 

@@ -9,7 +9,6 @@ import (
 	"github.com/daedaleanai/cobra"
 	"github.com/daedaleanai/reqtraq/diagnostics"
 	"github.com/daedaleanai/reqtraq/repos"
-	"github.com/daedaleanai/reqtraq/reqs"
 	"github.com/pkg/errors"
 )
 
@@ -18,9 +17,9 @@ var fValidateJson *string
 var fPrintOnlyErrors *bool
 
 var validateCmd = &cobra.Command{
-	Use:   "validate",
+	Use:   "validate [graph.json ...]",
 	Short: "Validates the requirement documents",
-	Long:  `Runs the validation checks for the requirement documents`,
+	Long:  `Runs the validation checks for the requirements documents in the current repo or in the specified requirements graphs exported previously.`,
 	RunE:  RunAndHandleError(runValidate),
 }
 
@@ -114,7 +113,7 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) error
 			Path:        issue.Path,
 			Line:        issue.Line,
 			Char:        0,
-			Description: issue.Error.Error(),
+			Description: issue.Description,
 		}
 		if err := jsonWriter.Encode(message); err != nil {
 			return err
@@ -151,7 +150,7 @@ func validate(issues []diagnostics.Issue, onlyErrors bool) (int, int) {
 		} else {
 			criticalErrorsCount += 1
 		}
-		fmt.Println(issue.Error)
+		fmt.Println(issue.Description)
 	}
 
 	return criticalErrorsCount, lintErrorsCount
@@ -160,13 +159,9 @@ func validate(issues []diagnostics.Issue, onlyErrors bool) (int, int) {
 // the run command for validate
 // @llr REQ-TRAQ-SWL-36
 func runValidate(command *cobra.Command, args []string) error {
-	if err := setupConfiguration(); err != nil {
-		return errors.Wrap(err, "setup configuration")
-	}
-
-	rg, err := reqs.BuildGraph(reqtraqConfig)
+	rg, err := loadReqGraph(args)
 	if err != nil {
-		return errors.Wrap(err, "build graph")
+		return errors.Wrap(err, "load req graph")
 	}
 
 	if *fValidateJson != "" {
