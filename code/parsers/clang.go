@@ -74,6 +74,8 @@ func isInAnonymousOrDetailNamespaceOrClass(cursor clang.Cursor) bool {
 	return isInAnonymousOrDetailNamespaceOrClass(cursor.SemanticParent())
 }
 
+// Returns true if a function is defined within an abstract class
+// @llr REQ-TRAQ-SWL-82
 func isInAbstractClass(cursor clang.Cursor) bool {
 	if cursor.IsNull() {
 		return false
