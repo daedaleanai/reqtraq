@@ -163,7 +163,7 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			// type alias CAN have parent requirements but DO NOT HAVE TO.
 			storeTag(cursor, true)
 
-		case clang.Cursor_CXXMethod, clang.Cursor_FunctionDecl, clang.Cursor_FunctionTemplate, clang.Cursor_Constructor, clang.Cursor_ConversionFunction:
+		case clang.Cursor_CXXMethod, clang.Cursor_FunctionDecl, clang.Cursor_FunctionTemplate, clang.Cursor_Constructor, clang.Cursor_ConversionFunction, clang.Cursor_Destructor:
 			if !isPublic(cursor) || isInAnonymousOrDetailNamespaceOrClass(cursor) || isDeleted(cursor) || cursor.CXXMethod_IsPureVirtual() {
 				return clang.ChildVisit_Continue
 			}

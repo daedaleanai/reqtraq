@@ -133,4 +133,11 @@ void ExternCFunc();
  */
 void doThings();
 
+class C final {
+   public:
+    /**
+     * \llr REQ-TEST-SWL-2
+     */
+    ~C();
+};
 }  // namespace na::nb::nc

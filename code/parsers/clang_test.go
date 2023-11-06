@@ -52,6 +52,8 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"JustAFreeFunction", 119, nil, false},
 		{"ExternCFunc", 126, nil, false},
 		{"doThings", 134, nil, false},
+		{"C", 136, nil, true},
+		{"~C", 141, nil, false},
 	}
 	LookFor(t, repoName, "code/include/a.hh", code.CodeTypeImplementation, tags, expectedTags)
 
