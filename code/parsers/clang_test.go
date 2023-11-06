@@ -54,6 +54,7 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"doThings", 134, nil, false},
 		{"C", 136, nil, true},
 		{"~C", 141, nil, false},
+		{"Abstract", 144, nil, true},
 	}
 	LookFor(t, repoName, "code/include/a.hh", code.CodeTypeImplementation, tags, expectedTags)
 

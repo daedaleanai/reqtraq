@@ -140,4 +140,10 @@ class C final {
      */
     ~C();
 };
+
+class Abstract {
+   public:
+    virtual void noImpl() = 0;
+    ~Abstract();
+};
 }  // namespace na::nb::nc
