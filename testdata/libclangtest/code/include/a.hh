@@ -144,6 +144,6 @@ class C final {
 class Abstract {
    public:
     virtual void noImpl() = 0;
-    ~Abstract();
+    virtual ~Abstract() = default;
 };
 }  // namespace na::nb::nc
