@@ -74,6 +74,25 @@ func isInAnonymousOrDetailNamespaceOrClass(cursor clang.Cursor) bool {
 	return isInAnonymousOrDetailNamespaceOrClass(cursor.SemanticParent())
 }
 
+// Returns true if a function is defined within an abstract class
+// @llr REQ-TRAQ-SWL-82
+func isInAbstractClass(cursor clang.Cursor) bool {
+	if cursor.IsNull() {
+		return false
+	}
+
+	parent := cursor.SemanticParent()
+	if parent.IsNull() {
+		return false
+	}
+
+	if (parent.Kind() != clang.Cursor_ClassDecl) && (parent.Kind() != clang.Cursor_StructDecl) {
+		return false
+	}
+
+	return parent.CXXRecord_IsAbstract()
+}
+
 // Returns true if the given cursor is a deleted member method. Libclang does not provide a nicer way to do this.
 // @llr REQ-TRAQ-SWL-61
 func isDeleted(cursor clang.Cursor) bool {
@@ -173,6 +192,17 @@ func visitAstNodes(cursor clang.Cursor, repoName repos.RepoName, repoPath string
 			}
 
 			// Regular functions are never optional
+			storeTag(cursor, false)
+		case clang.Cursor_Destructor:
+			if !isPublic(cursor) || isInAnonymousOrDetailNamespaceOrClass(cursor) || isDeleted(cursor) {
+				return clang.ChildVisit_Continue
+			}
+
+			if isInAbstractClass(cursor) {
+				// Destructors in abstract classes do not need requirements
+				return clang.ChildVisit_Continue
+			}
+
 			storeTag(cursor, false)
 		}
 

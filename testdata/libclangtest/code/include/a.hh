@@ -133,4 +133,17 @@ void ExternCFunc();
  */
 void doThings();
 
+class C final {
+   public:
+    /**
+     * \llr REQ-TEST-SWL-2
+     */
+    ~C();
+};
+
+class Abstract {
+   public:
+    virtual void noImpl() = 0;
+    virtual ~Abstract() = default;
+};
 }  // namespace na::nb::nc

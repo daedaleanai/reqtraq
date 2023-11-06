@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63, REQ-TRAQ-SWL-67
+// @llr REQ-TRAQ-SWL-61, REQ-TRAQ-SWL-62, REQ-TRAQ-SWL-63, REQ-TRAQ-SWL-67, REQ-TRAQ-SWL-82
 func TestTagCodeLibClang(t *testing.T) {
 
 	repoName := repos.RepoName("libclangtest")
@@ -52,6 +52,9 @@ func TestTagCodeLibClang(t *testing.T) {
 		{"JustAFreeFunction", 119, nil, false},
 		{"ExternCFunc", 126, nil, false},
 		{"doThings", 134, nil, false},
+		{"C", 136, nil, true},
+		{"~C", 141, nil, false},
+		{"Abstract", 144, nil, true},
 	}
 	LookFor(t, repoName, "code/include/a.hh", code.CodeTypeImplementation, tags, expectedTags)
 

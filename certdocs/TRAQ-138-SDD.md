@@ -1203,6 +1203,16 @@ to requirements.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-82 Skip destructors in abstract classes
+
+Reqtraq SHALL ensure that code inside an abstract class is not reported for requirements tracking.
+
+##### Attributes:
+- Parents:
+- Rationale: These destructors are always needed for an interface but don't implement functionality.
+- Verification: Test
+- Safety Impact: None
+
 #### REQ-TRAQ-SWL-67 Handle multiple symbol declaration
 
 Reqtraq SHALL use same parent links for all declarations and definitions of the same C++ symbol and
@@ -1216,7 +1226,7 @@ raise an error if multiple different parent links declaration present.
 
 #### REQ-TRAQ-SWL-79 Support architecture dependent codebases
 
-Reqtraq SHALL support the use of different compilation databases and compiler argumnets, depending 
+Reqtraq SHALL support the use of different compilation databases and compiler argumnets, depending
 on the architecture of the source code.
 
 ##### Attributes:
