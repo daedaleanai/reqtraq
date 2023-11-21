@@ -358,3 +358,68 @@ Requirement 'REQ-TEST-SWH-3' has invalid parent link ID 'REQ-TEST-SYS-1' with at
 
 	checkValidate(t, &config, expected, "")
 }
+
+// @llr REQ-TRAQ-SWL-36
+func TestValidateDataControlFlow(t *testing.T) {
+	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
+
+	commonAttributes := map[string]*config.Attribute{
+		"RATIONALE": {
+			Type:  config.AttributeAny,
+			Value: regexp.MustCompile(".*"),
+		},
+		"VERIFICATION": {
+			Type:  config.AttributeRequired,
+			Value: regexp.MustCompile("(Demonstration|Unit [Tt]est|[Tt]est)"),
+		},
+		"SAFETY IMPACT": {
+			Type:  config.AttributeRequired,
+			Value: regexp.MustCompile(".*"),
+		},
+	}
+
+	config := config.Config{
+		Repos: map[repos.RepoName]config.RepoConfig{
+			repos.BaseRepoName(): {
+				Documents: []config.Document{
+					{
+						Path: "testdata/TestValidateDataControlFlow/TEST-138-SDD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "TEST",
+							Level:  "SWL",
+						},
+						LinkSpecs: []config.LinkSpec{
+							{
+								Child: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+							},
+						},
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-TEST-SWL-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+								"FLOW": {
+									Type:  config.AttributeAny,
+									Value: regexp.MustCompile(`.*`),
+								},
+							},
+						},
+						Implementation: config.Implementation{
+							CodeParser: "ctags",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expected := `Unknown data/control flow tag 'FLOW-TAG-3' in requirement 'REQ-TEST-SWL-2'
+Data/control flow tag 'FLOW-TAG-2' has no linked requirements
+`
+
+	checkValidate(t, &config, expected, "")
+}

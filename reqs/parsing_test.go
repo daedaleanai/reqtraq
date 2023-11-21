@@ -46,6 +46,7 @@ Some more content
 Assumption body
 `,
 		"",
+		nil,
 		&Req{ID: "REQ-TEST-SYS-5",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   5,
@@ -75,23 +76,23 @@ Assumption body
 			Position:   11,
 			Attributes: map[string]string{}})
 
-	checkParse(t, `# REQ-TEST-SYS-5 REQ-TEST-SYS-6`, `malformed requirement title: too many IDs on line 1:`)
+	checkParse(t, `# REQ-TEST-SYS-5 REQ-TEST-SYS-6`, `malformed requirement title: too many IDs on line 1:`, nil)
 	checkParse(t, `
 # REQ-TEST-SYS-5
 ## REQ-TEST-SYS-6`,
-		"requirement heading on line 3 must be at same level as requirement heading on line 2 (2 != 1):")
+		"requirement heading on line 3 must be at same level as requirement heading on line 2 (2 != 1):", nil)
 	checkParse(t, `
 ## REQ-TEST-SYS-5
 # REQ-TEST-SYS-6`,
-		"requirement heading on line 3 must be at same level as requirement heading on line 2 (1 != 2):")
+		"requirement heading on line 3 must be at same level as requirement heading on line 2 (1 != 2):", nil)
 	checkParse(t, `
 # REQ-TEST-SYS-5
 # Title`,
-		"non-requirement heading on line 3 at same level as requirement heading on line 2 (1):")
+		"non-requirement heading on line 3 at same level as requirement heading on line 2 (1):", nil)
 	checkParse(t, `
 # Title
 # REQ-TEST-SYS-5`,
-		"requirement heading on line 3 at same level as previous heading on line 2 (1):")
+		"requirement heading on line 3 at same level as previous heading on line 2 (1):", nil)
 
 	// Table style requirements
 	checkParse(t, `
@@ -101,7 +102,7 @@ Assumption body
 | REQ-TEST-SYS-7 | My Last Requirement | Some more content |
 | ASM-TEST-SYS-1 | An assumption, not a requirement | Assumption body |
 `,
-		"",
+		"", nil,
 		&Req{ID: "REQ-TEST-SYS-5",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   5,
@@ -140,7 +141,7 @@ Assumption body
 | REQ-TEST-SYS-6 | Content mentioning REQ-TEST-SYS-1 | REQ-TEST-SYS-2 |
 | REQ-TEST-SYS-7 | My Last Requirement | Some more content |
 `,
-		"",
+		"", nil,
 		&Req{ID: "REQ-TEST-SYS-5",
 			Variant:    ReqVariantRequirement,
 			IDNumber:   5,
@@ -162,10 +163,49 @@ Assumption body
 			Body:       "Some more content",
 			Position:   7,
 			Attributes: map[string]string{}})
+
+	// Data/control flow
+	checkParse(t, `
+# Title
+| Caller | Flow Tag | Callee | Description |
+| --- | --- | --- | --- |
+| Caller Name | FLOW-TAG-1 | Callee Name | Flow description |
+| Caller Name | FLOW-TAG-2 | Callee Name | Flow description |
+
+#### REQ-TEST-SYS-5 My First Requirement
+Body
+###### Attributes:
+- Flow: FLOW-TAG-2
+`,
+		"", []*Flow{
+			&Flow{
+				ID:          "FLOW-TAG-1",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    5,
+				RepoName:    ".",
+			}, &Flow{
+				ID:          "FLOW-TAG-2",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    6,
+				RepoName:    ".",
+			},
+		},
+		&Req{ID: "REQ-TEST-SYS-5",
+			Variant:    ReqVariantRequirement,
+			IDNumber:   5,
+			Title:      "My First Requirement",
+			Body:       "Body",
+			Position:   8,
+			Attributes: map[string]string{"FLOW": "FLOW-TAG-2"}},
+	)
 }
 
 // @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5
-func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Req) {
+func checkParse(t *testing.T, content, expectedError string, expectedFlow []*Flow, expectedReqs ...*Req) {
 	f, err := createTempFile(content, "checkParse")
 	if f != nil {
 		defer os.Remove(f.Name())
@@ -182,7 +222,7 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 		Path: filepath.Base(f.Name()),
 	}
 
-	reqs, err := ParseMarkdown(repoName, &doc)
+	reqs, flow, err := ParseMarkdown(repoName, &doc)
 	if expectedError == "" {
 		if err != nil {
 			t.Errorf("content: `%s`\nshould not generate error: %v", content, err)
@@ -195,6 +235,17 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 				if !reflect.DeepEqual(reqs[i], expectedReqs[i]) {
 					t.Errorf("content: `%s`\nparsed into: %#v\ninstead of: %#v",
 						content, reqs[i], expectedReqs[i])
+				}
+			}
+
+			for i := range flow {
+				// Set the document and repo name in the expected requirement
+				expectedFlow[i].Document = &doc
+				expectedFlow[i].RepoName = repoName
+
+				if !reflect.DeepEqual(flow[i], expectedFlow[i]) {
+					t.Errorf("content: `%s`\nparsed into: %#v\ninstead of: %#v",
+						content, flow[i], expectedFlow[i])
 				}
 			}
 		}

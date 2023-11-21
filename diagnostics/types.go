@@ -19,6 +19,8 @@ const (
 	IssueTypeNoShallInBody
 	IssueTypeManyShallInBody
 	IssueTypeShallInRationale
+	IssueTypeInvalidFlowId
+	IssueTypeFlowNotImplemented
 )
 
 type IssueSeverity uint
