@@ -21,6 +21,7 @@ const (
 	IssueTypeShallInRationale
 	IssueTypeInvalidFlowId
 	IssueTypeFlowNotImplemented
+	IssueTypeDuplicateFlowId
 )
 
 type IssueSeverity uint

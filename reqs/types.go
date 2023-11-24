@@ -92,5 +92,6 @@ const (
 	None ReqFormatType = iota
 	Heading
 	Table
-	FlowTable
+	DataFlowTable
+	ControlFlowTable
 )

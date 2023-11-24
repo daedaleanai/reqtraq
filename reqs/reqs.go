@@ -215,7 +215,18 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextAsmId := 1
 
 	for _, f := range flow {
-		rg.FlowTags[f.ID] = f
+		if _, ok := rg.FlowTags[f.ID]; ok {
+			rg.Issues = append(rg.Issues, diagnostics.Issue{
+				Line:        f.Position,
+				Path:        f.Document.Path,
+				RepoName:    f.RepoName,
+				Description: fmt.Sprintf("Duplicate data/control flow tag '%s'", f.ID),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeDuplicateFlowId,
+			})
+		} else {
+			rg.FlowTags[f.ID] = f
+		}
 	}
 
 	for _, r := range reqs {

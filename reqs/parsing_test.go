@@ -169,29 +169,51 @@ Assumption body
 # Title
 | Caller | Flow Tag | Callee | Description |
 | --- | --- | --- | --- |
-| Caller Name | FLOW-TAG-1 | Callee Name | Flow description |
-| Caller Name | FLOW-TAG-2 | Callee Name | Flow description |
+| Caller Name | CF-FLOW-TAG-1 | Callee Name | Flow description |
+| Caller Name | CF-FLOW-TAG-2 | Callee Name | Flow description |
+
+| Caller | Flow Tag | Callee | Direction | Description |
+| --- | --- | --- | --- |
+| Caller Name | DF-FLOW-TAG-1 | Callee Name | In | Flow description |
+| Caller Name | DF-FLOW-TAG-2 | Callee Name | Out | Flow description |
 
 #### REQ-TEST-SYS-5 My First Requirement
 Body
 ###### Attributes:
-- Flow: FLOW-TAG-2
+- Flow: DF-FLOW-TAG-2
 `,
 		"", []*Flow{
 			&Flow{
-				ID:          "FLOW-TAG-1",
+				ID:          "CF-FLOW-TAG-1",
 				Callee:      "Callee Name",
 				Caller:      "Caller Name",
 				Description: "Flow description",
 				Position:    5,
 				RepoName:    ".",
 			}, &Flow{
-				ID:          "FLOW-TAG-2",
+				ID:          "CF-FLOW-TAG-2",
 				Callee:      "Callee Name",
 				Caller:      "Caller Name",
 				Description: "Flow description",
 				Position:    6,
 				RepoName:    ".",
+			},
+			&Flow{
+				ID:          "DF-FLOW-TAG-1",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    10,
+				RepoName:    ".",
+				Direction:   "In",
+			}, &Flow{
+				ID:          "DF-FLOW-TAG-2",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    11,
+				RepoName:    ".",
+				Direction:   "Out",
 			},
 		},
 		&Req{ID: "REQ-TEST-SYS-5",
@@ -199,12 +221,28 @@ Body
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "Body",
-			Position:   8,
-			Attributes: map[string]string{"FLOW": "FLOW-TAG-2"}},
+			Position:   13,
+			Attributes: map[string]string{"FLOW": "DF-FLOW-TAG-2"}},
 	)
+
+	/*	checkParse(t, `
+		# Title
+		| Caller | Flow Tag | Callee | Description |
+		| --- | --- | --- | --- |
+		| Caller Name | DF-FLOW-TAG-1 | Callee Name | Flow description |
+		`,
+				"Invalid tag 'DF-FLOW-TAG-1' on row 3 of control flow table", nil)
+			checkParse(t, `
+		# Title
+		| Caller | Flow Tag | Callee | Direction | Description |
+		| --- | --- | --- | --- | --- |
+		| Caller Name | CF-FLOW-TAG-1 | Callee Name | In | Flow description |
+		`,
+				"Invalid tag 'CF-FLOW-TAG-1' on row 3 of data flow table", nil)
+	*/
 }
 
-// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5, REQ-TRAQ-SWL-83, REQ-TRAQ-SWL-84
 func checkParse(t *testing.T, content, expectedError string, expectedFlow []*Flow, expectedReqs ...*Req) {
 	f, err := createTempFile(content, "checkParse")
 	if f != nil {

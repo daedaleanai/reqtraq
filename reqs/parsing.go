@@ -30,8 +30,11 @@ var (
 	reATXHeading = regexp.MustCompile(`^ {0,3}(#{1,6})( +(.*)( #* *)?)?$`)
 
 	// For detecting the first row and delimiter of data/control flow table
-	dcfTableHeader    = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\|(?:[^\|]*\|)+$`)
+	cfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Description *\|$`)
+	dfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Direction *\| *Description *\|$`)
 	dcfTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
+	dfId              = regexp.MustCompile(`DF-((\w+)-)+(\d+)`)
+	cfId              = regexp.MustCompile(`CF-((\w+)-)+(\d+)`)
 
 	// For detecting the first row and delimiter row of a requirement table
 	reTableHeader    = regexp.MustCompile(`^\| *ID *\|(?:[^\|]*\|)+$`)
@@ -155,7 +158,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 			inReq = Table
 			reqLine = lno
 			reqBuf.Reset()
-		} else if dcfTableHeader.MatchString(line) {
+		} else if dfTableHeader.MatchString(line) {
 			// It's a data or control flow table
 			// If we're currently parsing a requirement close it
 			if inReq != None {
@@ -165,7 +168,20 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 				}
 			}
 			// Start a new flow table
-			inReq = FlowTable
+			inReq = DataFlowTable
+			reqLine = lno
+			reqBuf.Reset()
+		} else if cfTableHeader.MatchString(line) {
+			// It's a data or control flow table
+			// If we're currently parsing a requirement close it
+			if inReq != None {
+				reqs, flow, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs, flow)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			// Start a new flow table
+			inReq = ControlFlowTable
 			reqLine = lno
 			reqBuf.Reset()
 		}
@@ -220,9 +236,9 @@ func parseMarkdownFragment(reqType ReqFormatType, txt string, reqLine int, reqs 
 			return reqs, flow, err
 		}
 		reqs = newReqs
-	} else if reqType == FlowTable {
+	} else if reqType == DataFlowTable || reqType == ControlFlowTable {
 		// A flow table
-		newFlow, err := parseFlowTable(txt, reqLine, flow)
+		newFlow, err := parseFlowTable(txt, reqLine, flow, reqType)
 		if err != nil {
 			return reqs, flow, err
 		}
@@ -424,16 +440,29 @@ func parseReqTable(txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 // The second column must be "Flow Tag" and each row must contain a valid Flow Tag. Direction column is optional.
 //
 // @llr REQ-TRAQ-SWL-5
-func parseFlowTable(txt string, reqLine int, flow []*Flow) ([]*Flow, error) {
-
+func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType) ([]*Flow, error) {
 	var attributes []string
+
+	var header *regexp.Regexp
+	var tag *regexp.Regexp
+	typ := ""
+
+	if reqType == DataFlowTable {
+		header = dfTableHeader
+		tag = dfId
+		typ = "data flow"
+	} else {
+		header = cfTableHeader
+		tag = cfId
+		typ = "control flow"
+	}
 
 	// Split the table into rows and loop through
 	for index, row := range strings.Split(txt, "\n") {
 
 		// The first row contains the attribute names for each column, the first column must be "ID"
 		if index == 0 {
-			if dcfTableHeader.MatchString(row) {
+			if header.MatchString(row) {
 				attributes = splitTableLine(row)
 				for i, a := range attributes {
 					attributes[i] = strings.ToUpper(a)
@@ -455,7 +484,7 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow) ([]*Flow, error) {
 			}
 
 			if len(values) < len(attributes) {
-				return flow, fmt.Errorf("too few cells on row %d of requirement table", index+1)
+				return flow, fmt.Errorf("too few cells on row %d of %s table", index+1, typ)
 			}
 
 			r := &Flow{}
@@ -463,6 +492,9 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow) ([]*Flow, error) {
 			// For each attribute in the first row, read in the associated value on this row
 			for i, k := range attributes {
 				if k == "FLOW TAG" {
+					if !tag.MatchString(values[i]) {
+						return flow, fmt.Errorf("Invalid tag '%s' on row %d of %s table", values[i], index+1, typ)
+					}
 					r.ID = values[i]
 				} else if k == "CALLER" {
 					r.Caller = values[i]

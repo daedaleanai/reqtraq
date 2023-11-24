@@ -1235,6 +1235,37 @@ on the architecture of the source code.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-83 Control and data flow parsing
+
+Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS
+
+##### Attributes:
+- Parents: 
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-84 Control and data flow linking
+
+Reqtraq SHALL verify control and data flow tags mentioned in "Flow" requirement attribute
+
+##### Attributes:
+- Parents:
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-85 Control and data flow verification
+
+Reqtraq SHALL verify that all control and data flow tags has linked requirements
+
+##### Attributes:
+- Parents:
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+
 ## Appendix
 
 ### Deleted Requirements

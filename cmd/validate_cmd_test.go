@@ -359,7 +359,7 @@ Requirement 'REQ-TEST-SWH-3' has invalid parent link ID 'REQ-TEST-SYS-1' with at
 	checkValidate(t, &config, expected, "")
 }
 
-// @llr REQ-TRAQ-SWL-36
+// @llr REQ-TRAQ-SWL-84, REQ-TRAQ-SWL-85
 func TestValidateDataControlFlow(t *testing.T) {
 	repos.RegisterRepository(repos.BaseRepoName(), repos.BaseRepoPath())
 
@@ -417,8 +417,9 @@ func TestValidateDataControlFlow(t *testing.T) {
 		},
 	}
 
-	expected := `Unknown data/control flow tag 'FLOW-TAG-3' in requirement 'REQ-TEST-SWL-2'
-Data/control flow tag 'FLOW-TAG-2' has no linked requirements
+	expected := `Duplicate data/control flow tag 'CF-FLOW-TAG-2'
+Unknown data/control flow tag 'CF-FLOW-TAG-3' in requirement 'REQ-TEST-SWL-2'
+Data/control flow tag 'CF-FLOW-TAG-2' has no linked requirements
 `
 
 	checkValidate(t, &config, expected, "")
