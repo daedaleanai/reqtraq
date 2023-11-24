@@ -521,9 +521,13 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 // a cell separator. Removes the first and last parts if they are empty.
 // @llr REQ-TRAQ-SWL-5
 func splitTableLine(line string) []string {
+	if line == "" || line[0] != '|' {
+		return nil
+	}
 	// The `|` at the beginning of the line is ignored because it
 	// represents visually the table's left side.
 	parts := strings.Split(line, "|")
+
 	if parts[0] == "" {
 		parts = parts[1:]
 	}
