@@ -194,7 +194,7 @@ func (rg *ReqGraph) mergeTags(tagsByFile *map[code.CodeFile][]*code.Code) {
 
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
 // found to the regGraph
-// @llr REQ-TRAQ-SWL-27
+// @llr REQ-TRAQ-SWL-27, REQ-TRAQ-SWL-84, , REQ-TRAQ-SWL-85
 func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *config.Document) error {
 	var reqs []*Req
 	var flow []*Flow

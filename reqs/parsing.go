@@ -439,7 +439,7 @@ func parseReqTable(txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 //
 // The second column must be "Flow Tag" and each row must contain a valid Flow Tag. Direction column is optional.
 //
-// @llr REQ-TRAQ-SWL-5
+// @llr REQ-TRAQ-SWL-83
 func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType) ([]*Flow, error) {
 	var attributes []string
 
