@@ -2,7 +2,7 @@ import groovy.json.JsonSlurper
 
 pipeline {
   agent {
-    label "exp-builder"
+    label "prod-docker-builder"
   }
 
   triggers {
