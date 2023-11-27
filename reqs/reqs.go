@@ -214,6 +214,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextReqId := 1
 	nextAsmId := 1
 
+	flowIds := map[string][]int{}
+
 	for _, f := range flow {
 		if _, ok := rg.FlowTags[f.ID]; ok {
 			rg.Issues = append(rg.Issues, diagnostics.Issue{
@@ -226,6 +228,28 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 			})
 		} else {
 			rg.FlowTags[f.ID] = f
+
+			parts := strings.Split(f.ID, "-")
+			numId, _ := strconv.Atoi(parts[2])
+			prefix := fmt.Sprintf("%s-%s", parts[0], parts[1])
+			flowIds[prefix] = append(flowIds[prefix], numId)
+		}
+	}
+
+	for prefix, ids := range flowIds {
+		sort.Ints(ids)
+		for i, v := range ids {
+			if i == 0 {
+				continue
+			}
+
+			for mId := ids[i-1] + 1; mId < v; mId++ {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Description: fmt.Sprintf("Missing flow tag '%s-%d'", prefix, mId),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeDuplicateFlowId,
+				})
+			}
 		}
 	}
 
@@ -266,7 +290,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	}
 
 	for _, f := range rg.FlowTags {
-		if len(f.Reqs) == 0 {
+		if len(f.Reqs) == 0 && !f.Deleted {
 			rg.Issues = append(rg.Issues, diagnostics.Issue{
 				Line:        f.Position,
 				Path:        f.Document.Path,

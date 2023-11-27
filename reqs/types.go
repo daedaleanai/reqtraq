@@ -19,6 +19,7 @@ type Flow struct {
 	Callee      string
 	Direction   string
 	Description string
+	Deleted     bool
 	// Reqs contains list of requirements linked to tag
 	Reqs []*Req
 

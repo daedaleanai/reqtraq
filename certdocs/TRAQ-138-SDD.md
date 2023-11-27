@@ -1237,7 +1237,7 @@ on the architecture of the source code.
 
 #### REQ-TRAQ-SWL-83 Control and data flow parsing
 
-Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS
+Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-3
@@ -1247,7 +1247,7 @@ Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS
 
 #### REQ-TRAQ-SWL-84 Control and data flow linking
 
-Reqtraq SHALL verify control and data flow tags mentioned in "Flow" requirement attribute
+Reqtraq SHALL check that the control and data flow tags mentioned in "Flow" requirement attributes exist.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-3
@@ -1257,7 +1257,7 @@ Reqtraq SHALL verify control and data flow tags mentioned in "Flow" requirement 
 
 #### REQ-TRAQ-SWL-85 Control and data flow verification
 
-Reqtraq SHALL verify that all control and data flow tags has linked requirements
+Reqtraq SHALL verify that all control and data flow tags have linked requirements.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-3

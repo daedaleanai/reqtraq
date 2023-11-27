@@ -169,51 +169,66 @@ Assumption body
 # Title
 | Caller | Flow Tag | Callee | Description |
 | --- | --- | --- | --- |
-| Caller Name | CF-FLOW-TAG-1 | Callee Name | Flow description |
-| Caller Name | CF-FLOW-TAG-2 | Callee Name | Flow description |
+| Caller Name | CF-FLT-1 | Callee Name | Flow description |
+| Caller Name | CF-FLT-2 | Callee Name | Flow description |
 
 | Caller | Flow Tag | Callee | Direction | Description |
 | --- | --- | --- | --- |
-| Caller Name | DF-FLOW-TAG-1 | Callee Name | In | Flow description |
-| Caller Name | DF-FLOW-TAG-2 | Callee Name | Out | Flow description |
+| Caller Name | DF-FLT-1 | Callee Name | In | Flow description |
+| Caller Name | DF-FLT-2 | Callee Name | Out | Flow description |
+| Caller Name | DF-FLT-3-DELETED | Callee Name | Out | Flow description |
 
 #### REQ-TEST-SYS-5 My First Requirement
 Body
 ###### Attributes:
-- Flow: DF-FLOW-TAG-2
+- Flow: DF-FLT-2
 `,
 		"", []*Flow{
 			&Flow{
-				ID:          "CF-FLOW-TAG-1",
+				ID:          "CF-FLT-1",
 				Callee:      "Callee Name",
 				Caller:      "Caller Name",
 				Description: "Flow description",
 				Position:    5,
 				RepoName:    ".",
+				Deleted:     false,
 			}, &Flow{
-				ID:          "CF-FLOW-TAG-2",
+				ID:          "CF-FLT-2",
 				Callee:      "Callee Name",
 				Caller:      "Caller Name",
 				Description: "Flow description",
 				Position:    6,
 				RepoName:    ".",
+				Deleted:     false,
 			},
 			&Flow{
-				ID:          "DF-FLOW-TAG-1",
+				ID:          "DF-FLT-1",
 				Callee:      "Callee Name",
 				Caller:      "Caller Name",
 				Description: "Flow description",
 				Position:    10,
 				RepoName:    ".",
 				Direction:   "In",
+				Deleted:     false,
 			}, &Flow{
-				ID:          "DF-FLOW-TAG-2",
+				ID:          "DF-FLT-2",
 				Callee:      "Callee Name",
 				Caller:      "Caller Name",
 				Description: "Flow description",
 				Position:    11,
 				RepoName:    ".",
 				Direction:   "Out",
+				Deleted:     false,
+			},
+			&Flow{
+				ID:          "DF-FLT-3",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    12,
+				RepoName:    ".",
+				Direction:   "Out",
+				Deleted:     true,
 			},
 		},
 		&Req{ID: "REQ-TEST-SYS-5",
@@ -221,24 +236,24 @@ Body
 			IDNumber:   5,
 			Title:      "My First Requirement",
 			Body:       "Body",
-			Position:   13,
-			Attributes: map[string]string{"FLOW": "DF-FLOW-TAG-2"}},
+			Position:   14,
+			Attributes: map[string]string{"FLOW": "DF-FLT-2"}},
 	)
 
 	/*	checkParse(t, `
 		# Title
 		| Caller | Flow Tag | Callee | Description |
 		| --- | --- | --- | --- |
-		| Caller Name | DF-FLOW-TAG-1 | Callee Name | Flow description |
+		| Caller Name | DF-FLT-1 | Callee Name | Flow description |
 		`,
-				"Invalid tag 'DF-FLOW-TAG-1' on row 3 of control flow table", nil)
+				"Invalid tag 'DF-FLT-1' on row 3 of control flow table", nil)
 			checkParse(t, `
 		# Title
 		| Caller | Flow Tag | Callee | Direction | Description |
 		| --- | --- | --- | --- | --- |
-		| Caller Name | CF-FLOW-TAG-1 | Callee Name | In | Flow description |
+		| Caller Name | CF-FLT-1 | Callee Name | In | Flow description |
 		`,
-				"Invalid tag 'CF-FLOW-TAG-1' on row 3 of data flow table", nil)
+				"Invalid tag 'CF-FLT-1' on row 3 of data flow table", nil)
 	*/
 }
 

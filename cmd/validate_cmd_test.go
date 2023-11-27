@@ -417,9 +417,11 @@ func TestValidateDataControlFlow(t *testing.T) {
 		},
 	}
 
-	expected := `Duplicate data/control flow tag 'CF-FLOW-TAG-2'
-Unknown data/control flow tag 'CF-FLOW-TAG-3' in requirement 'REQ-TEST-SWL-2'
-Data/control flow tag 'CF-FLOW-TAG-2' has no linked requirements
+	expected := `Duplicate data/control flow tag 'CF-FLT-2'
+Unknown data/control flow tag 'CF-FLT-3' in requirement 'REQ-TEST-SWL-2'
+Data/control flow tag 'CF-FLT-2' has no linked requirements
+Data/control flow tag 'DF-FLT-2' has no linked requirements
+Missing flow tag 'CF-FLT-3'
 `
 
 	checkValidate(t, &config, expected, "")

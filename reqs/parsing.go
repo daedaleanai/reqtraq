@@ -33,8 +33,8 @@ var (
 	cfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Description *\|$`)
 	dfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Direction *\| *Description *\|$`)
 	dcfTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
-	dfId              = regexp.MustCompile(`DF-((\w+)-)+(\d+)`)
-	cfId              = regexp.MustCompile(`CF-((\w+)-)+(\d+)`)
+	dfId              = regexp.MustCompile(`^DF-(\w\w\w)-(\d+)(-DELETED)?$`)
+	cfId              = regexp.MustCompile(`^CF-(\w\w\w)-(\d+)(-DELETED)?$`)
 
 	// For detecting the first row and delimiter row of a requirement table
 	reTableHeader    = regexp.MustCompile(`^\| *ID *\|(?:[^\|]*\|)+$`)
@@ -437,7 +437,7 @@ func parseReqTable(txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 // | --- | --- | --- | --- | --- |
 // | <text> | <flow tag> | <text> | <text> | <text> |
 //
-// The second column must be "Flow Tag" and each row must contain a valid Flow Tag. Direction column is optional.
+// Direction column should be present for data flow only.
 //
 // @llr REQ-TRAQ-SWL-83
 func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType) ([]*Flow, error) {
@@ -495,7 +495,13 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 					if !tag.MatchString(values[i]) {
 						return flow, fmt.Errorf("Invalid tag '%s' on row %d of %s table", values[i], index+1, typ)
 					}
-					r.ID = values[i]
+
+					if strings.HasSuffix(values[i], "-DELETED") {
+						r.ID = strings.TrimSuffix(values[i], "-DELETED")
+						r.Deleted = true
+					} else {
+						r.ID = values[i]
+					}
 				} else if k == "CALLER" {
 					r.Caller = values[i]
 				} else if k == "CALLEE" {
