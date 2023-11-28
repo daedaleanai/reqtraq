@@ -33,8 +33,8 @@ var (
 	cfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Description *\|$`)
 	dfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Direction *\| *Description *\|$`)
 	dcfTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
-	dfId              = regexp.MustCompile(`^DF-(\w\w\w)-(\d+)(-DELETED)?$`)
-	cfId              = regexp.MustCompile(`^CF-(\w\w\w)-(\d+)(-DELETED)?$`)
+	dfId              = regexp.MustCompile(`^DF-(\w+)-(\d+)(-DELETED)?$`)
+	cfId              = regexp.MustCompile(`^CF-(\w+)-(\d+)(-DELETED)?$`)
 
 	// For detecting the first row and delimiter row of a requirement table
 	reTableHeader    = regexp.MustCompile(`^\| *ID *\|(?:[^\|]*\|)+$`)
@@ -458,10 +458,10 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 	}
 
 	// Split the table into rows and loop through
-	for index, row := range strings.Split(txt, "\n") {
+	for rowIndex, row := range strings.Split(txt, "\n") {
 
 		// The first row contains the attribute names for each column, the first column must be "ID"
-		if index == 0 {
+		if rowIndex == 0 {
 			if header.MatchString(row) {
 				attributes = splitTableLine(row)
 				for i, a := range attributes {
@@ -484,7 +484,7 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 			}
 
 			if len(values) < len(attributes) {
-				return flow, fmt.Errorf("too few cells on row %d of %s table", index+1, typ)
+				return flow, fmt.Errorf("too few cells on row %d of %s table", rowIndex+1, typ)
 			}
 
 			r := &Flow{}
@@ -493,7 +493,7 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 			for i, k := range attributes {
 				if k == "FLOW TAG" {
 					if !tag.MatchString(values[i]) {
-						return flow, fmt.Errorf("Invalid tag '%s' on row %d of %s table", values[i], index+1, typ)
+						return flow, fmt.Errorf("Invalid tag '%s' on row %d of %s table", values[i], rowIndex+1, typ)
 					}
 
 					if strings.HasSuffix(values[i], "-DELETED") {
@@ -509,12 +509,16 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 				} else if k == "DESCRIPTION" {
 					r.Description = values[i]
 				} else if k == "DIRECTION" {
+					if values[i] != "In" && values[i] != "Out" && values[i] != "In/Out" {
+						return flow, fmt.Errorf("Invalid direction '%s' on row %d of %s table. Allowed values are 'In', 'Out' and 'In/Out'", values[i], rowIndex+1, typ)
+					}
+
 					r.Direction = values[i]
 				}
 
 			}
 
-			r.Position = index + reqLine
+			r.Position = rowIndex + reqLine
 			flow = append(flow, r)
 		}
 	}

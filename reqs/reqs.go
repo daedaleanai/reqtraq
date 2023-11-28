@@ -192,9 +192,64 @@ func (rg *ReqGraph) mergeTags(tagsByFile *map[code.CodeFile][]*code.Code) {
 	}
 }
 
+// processFlow process parsed flow tags and check consistency
+// @llr REQ-TRAQ-SWL-84
+func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
+	flowIds := map[string][]int{}
+
+	for _, f := range flow {
+		if _, ok := rg.FlowTags[f.ID]; ok {
+			rg.Issues = append(rg.Issues, diagnostics.Issue{
+				Line:        f.Position,
+				Path:        f.Document.Path,
+				RepoName:    f.RepoName,
+				Description: fmt.Sprintf("Duplicate data/control flow tag '%s'", f.ID),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeDuplicateFlowId,
+			})
+		} else {
+			parts := strings.Split(f.ID, "-")
+
+			if parts[1] != string(documentConfig.ReqSpec.Prefix) {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Line:        f.Position,
+					Path:        f.Document.Path,
+					RepoName:    f.RepoName,
+					Description: fmt.Sprintf("Invalid data/control flow tag prefix in '%s'", f.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeDuplicateFlowId,
+				})
+			} else {
+				rg.FlowTags[f.ID] = f
+				numId, _ := strconv.Atoi(parts[2])
+				prefix := fmt.Sprintf("%s-%s", parts[0], parts[1])
+				flowIds[prefix] = append(flowIds[prefix], numId)
+			}
+		}
+	}
+
+	for prefix, ids := range flowIds {
+		sort.Ints(ids)
+		for i, v := range ids {
+			expectedId := 1
+			if i != 0 {
+				expectedId = ids[i-1] + 1
+			}
+
+			for mId := expectedId; mId < v; mId++ {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Description: fmt.Sprintf("Missing flow tag '%s-%d'", prefix, mId),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeDuplicateFlowId,
+				})
+			}
+		}
+	}
+}
+
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
 // found to the regGraph
-// @llr REQ-TRAQ-SWL-27, REQ-TRAQ-SWL-84, , REQ-TRAQ-SWL-85
+// @llr REQ-TRAQ-SWL-27, REQ-TRAQ-SWL-86, REQ-TRAQ-SWL-85
 func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *config.Document) error {
 	var reqs []*Req
 	var flow []*Flow
@@ -214,44 +269,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextReqId := 1
 	nextAsmId := 1
 
-	flowIds := map[string][]int{}
-
-	for _, f := range flow {
-		if _, ok := rg.FlowTags[f.ID]; ok {
-			rg.Issues = append(rg.Issues, diagnostics.Issue{
-				Line:        f.Position,
-				Path:        f.Document.Path,
-				RepoName:    f.RepoName,
-				Description: fmt.Sprintf("Duplicate data/control flow tag '%s'", f.ID),
-				Severity:    diagnostics.IssueSeverityMajor,
-				Type:        diagnostics.IssueTypeDuplicateFlowId,
-			})
-		} else {
-			rg.FlowTags[f.ID] = f
-
-			parts := strings.Split(f.ID, "-")
-			numId, _ := strconv.Atoi(parts[2])
-			prefix := fmt.Sprintf("%s-%s", parts[0], parts[1])
-			flowIds[prefix] = append(flowIds[prefix], numId)
-		}
-	}
-
-	for prefix, ids := range flowIds {
-		sort.Ints(ids)
-		for i, v := range ids {
-			if i == 0 {
-				continue
-			}
-
-			for mId := ids[i-1] + 1; mId < v; mId++ {
-				rg.Issues = append(rg.Issues, diagnostics.Issue{
-					Description: fmt.Sprintf("Missing flow tag '%s-%d'", prefix, mId),
-					Severity:    diagnostics.IssueSeverityMajor,
-					Type:        diagnostics.IssueTypeDuplicateFlowId,
-				})
-			}
-		}
-	}
+	rg.processFlow(flow, documentConfig)
 
 	for _, r := range reqs {
 		var newIssues []diagnostics.Issue

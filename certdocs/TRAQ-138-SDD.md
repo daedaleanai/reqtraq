@@ -786,7 +786,7 @@ Reqtraq SHALL include functions to sort a requirements list by ID number.
 Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS.
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-3
+- Parents: REQ-TRAQ-SWH-20
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -796,7 +796,7 @@ Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS.
 Reqtraq SHALL check that the control and data flow tags mentioned in "Flow" requirement attributes exist.
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-3
+- Parents: REQ-TRAQ-SWH-20
 - Rationale:
 - Verification: Test
 - Safety Impact: None
@@ -806,7 +806,17 @@ Reqtraq SHALL check that the control and data flow tags mentioned in "Flow" requ
 Reqtraq SHALL verify that all control and data flow tags have linked requirements.
 
 ##### Attributes:
-- Parents: REQ-TRAQ-SWH-3
+- Parents: REQ-TRAQ-SWH-20
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-86 Control and data flow id sequence
+
+Reqtraq SHALL verify that control and data flow tags numbered without gaps and duplicates starting from 1
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-20
 - Rationale:
 - Verification: Test
 - Safety Impact: None
