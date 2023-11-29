@@ -217,7 +217,16 @@ func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
 					RepoName:    f.RepoName,
 					Description: fmt.Sprintf("Invalid data/control flow tag prefix in '%s'", f.ID),
 					Severity:    diagnostics.IssueSeverityMajor,
-					Type:        diagnostics.IssueTypeDuplicateFlowId,
+					Type:        diagnostics.IssueTypeInvalidFlowId,
+				})
+			} else if parts[0] == "DF" && f.Direction != "In" && f.Direction != "Out" && f.Direction != "In/Out" {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Line:        f.Position,
+					Path:        f.Document.Path,
+					RepoName:    f.RepoName,
+					Description: fmt.Sprintf("Invalid direction '%s' for data flow tag '%s'. Allowed values are 'In', 'Out' and 'In/Out'", f.Direction, f.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidFlowDirection,
 				})
 			} else {
 				rg.FlowTags[f.ID] = f
@@ -240,7 +249,7 @@ func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
 				rg.Issues = append(rg.Issues, diagnostics.Issue{
 					Description: fmt.Sprintf("Missing flow tag '%s-%d'", prefix, mId),
 					Severity:    diagnostics.IssueSeverityMajor,
-					Type:        diagnostics.IssueTypeDuplicateFlowId,
+					Type:        diagnostics.IssueTypeMissingFlowId,
 				})
 			}
 		}

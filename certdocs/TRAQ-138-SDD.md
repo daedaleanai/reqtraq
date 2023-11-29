@@ -813,7 +813,7 @@ Reqtraq SHALL verify that all control and data flow tags have linked requirement
 
 #### REQ-TRAQ-SWL-86 Control and data flow id sequence
 
-Reqtraq SHALL verify that control and data flow tags numbered without gaps and duplicates starting from 1
+Reqtraq SHALL verify that control and data flow tags are numbered without gaps and duplicates starting from 1.
 
 ##### Attributes:
 - Parents: REQ-TRAQ-SWH-20

@@ -423,6 +423,7 @@ Data/control flow tag 'CF-TEST-2' has no linked requirements
 Data/control flow tag 'DF-TEST-2' has no linked requirements
 Missing flow tag 'CF-TEST-3'
 Invalid data/control flow tag prefix in 'DF-TST-1'
+Invalid direction 'Bad' for data flow tag 'DF-TEST-4'. Allowed values are 'In', 'Out' and 'In/Out'
 `
 
 	checkValidate(t, &config, expected, "")

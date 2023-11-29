@@ -509,10 +509,6 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 				} else if k == "DESCRIPTION" {
 					r.Description = values[i]
 				} else if k == "DIRECTION" {
-					if values[i] != "In" && values[i] != "Out" && values[i] != "In/Out" {
-						return flow, fmt.Errorf("Invalid direction '%s' on row %d of %s table. Allowed values are 'In', 'Out' and 'In/Out'", values[i], rowIndex+1, typ)
-					}
-
 					r.Direction = values[i]
 				}
 

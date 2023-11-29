@@ -272,13 +272,6 @@ Body
 | Caller Name | CF-FLT-1 | Callee Name | In | Flow description |
 		`,
 		"Invalid tag 'CF-FLT-1' on row 3 of data flow table")
-	checkParseError(t, `
-# Title
-| Caller | Flow Tag | Callee | Direction | Description |
-| --- | --- | --- | --- | --- |
-| Caller Name | DF-FLT-1 | Callee Name | Bad | Flow description |
-		`,
-		"Invalid direction 'Bad' on row 3 of data flow table. Allowed values are 'In', 'Out' and 'In/Out'")
 }
 
 // @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5, REQ-TRAQ-SWL-83, REQ-TRAQ-SWL-84
