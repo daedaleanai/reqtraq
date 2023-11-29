@@ -47,7 +47,7 @@ func runListCmd(command *cobra.Command, args []string) error {
 	if repoName, certdocConfig = reqtraqConfig.FindCertdoc(filename); certdocConfig == nil {
 		return fmt.Errorf("Could not find document `%s` in the list of documents", filename)
 	}
-	requirements, err := reqs.ParseMarkdown(repoName, certdocConfig)
+	requirements, _, err := reqs.ParseMarkdown(repoName, certdocConfig)
 	if err != nil {
 		return err
 	}

@@ -12,12 +12,31 @@ import (
 	"github.com/daedaleanai/reqtraq/repos"
 )
 
+// Flow holds information about data/control flow tag
+type Flow struct {
+	ID          string // e.g. ERR-CF-IN-001
+	Caller      string
+	Callee      string
+	Direction   string
+	Description string
+	Deleted     bool
+	// Reqs contains list of requirements linked to tag
+	Reqs []*Req
+
+	Position int
+	// Link back to the document where the requirement is defined and the name of the repository
+	Document *config.Document
+	RepoName repos.RepoName
+}
+
 // ReqGraph holds the complete information about a set of requirements and associated code tags.
 type ReqGraph struct {
 	// Reqs contains the requirements by ID.
 	Reqs map[string]*Req
 	// CodeTags contains the source code functions per repo.
 	CodeTags map[repos.RepoName][]*code.Code
+	// FlowTags contains data/control flow tags
+	FlowTags map[string]*Flow
 	// Issues which have been found while analyzing the graph.
 	// This is extended in multiple places.
 	Issues []diagnostics.Issue
@@ -74,4 +93,6 @@ const (
 	None ReqFormatType = iota
 	Heading
 	Table
+	DataFlowTable
+	ControlFlowTable
 )

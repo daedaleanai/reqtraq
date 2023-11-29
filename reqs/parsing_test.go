@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 func TestParseMarkdown(t *testing.T) {
 
 	// Heading style requirements
-	checkParse(t, `
+	checkParseOk(t, `
 # Title
 #### REQ-TEST-SYS-5 My First Requirement
 ##### Heading part of a req
@@ -45,94 +45,100 @@ Some more content
 #### ASM-TEST-SYS-1 An assumption, not a requirement
 Assumption body
 `,
-		"",
-		&Req{ID: "REQ-TEST-SYS-5",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   5,
-			Title:      "My First Requirement",
-			Body:       "##### Heading part of a req",
-			Position:   3,
-			Attributes: map[string]string{}},
-		&Req{ID: "REQ-TEST-SYS-6",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   6,
-			Title:      "Content mentioning REQ-TEST-SYS-1",
-			Body:       "REQ-TEST-SYS-2",
-			Position:   5,
-			Attributes: map[string]string{}},
-		&Req{ID: "REQ-TEST-SYS-7",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   7,
-			Title:      "My Last Requirement",
-			Body:       "Some more content",
-			Position:   9,
-			Attributes: map[string]string{}},
-		&Req{ID: "ASM-TEST-SYS-1",
-			Variant:    ReqVariantAssumption,
-			IDNumber:   1,
-			Title:      "An assumption, not a requirement",
-			Body:       "Assumption body",
-			Position:   11,
-			Attributes: map[string]string{}})
 
-	checkParse(t, `# REQ-TEST-SYS-5 REQ-TEST-SYS-6`, `malformed requirement title: too many IDs on line 1:`)
-	checkParse(t, `
+		[]*Flow{},
+		[]*Req{
+			&Req{ID: "REQ-TEST-SYS-5",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   5,
+				Title:      "My First Requirement",
+				Body:       "##### Heading part of a req",
+				Position:   3,
+				Attributes: map[string]string{}},
+			&Req{ID: "REQ-TEST-SYS-6",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   6,
+				Title:      "Content mentioning REQ-TEST-SYS-1",
+				Body:       "REQ-TEST-SYS-2",
+				Position:   5,
+				Attributes: map[string]string{}},
+			&Req{ID: "REQ-TEST-SYS-7",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   7,
+				Title:      "My Last Requirement",
+				Body:       "Some more content",
+				Position:   9,
+				Attributes: map[string]string{}},
+			&Req{ID: "ASM-TEST-SYS-1",
+				Variant:    ReqVariantAssumption,
+				IDNumber:   1,
+				Title:      "An assumption, not a requirement",
+				Body:       "Assumption body",
+				Position:   11,
+				Attributes: map[string]string{}},
+		})
+
+	checkParseError(t, `# REQ-TEST-SYS-5 REQ-TEST-SYS-6`, `malformed requirement title: too many IDs on line 1:`)
+	checkParseError(t, `
 # REQ-TEST-SYS-5
 ## REQ-TEST-SYS-6`,
 		"requirement heading on line 3 must be at same level as requirement heading on line 2 (2 != 1):")
-	checkParse(t, `
+	checkParseError(t, `
 ## REQ-TEST-SYS-5
 # REQ-TEST-SYS-6`,
 		"requirement heading on line 3 must be at same level as requirement heading on line 2 (1 != 2):")
-	checkParse(t, `
+	checkParseError(t, `
 # REQ-TEST-SYS-5
 # Title`,
 		"non-requirement heading on line 3 at same level as requirement heading on line 2 (1):")
-	checkParse(t, `
+	checkParseError(t, `
 # Title
 # REQ-TEST-SYS-5`,
 		"requirement heading on line 3 at same level as previous heading on line 2 (1):")
 
 	// Table style requirements
-	checkParse(t, `
+	checkParseOk(t, `
 | ID | Title | Body |
 | REQ-TEST-SYS-5 | My First Requirement | Heading part of a req |
 | REQ-TEST-SYS-6 | Content mentioning REQ-TEST-SYS-1 | REQ-TEST-SYS-2 |
 | REQ-TEST-SYS-7 | My Last Requirement | Some more content |
 | ASM-TEST-SYS-1 | An assumption, not a requirement | Assumption body |
 `,
-		"",
-		&Req{ID: "REQ-TEST-SYS-5",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   5,
-			Title:      "My First Requirement",
-			Body:       "Heading part of a req",
-			Position:   3,
-			Attributes: map[string]string{}},
-		&Req{ID: "REQ-TEST-SYS-6",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   6,
-			Title:      "Content mentioning REQ-TEST-SYS-1",
-			Body:       "REQ-TEST-SYS-2",
-			Position:   4,
-			Attributes: map[string]string{}},
-		&Req{ID: "REQ-TEST-SYS-7",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   7,
-			Title:      "My Last Requirement",
-			Body:       "Some more content",
-			Position:   5,
-			Attributes: map[string]string{}},
-		&Req{ID: "ASM-TEST-SYS-1",
-			Variant:    ReqVariantAssumption,
-			IDNumber:   1,
-			Title:      "An assumption, not a requirement",
-			Body:       "Assumption body",
-			Position:   6,
-			Attributes: map[string]string{}})
+		[]*Flow{},
+		[]*Req{
+			&Req{ID: "REQ-TEST-SYS-5",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   5,
+				Title:      "My First Requirement",
+				Body:       "Heading part of a req",
+				Position:   3,
+				Attributes: map[string]string{},
+			},
+			&Req{ID: "REQ-TEST-SYS-6",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   6,
+				Title:      "Content mentioning REQ-TEST-SYS-1",
+				Body:       "REQ-TEST-SYS-2",
+				Position:   4,
+				Attributes: map[string]string{}},
+			&Req{ID: "REQ-TEST-SYS-7",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   7,
+				Title:      "My Last Requirement",
+				Body:       "Some more content",
+				Position:   5,
+				Attributes: map[string]string{}},
+			&Req{ID: "ASM-TEST-SYS-1",
+				Variant:    ReqVariantAssumption,
+				IDNumber:   1,
+				Title:      "An assumption, not a requirement",
+				Body:       "Assumption body",
+				Position:   6,
+				Attributes: map[string]string{}},
+		})
 
 	// Mixed style requirements
-	checkParse(t, `
+	checkParseOk(t, `
 # Title
 #### REQ-TEST-SYS-5 My First Requirement
 ##### Heading part of a req
@@ -140,32 +146,136 @@ Assumption body
 | REQ-TEST-SYS-6 | Content mentioning REQ-TEST-SYS-1 | REQ-TEST-SYS-2 |
 | REQ-TEST-SYS-7 | My Last Requirement | Some more content |
 `,
-		"",
-		&Req{ID: "REQ-TEST-SYS-5",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   5,
-			Title:      "My First Requirement",
-			Body:       "##### Heading part of a req",
-			Position:   3,
-			Attributes: map[string]string{}},
-		&Req{ID: "REQ-TEST-SYS-6",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   6,
-			Title:      "Content mentioning REQ-TEST-SYS-1",
-			Body:       "REQ-TEST-SYS-2",
-			Position:   6,
-			Attributes: map[string]string{}},
-		&Req{ID: "REQ-TEST-SYS-7",
-			Variant:    ReqVariantRequirement,
-			IDNumber:   7,
-			Title:      "My Last Requirement",
-			Body:       "Some more content",
-			Position:   7,
-			Attributes: map[string]string{}})
+		[]*Flow{},
+		[]*Req{
+			&Req{ID: "REQ-TEST-SYS-5",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   5,
+				Title:      "My First Requirement",
+				Body:       "##### Heading part of a req",
+				Position:   3,
+				Attributes: map[string]string{},
+			},
+			&Req{ID: "REQ-TEST-SYS-6",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   6,
+				Title:      "Content mentioning REQ-TEST-SYS-1",
+				Body:       "REQ-TEST-SYS-2",
+				Position:   6,
+				Attributes: map[string]string{}},
+			&Req{ID: "REQ-TEST-SYS-7",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   7,
+				Title:      "My Last Requirement",
+				Body:       "Some more content",
+				Position:   7,
+				Attributes: map[string]string{}},
+		},
+	)
 }
 
-// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5
-func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Req) {
+// TestParseMarkdown checks that parseMarkdown parse data/control flow tabless
+// correctly.
+// @llr REQ-TRAQ-SWL-83, REQ-TRAQ-SWL-84
+func TestParseDataControlFlow(t *testing.T) {
+	// Data/control flow
+	checkParseOk(t, `
+# Title
+| Caller | Flow Tag | Callee | Description |
+| --- | --- | --- | --- |
+| Caller Name | CF-FLT-1 | Callee Name | Flow description |
+| Caller Name | CF-FLT-2 | Callee Name | Flow description |
+
+| Caller | Flow Tag | Callee | Direction | Description |
+| --- | --- | --- | --- |
+| Caller Name | DF-FLT-1 | Callee Name | In | Flow description |
+| Caller Name | DF-FLT-2 | Callee Name | Out | Flow description |
+| Caller Name | DF-FLT-3-DELETED | Callee Name | Out | Flow description |
+
+#### REQ-TEST-SYS-5 My First Requirement
+Body
+###### Attributes:
+- Flow: DF-FLT-2
+`,
+		[]*Flow{
+			&Flow{
+				ID:          "CF-FLT-1",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    5,
+				RepoName:    ".",
+				Deleted:     false,
+			},
+			&Flow{
+				ID:          "CF-FLT-2",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    6,
+				RepoName:    ".",
+				Deleted:     false,
+			},
+			&Flow{
+				ID:          "DF-FLT-1",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    10,
+				RepoName:    ".",
+				Direction:   "In",
+				Deleted:     false,
+			},
+			&Flow{
+				ID:          "DF-FLT-2",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    11,
+				RepoName:    ".",
+				Direction:   "Out",
+				Deleted:     false,
+			},
+			&Flow{
+				ID:          "DF-FLT-3",
+				Callee:      "Callee Name",
+				Caller:      "Caller Name",
+				Description: "Flow description",
+				Position:    12,
+				RepoName:    ".",
+				Direction:   "Out",
+				Deleted:     true,
+			},
+		},
+		[]*Req{
+			&Req{ID: "REQ-TEST-SYS-5",
+				Variant:    ReqVariantRequirement,
+				IDNumber:   5,
+				Title:      "My First Requirement",
+				Body:       "Body",
+				Position:   14,
+				Attributes: map[string]string{"FLOW": "DF-FLT-2"}},
+		},
+	)
+
+	checkParseError(t, `
+# Title
+| Caller | Flow Tag | Callee | Description |
+| --- | --- | --- | --- |
+| Caller Name | DF-FLT-1 | Callee Name | Flow description |
+		`,
+		"Invalid tag 'DF-FLT-1' on row 3 of control flow table")
+	checkParseError(t, `
+# Title
+| Caller | Flow Tag | Callee | Direction | Description |
+| --- | --- | --- | --- | --- |
+| Caller Name | CF-FLT-1 | Callee Name | In | Flow description |
+		`,
+		"Invalid tag 'CF-FLT-1' on row 3 of data flow table")
+}
+
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5, REQ-TRAQ-SWL-83, REQ-TRAQ-SWL-84
+func doParse(t *testing.T, content string) ([]*Req, []*Flow, error) {
 	f, err := createTempFile(content, "checkParse")
 	if f != nil {
 		defer os.Remove(f.Name())
@@ -182,27 +292,63 @@ func checkParse(t *testing.T, content, expectedError string, expectedReqs ...*Re
 		Path: filepath.Base(f.Name()),
 	}
 
-	reqs, err := ParseMarkdown(repoName, &doc)
-	if expectedError == "" {
-		if err != nil {
-			t.Errorf("content: `%s`\nshould not generate error: %v", content, err)
-		} else {
-			for i := range reqs {
-				// Set the document and repo name in the expected requirement
-				expectedReqs[i].Document = &doc
-				expectedReqs[i].RepoName = repoName
+	return ParseMarkdown(repoName, &doc)
+}
 
-				if !reflect.DeepEqual(reqs[i], expectedReqs[i]) {
-					t.Errorf("content: `%s`\nparsed into: %#v\ninstead of: %#v",
-						content, reqs[i], expectedReqs[i])
-				}
-			}
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5, REQ-TRAQ-SWL-83, REQ-TRAQ-SWL-84
+func checkParseError(t *testing.T, content string, expectedError string) {
+	_, _, err := doParse(t, content)
+	if err == nil {
+		t.Errorf("content `%s` does not generate error `%s`", content, expectedError)
+	}
+	assert.Contains(t, err.Error(), expectedError)
+}
+
+// @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-4, REQ-TRAQ-SWL-5, REQ-TRAQ-SWL-83, REQ-TRAQ-SWL-84
+func checkParseOk(t *testing.T, content string, expectedFlow []*Flow, expectedReqs []*Req) {
+	f, err := createTempFile(content, "checkParse")
+	if f != nil {
+		defer os.Remove(f.Name())
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repoPath := repos.RepoPath(filepath.Dir(f.Name()))
+	repoName := repos.RepoName(filepath.Dir(filepath.Base(f.Name())))
+	repos.RegisterRepository(repoName, repoPath)
+
+	doc := config.Document{
+		Path: filepath.Base(f.Name()),
+	}
+
+	reqs, flow, err := ParseMarkdown(repoName, &doc)
+
+	if err != nil {
+		t.Errorf("content: `%s`\nshould not generate error: %v", content, err)
+		return
+	}
+
+	for i := range reqs {
+		// Set the document and repo name in the expected requirement
+		expectedReqs[i].Document = &doc
+		expectedReqs[i].RepoName = repoName
+
+		if !reflect.DeepEqual(reqs[i], expectedReqs[i]) {
+			t.Errorf("content: `%s`\nparsed into: %#v\ninstead of: %#v",
+				content, reqs[i], expectedReqs[i])
 		}
-	} else {
-		if err == nil {
-			t.Errorf("content `%s` does not generate error `%s`", content, expectedError)
+	}
+
+	for i := range flow {
+		// Set the document and repo name in the expected requirement
+		expectedFlow[i].Document = &doc
+		expectedFlow[i].RepoName = repoName
+
+		if !reflect.DeepEqual(flow[i], expectedFlow[i]) {
+			t.Errorf("content: `%s`\nparsed into: %#v\ninstead of: %#v",
+				content, flow[i], expectedFlow[i])
 		}
-		assert.Contains(t, err.Error(), expectedError)
 	}
 }
 

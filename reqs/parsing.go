@@ -29,6 +29,13 @@ var (
 	// For detecting ATX Headings, see http://spec.commonmark.org/0.27/#atx-headings
 	reATXHeading = regexp.MustCompile(`^ {0,3}(#{1,6})( +(.*)( #* *)?)?$`)
 
+	// For detecting the first row and delimiter of data/control flow table
+	cfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Description *\|$`)
+	dfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Direction *\| *Description *\|$`)
+	dcfTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
+	dfId              = regexp.MustCompile(`^DF-(\w+)-(\d+)(-DELETED)?$`)
+	cfId              = regexp.MustCompile(`^CF-(\w+)-(\d+)(-DELETED)?$`)
+
 	// For detecting the first row and delimiter row of a requirement table
 	reTableHeader    = regexp.MustCompile(`^\| *ID *\|(?:[^\|]*\|)+$`)
 	reTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
@@ -46,7 +53,7 @@ var (
 
 // ParseMarkdown parses a certification document and returns the found requirements.
 // @llr REQ-TRAQ-SWL-2, REQ-TRAQ-SWL-4
-func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]*Req, error) {
+func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]*Req, []*Flow, error) {
 	var (
 		reqs []*Req
 
@@ -61,14 +68,17 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 
 	documentPath, err := repos.PathInRepo(repoName, documentConfig.Path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	r, err := os.Open(documentPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	scan := bufio.NewScanner(r)
+
+	flow := []*Flow{}
+	//TODO:
 
 	// scan through the markdown, one line at a time
 	for lno := 1; scan.Scan(); lno++ {
@@ -82,7 +92,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 			title := ATXparts[3]
 			reqIDs := reReqID.FindAllString(title, -1)
 			if len(reqIDs) > 1 {
-				return nil, fmt.Errorf("malformed requirement title: too many IDs on line %d: %q", lno, line)
+				return nil, nil, fmt.Errorf("malformed requirement title: too many IDs on line %d: %q", lno, line)
 			}
 			headingHasReqID := len(reqIDs) == 1
 
@@ -93,7 +103,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 					// This is a requirement heading.
 					// The level must be the same as the current requirement.
 					if level != reqLevel {
-						return nil, fmt.Errorf("requirement heading on line %d must be at same level as requirement heading on line %d (%d != %d): %q", lno, reqLine, level, reqLevel, line)
+						return nil, nil, fmt.Errorf("requirement heading on line %d must be at same level as requirement heading on line %d (%d != %d): %q", lno, reqLine, level, reqLevel, line)
 					}
 				} else {
 					// No requirement ID on this heading.
@@ -101,7 +111,7 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 					// requirement's heading level. We don't want to mix requirements
 					// with other headings of the same level, in the same section.
 					if level == reqLevel {
-						return nil, fmt.Errorf("non-requirement heading on line %d at same level as requirement heading on line %d (%d): %q", lno, reqLine, level, line)
+						return nil, nil, fmt.Errorf("non-requirement heading on line %d at same level as requirement heading on line %d (%d): %q", lno, reqLine, level, line)
 					}
 				}
 			} else {
@@ -109,16 +119,16 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 				if headingHasReqID {
 					// Can be the first one or the first one in another section.
 					if level == lastHeadingLevel {
-						return nil, fmt.Errorf("requirement heading on line %d at same level as previous heading on line %d (%d): %q", lno, lastHeadingLine, level, line)
+						return nil, nil, fmt.Errorf("requirement heading on line %d at same level as previous heading on line %d (%d): %q", lno, lastHeadingLine, level, line)
 					}
 				}
 			}
 
 			// If we're currently parsing a requirement, and just read the start of a new requirement (cf rules for ending a requirement), close it
 			if (inReq != None) && (headingHasReqID || level < reqLevel) {
-				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
+				reqs, flow, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs, flow)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				inReq = None
 			}
@@ -139,13 +149,39 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 			// It's a requirements table
 			// If we're currently parsing a requirement close it
 			if inReq != None {
-				reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
+				reqs, flow, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs, flow)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 			}
 			// Start a new requirement table
 			inReq = Table
+			reqLine = lno
+			reqBuf.Reset()
+		} else if dfTableHeader.MatchString(line) {
+			// It's a data or control flow table
+			// If we're currently parsing a requirement close it
+			if inReq != None {
+				reqs, flow, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs, flow)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			// Start a new flow table
+			inReq = DataFlowTable
+			reqLine = lno
+			reqBuf.Reset()
+		} else if cfTableHeader.MatchString(line) {
+			// It's a data or control flow table
+			// If we're currently parsing a requirement close it
+			if inReq != None {
+				reqs, flow, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs, flow)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			// Start a new flow table
+			inReq = ControlFlowTable
 			reqLine = lno
 			reqBuf.Reset()
 		}
@@ -156,14 +192,14 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 		}
 	}
 	if err := scan.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if inReq != None {
 		// Close the current requirement, we're at the end.
-		reqs, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs)
+		reqs, flow, err = parseMarkdownFragment(inReq, reqBuf.String(), reqLine, reqs, flow)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -172,32 +208,44 @@ func ParseMarkdown(repoName repos.RepoName, documentConfig *config.Document) ([]
 		reqs[reqIdx].Document = documentConfig
 	}
 
-	return reqs, nil
+	for flowIdx := range flow {
+		flow[flowIdx].RepoName = repoName
+		flow[flowIdx].Document = documentConfig
+	}
+
+	return reqs, flow, nil
 }
 
 // parseMarkdownFragment accepts a string containing either an ATX requirement or a requirements table and calls the
 // appropriate parsing function
 // @llr REQ-TRAQ-SWL-3, REQ-TRAQ-SWL-5
-func parseMarkdownFragment(reqType ReqFormatType, txt string, reqLine int, reqs []*Req) ([]*Req, error) {
+func parseMarkdownFragment(reqType ReqFormatType, txt string, reqLine int, reqs []*Req, flow []*Flow) ([]*Req, []*Flow, error) {
 
 	if reqType == Heading {
 		// An ATX requirement
 		newReq, err := parseReq(txt)
 		if err != nil {
-			return reqs, err
+			return reqs, flow, err
 		}
 		newReq.Position = reqLine
 		reqs = append(reqs, newReq)
-	} else {
+	} else if reqType == Table {
 		// A requirements table
 		newReqs, err := parseReqTable(txt, reqLine, reqs)
 		if err != nil {
-			return reqs, err
+			return reqs, flow, err
 		}
 		reqs = newReqs
+	} else if reqType == DataFlowTable || reqType == ControlFlowTable {
+		// A flow table
+		newFlow, err := parseFlowTable(txt, reqLine, flow, reqType)
+		if err != nil {
+			return reqs, flow, err
+		}
+		flow = newFlow
 	}
 
-	return reqs, nil
+	return reqs, flow, nil
 }
 
 // parseReq finds the first REQ-XXX tag and the reserved words and distills a Req from it.
@@ -381,14 +429,111 @@ func parseReqTable(txt string, reqLine int, reqs []*Req) ([]*Req, error) {
 	return reqs, nil
 }
 
+// parseFlowTable reads a table of data/control flow one row at a time and parses the content into Flow structures which are
+// then returned in a slice.
+//
+// Tables have the following format:
+// | Caller | Flow Tag | Callee | Direction | Description |
+// | --- | --- | --- | --- | --- |
+// | <text> | <flow tag> | <text> | <text> | <text> |
+//
+// Direction column should be present for data flow only.
+//
+// @llr REQ-TRAQ-SWL-83
+func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType) ([]*Flow, error) {
+	var attributes []string
+
+	var header *regexp.Regexp
+	var tag *regexp.Regexp
+	typ := ""
+
+	if reqType == DataFlowTable {
+		header = dfTableHeader
+		tag = dfId
+		typ = "data flow"
+	} else {
+		header = cfTableHeader
+		tag = cfId
+		typ = "control flow"
+	}
+
+	// Split the table into rows and loop through
+	for rowIndex, row := range strings.Split(txt, "\n") {
+
+		// The first row contains the attribute names for each column, the first column must be "ID"
+		if rowIndex == 0 {
+			if header.MatchString(row) {
+				attributes = splitTableLine(row)
+				for i, a := range attributes {
+					attributes[i] = strings.ToUpper(a)
+				}
+			} else {
+				return flow, fmt.Errorf("flow table must have at least 4 columns, second column head must be \"Flow Tag\"")
+			}
+		} else {
+			if dcfTableDelimiter.MatchString(row) {
+				// Ignore the delimiter row
+				continue
+			}
+
+			values := splitTableLine(row)
+
+			if len(values) == 0 {
+				// End of table
+				break
+			}
+
+			if len(values) < len(attributes) {
+				return flow, fmt.Errorf("too few cells on row %d of %s table", rowIndex+1, typ)
+			}
+
+			r := &Flow{}
+
+			// For each attribute in the first row, read in the associated value on this row
+			for i, k := range attributes {
+				if k == "FLOW TAG" {
+					if !tag.MatchString(values[i]) {
+						return flow, fmt.Errorf("Invalid tag '%s' on row %d of %s table", values[i], rowIndex+1, typ)
+					}
+
+					if strings.HasSuffix(values[i], "-DELETED") {
+						r.ID = strings.TrimSuffix(values[i], "-DELETED")
+						r.Deleted = true
+					} else {
+						r.ID = values[i]
+					}
+				} else if k == "CALLER" {
+					r.Caller = values[i]
+				} else if k == "CALLEE" {
+					r.Callee = values[i]
+				} else if k == "DESCRIPTION" {
+					r.Description = values[i]
+				} else if k == "DIRECTION" {
+					r.Direction = values[i]
+				}
+
+			}
+
+			r.Position = rowIndex + reqLine
+			flow = append(flow, r)
+		}
+	}
+
+	return flow, nil
+}
+
 // splitTableLine splits a pipe table row in cells. Does not count for
 // escaped `|` characters or other cases when `|` should not be considered
 // a cell separator. Removes the first and last parts if they are empty.
 // @llr REQ-TRAQ-SWL-5
 func splitTableLine(line string) []string {
+	if line == "" || line[0] != '|' {
+		return nil
+	}
 	// The `|` at the beginning of the line is ignored because it
 	// represents visually the table's left side.
 	parts := strings.Split(line, "|")
+
 	if parts[0] == "" {
 		parts = parts[1:]
 	}

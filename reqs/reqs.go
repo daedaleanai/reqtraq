@@ -50,6 +50,7 @@ func BuildGraph(reqtraqConfig *config.Config) (*ReqGraph, error) {
 	rg := &ReqGraph{
 		make(map[string]*Req, 0),
 		make(map[repos.RepoName][]*code.Code),
+		make(map[string]*Flow),
 		make([]diagnostics.Issue, 0),
 		reqtraqConfig}
 
@@ -87,6 +88,7 @@ func LoadGraphs(graphs_paths []string) (*ReqGraph, error) {
 	var rg *ReqGraph = &ReqGraph{
 		make(map[string]*Req, 0),
 		make(map[repos.RepoName][]*code.Code),
+		make(map[string]*Flow),
 		make([]diagnostics.Issue, 0),
 		nil,
 	}
@@ -190,13 +192,78 @@ func (rg *ReqGraph) mergeTags(tagsByFile *map[code.CodeFile][]*code.Code) {
 	}
 }
 
+// processFlow process parsed flow tags and check consistency
+// @llr REQ-TRAQ-SWL-84
+func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
+	flowIds := map[string][]int{}
+
+	for _, f := range flow {
+		if _, ok := rg.FlowTags[f.ID]; ok {
+			rg.Issues = append(rg.Issues, diagnostics.Issue{
+				Line:        f.Position,
+				Path:        f.Document.Path,
+				RepoName:    f.RepoName,
+				Description: fmt.Sprintf("Duplicate data/control flow tag '%s'", f.ID),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeDuplicateFlowId,
+			})
+		} else {
+			parts := strings.Split(f.ID, "-")
+
+			if parts[1] != string(documentConfig.ReqSpec.Prefix) {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Line:        f.Position,
+					Path:        f.Document.Path,
+					RepoName:    f.RepoName,
+					Description: fmt.Sprintf("Invalid data/control flow tag prefix in '%s'", f.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidFlowId,
+				})
+			} else if parts[0] == "DF" && f.Direction != "In" && f.Direction != "Out" && f.Direction != "In/Out" {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Line:        f.Position,
+					Path:        f.Document.Path,
+					RepoName:    f.RepoName,
+					Description: fmt.Sprintf("Invalid direction '%s' for data flow tag '%s'. Allowed values are 'In', 'Out' and 'In/Out'", f.Direction, f.ID),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeInvalidFlowDirection,
+				})
+			} else {
+				rg.FlowTags[f.ID] = f
+				numId, _ := strconv.Atoi(parts[2])
+				prefix := fmt.Sprintf("%s-%s", parts[0], parts[1])
+				flowIds[prefix] = append(flowIds[prefix], numId)
+			}
+		}
+	}
+
+	for prefix, ids := range flowIds {
+		sort.Ints(ids)
+		for i, v := range ids {
+			expectedId := 1
+			if i != 0 {
+				expectedId = ids[i-1] + 1
+			}
+
+			for mId := expectedId; mId < v; mId++ {
+				rg.Issues = append(rg.Issues, diagnostics.Issue{
+					Description: fmt.Sprintf("Missing flow tag '%s-%d'", prefix, mId),
+					Severity:    diagnostics.IssueSeverityMajor,
+					Type:        diagnostics.IssueTypeMissingFlowId,
+				})
+			}
+		}
+	}
+}
+
 // addCertdocToGraph parses a file for requirements, checks their validity and then adds them along with any errors
 // found to the regGraph
-// @llr REQ-TRAQ-SWL-27
+// @llr REQ-TRAQ-SWL-27, REQ-TRAQ-SWL-86, REQ-TRAQ-SWL-85
 func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *config.Document) error {
 	var reqs []*Req
+	var flow []*Flow
 	var err error
-	if reqs, err = ParseMarkdown(repoName, documentConfig); err != nil {
+	if reqs, flow, err = ParseMarkdown(repoName, documentConfig); err != nil {
 		return errors.Wrapf(err, "Error parsing `%s` in repo `%s`", documentConfig.Path, repoName)
 	}
 	if len(reqs) == 0 {
@@ -211,6 +278,8 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextReqId := 1
 	nextAsmId := 1
 
+	rg.processFlow(flow, documentConfig)
+
 	for _, r := range reqs {
 		var newIssues []diagnostics.Issue
 		if r.Variant == ReqVariantRequirement {
@@ -220,6 +289,24 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 			newIssues = r.checkID(documentConfig, nextAsmId, isAsmPresent)
 			nextAsmId = r.IDNumber + 1
 		}
+
+		if ft, ok := r.Attributes["FLOW"]; ok {
+			for _, tag := range strings.Split(ft, ",") {
+				if flowTag, ok := rg.FlowTags[strings.TrimSpace(tag)]; ok {
+					flowTag.Reqs = append(flowTag.Reqs, r)
+				} else {
+					newIssues = append(newIssues, diagnostics.Issue{
+						Line:        r.Position,
+						Path:        r.Document.Path,
+						RepoName:    r.RepoName,
+						Description: fmt.Sprintf("Unknown data/control flow tag '%s' in requirement '%s'", strings.TrimSpace(tag), r.ID),
+						Severity:    diagnostics.IssueSeverityMajor,
+						Type:        diagnostics.IssueTypeInvalidFlowId,
+					})
+				}
+			}
+		}
+
 		if len(newIssues) != 0 {
 			rg.Issues = append(rg.Issues, newIssues...)
 			continue
@@ -228,6 +315,20 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 		r.Document = documentConfig
 		rg.Reqs[r.ID] = r
 	}
+
+	for _, f := range rg.FlowTags {
+		if len(f.Reqs) == 0 && !f.Deleted {
+			rg.Issues = append(rg.Issues, diagnostics.Issue{
+				Line:        f.Position,
+				Path:        f.Document.Path,
+				RepoName:    f.RepoName,
+				Description: fmt.Sprintf("Data/control flow tag '%s' has no linked requirements", f.ID),
+				Severity:    diagnostics.IssueSeverityMinor,
+				Type:        diagnostics.IssueTypeFlowNotImplemented,
+			})
+		}
+	}
+
 	return nil
 }
 

@@ -781,6 +781,46 @@ Reqtraq SHALL include functions to sort a requirements list by ID number.
 
 #### REQ-TRAQ-SWL-17 DELETED
 
+#### REQ-TRAQ-SWL-83 Control and data flow parsing
+
+Reqtraq SHALL read control and data flow from tables as specified in DDLN-7-SDS.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-20
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-84 Control and data flow linking
+
+Reqtraq SHALL check that the control and data flow tags mentioned in "Flow" requirement attributes exist.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-20
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-85 Control and data flow verification
+
+Reqtraq SHALL verify that all control and data flow tags have linked requirements.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-20
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
+#### REQ-TRAQ-SWL-86 Control and data flow id sequence
+
+Reqtraq SHALL verify that control and data flow tags are numbered without gaps and duplicates starting from 1.
+
+##### Attributes:
+- Parents: REQ-TRAQ-SWH-20
+- Rationale:
+- Verification: Test
+- Safety Impact: None
+
 ### web/webapp.go
 
 Functions for creating and servicing a web interface.
@@ -1234,6 +1274,7 @@ on the architecture of the source code.
 - Rationale:
 - Verification: Test
 - Safety Impact: None
+
 
 ## Appendix
 

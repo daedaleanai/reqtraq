@@ -221,6 +221,16 @@ are not implemented and to compute the test coverage of requirements.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWH-20 Control/Data flow
+
+Reqtraq SHALL validate control and data flow
+
+##### Attributes:
+- Parents:
+- Rationale: Control/Data flow is required by DDLN-7-SDS. 
+- Verification: Test
+- Safety Impact: None
+
 ## Appendix
 
 ### Deleted requirements
