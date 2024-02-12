@@ -37,17 +37,19 @@
                 "prefix": "TRAQ",
                 "level": "SWH"
             },
-            "implementation": {
-                "code": {
-                    "paths": ["."],
-                    "matchingPattern": ".*\\.go$",
-                    "ignoredPatterns": [".*_test\\.go$"]
-                },
-                "tests": {
-                    "paths": ["."],
-                    "matchingPattern": ".*_test\\.go$"
+            "implementation": [
+                {
+                    "code": {
+                        "paths": ["."],
+                        "matchingPattern": ".*\\.go$",
+                        "ignoredPatterns": [".*_test\\.go$"]
+                    },
+                    "tests": {
+                        "paths": ["."],
+                        "matchingPattern": ".*_test\\.go$"
+                    }
                 }
-            }
+            ]
         }
     ]
 }

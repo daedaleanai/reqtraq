@@ -69,13 +69,13 @@ type jsonParent struct {
 type jsonParents []jsonParent
 
 type jsonDoc struct {
-	Path           string             `json:"path"`
-	Prefix         ReqPrefix          `json:"prefix"`
-	Level          ReqLevel           `json:"level"`
-	Parent         jsonParents        `json:"parent"`
-	Attributes     []jsonAttribute    `json:"attributes"`
-	AsmAttributes  []jsonAttribute    `json:"asmAttributes"`
-	Implementation jsonImplementation `json:"implementation"`
+	Path           string               `json:"path"`
+	Prefix         ReqPrefix            `json:"prefix"`
+	Level          ReqLevel             `json:"level"`
+	Parent         jsonParents          `json:"parent"`
+	Attributes     []jsonAttribute      `json:"attributes"`
+	AsmAttributes  []jsonAttribute      `json:"asmAttributes"`
+	Implementation []jsonImplementation `json:"implementation"`
 }
 
 type jsonConfig struct {
@@ -153,7 +153,7 @@ type Document struct {
 	ReqSpec        ReqSpec
 	LinkSpecs      []LinkSpec
 	Schema         Schema
-	Implementation Implementation
+	Implementation []Implementation
 }
 
 // A configuration for a single repository, which is made of documents.
@@ -199,7 +199,13 @@ func ParseConfig(repoPath repos.RepoPath) (Config, error) {
 // Returns true if the document has associated implementation
 // @llr REQ-TRAQ-SWL-56
 func (doc *Document) HasImplementation() bool {
-	return len(doc.Implementation.CodeFiles) != 0
+	var hasImpl bool
+	for _, impl := range doc.Implementation {
+		if len(impl.CodeFiles) != 0 {
+			hasImpl = true
+		}
+	}
+	return hasImpl
 }
 
 // Returns true if the document matches the given requirement spec.
@@ -451,9 +457,78 @@ func (fileQuery *jsonFileQuery) findAllMatchingFiles(repoName repos.RepoName, ar
 	return collectedFiles, nil
 }
 
+// Parses an implementation of a document, returning it or an error if the parsing failed
+// @llr REQ-TRAQ-SWL-56, REQ-TRAQ-SWL-64, REQ-TRAQ-SWL-87
+func parseImplementation(repoName repos.RepoName, impl *jsonImplementation) (*Implementation, error) {
+	parsedImpl := Implementation{
+		Archs: map[Arch]ArchImplementation{},
+	}
+
+	// Trigger a warning for every arch with matching rules
+	// that has no compilation database or arguments defined
+	for arch := range impl.Code.ArchPatterns {
+		var exists bool
+		_, exists = impl.Archs[arch]
+		if !exists {
+			fmt.Printf("Warning: %q has matching rules for code, but it is not mentioned in the top level `archs` field, so it will not actually be used for matching its files.\n", arch)
+		}
+	}
+
+	for arch := range impl.Tests.ArchPatterns {
+		var exists bool
+		_, exists = impl.Archs[arch]
+		if !exists {
+			fmt.Printf("Warning: %q has matching rules for tests, but it is not mentioned in the top level `archs` field, so it will not actually be used for matching its files.\n", arch)
+		}
+	}
+
+	for arch := range impl.Archs {
+		var newArchEntry ArchImplementation
+		newArchEntry.CompilationDatabase = impl.Archs[arch].CompilationDatabase
+		newArchEntry.CompilerArguments = impl.Archs[arch].CompilerArguments
+
+		codeFiles, err := impl.Code.findAllMatchingFiles(repoName, arch)
+		newArchEntry.CodeFiles = codeFiles
+		if err != nil {
+			return nil, err
+		}
+
+		testFiles, err := impl.Tests.findAllMatchingFiles(repoName, arch)
+		newArchEntry.TestFiles = testFiles
+		if err != nil {
+			return nil, err
+		}
+
+		parsedImpl.Archs[arch] = newArchEntry
+	}
+
+	codeFiles, err := impl.Code.findAllMatchingFiles(repoName)
+	parsedImpl.CodeFiles = codeFiles
+	if err != nil {
+		return nil, err
+	}
+
+	testFiles, err := impl.Tests.findAllMatchingFiles(repoName)
+	parsedImpl.TestFiles = testFiles
+	if err != nil {
+		return nil, err
+	}
+	parsedImpl.CompilationDatabase = impl.CompilationDatabase
+	parsedImpl.CompilerArguments = impl.CompilerArguments
+	if parsedImpl.CompilerArguments == nil {
+		parsedImpl.CompilerArguments = []string{}
+	}
+	parsedImpl.CodeParser = impl.CodeParser
+	if parsedImpl.CodeParser == "" {
+		// Default to ctags parser, which is always built-in
+		parsedImpl.CodeParser = "ctags"
+	}
+	return &parsedImpl, nil
+}
+
 // Parses a document, appending it to the list of documents for the repoConfig instance or returning
 // an error if the document is invalid.
-// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56, REQ-TRAQ-SWL-64
+// @llr REQ-TRAQ-SWL-53, REQ-TRAQ-SWL-56, REQ-TRAQ-SWL-64, REQ-TRAQ-SWL-87
 func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error {
 	var err error
 	parsedDoc := Document{
@@ -463,6 +538,7 @@ func (rc *RepoConfig) parseDocument(repoName repos.RepoName, doc jsonDoc) error 
 			Attributes:    make(map[string]*Attribute),
 			AsmAttributes: make(map[string]*Attribute),
 		},
+		Implementation: []Implementation{},
 	}
 
 	_, err = repos.PathInRepo(repoName, doc.Path)
@@ -528,64 +604,12 @@ The parents attribute for assumptions is implicit and refers to requirements in 
 		Value: regexp.MustCompile(fmt.Sprintf("REQ-%s-%s-(\\d+)", parsedDoc.ReqSpec.Prefix, parsedDoc.ReqSpec.Level)),
 	}
 
-	if parsedDoc.Implementation.Archs == nil {
-		parsedDoc.Implementation.Archs = map[Arch]ArchImplementation{}
-	}
-
-	// Trigger a warning for every arch with matching rules
-	// that has no compilation database or arguments defined
-	for arch := range doc.Implementation.Code.ArchPatterns {
-		var exists bool
-		_, exists = doc.Implementation.Archs[arch]
-		if !exists {
-			fmt.Printf("Warning: %q has matching rules for code, but it is not mentioned in the top level `archs` field, so it will not actually be used for matching its files.\n", arch)
-		}
-	}
-
-	for arch := range doc.Implementation.Tests.ArchPatterns {
-		var exists bool
-		_, exists = doc.Implementation.Archs[arch]
-		if !exists {
-			fmt.Printf("Warning: %q has matching rules for tests, but it is not mentioned in the top level `archs` field, so it will not actually be used for matching its files.\n", arch)
-		}
-	}
-
-	for arch := range doc.Implementation.Archs {
-		var newArchEntry ArchImplementation
-		newArchEntry.CompilationDatabase = doc.Implementation.Archs[arch].CompilationDatabase
-		newArchEntry.CompilerArguments = doc.Implementation.Archs[arch].CompilerArguments
-
-		newArchEntry.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName, arch)
+	for _, impl := range doc.Implementation {
+		parsedImpl, err := parseImplementation(repoName, &impl)
 		if err != nil {
 			return err
 		}
-
-		newArchEntry.TestFiles, err = doc.Implementation.Tests.findAllMatchingFiles(repoName, arch)
-		if err != nil {
-			return err
-		}
-
-		parsedDoc.Implementation.Archs[arch] = newArchEntry
-	}
-
-	parsedDoc.Implementation.CodeFiles, err = doc.Implementation.Code.findAllMatchingFiles(repoName)
-	if err != nil {
-		return err
-	}
-
-	parsedDoc.Implementation.TestFiles, err = doc.Implementation.Tests.findAllMatchingFiles(repoName)
-	if err != nil {
-		return err
-	}
-	parsedDoc.Implementation.CompilationDatabase = doc.Implementation.CompilationDatabase
-	parsedDoc.Implementation.CompilerArguments = doc.Implementation.CompilerArguments
-	if parsedDoc.Implementation.CompilerArguments == nil {
-		parsedDoc.Implementation.CompilerArguments = []string{}
-	}
-	parsedDoc.Implementation.CodeParser = doc.Implementation.CodeParser
-	if parsedDoc.Implementation.CodeParser == "" {
-		// Default to ctags parser, which is always built-in
-		parsedDoc.Implementation.CodeParser = "ctags"
+		parsedDoc.Implementation = append(parsedDoc.Implementation, *parsedImpl)
 	}
 
 	rc.Documents = append(rc.Documents, parsedDoc)

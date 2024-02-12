@@ -36,23 +36,25 @@
                 "prefix": "TEST",
                 "level": "SWH"
             },
-            "implementation": {
-                "code": {
-                    "paths": ["code"],
-                    "matchingPattern": ".*\\.(cc|hh)$",
-                    "ignoredPatterns": [".*_ignored\\.(cc|hh)$"]
-                },
-                "tests": {
-                    "paths": ["test"],
-                    "matchingPattern": ".*_test\\.(cc|hh)$"
-                },
-                "codeParser": "clang",
-                "compilationDatabase": "compile_commands.json",
-                "compilerArguments": [
-                    "-std=c++20",
-                    "-Icode/include"
-                ]
-            }
+            "implementation": [
+                {
+                    "code": {
+                        "paths": ["code"],
+                        "matchingPattern": ".*\\.(cc|hh)$",
+                        "ignoredPatterns": [".*_ignored\\.(cc|hh)$"]
+                    },
+                    "tests": {
+                        "paths": ["test"],
+                        "matchingPattern": ".*_test\\.(cc|hh)$"
+                    },
+                    "codeParser": "clang",
+                    "compilationDatabase": "compile_commands.json",
+                    "compilerArguments": [
+                        "-std=c++20",
+                        "-Icode/include"
+                    ]
+                }
+            ]
         }
     ]
 }

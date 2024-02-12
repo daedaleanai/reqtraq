@@ -64,16 +64,7 @@ func TestConfig_ParseConfig(t *testing.T) {
 					},
 				},
 			},
-			Implementation: Implementation{
-				ArchImplementation: ArchImplementation{
-					CodeFiles:           []string{},
-					TestFiles:           []string{},
-					CompilationDatabase: "",
-					CompilerArguments:   []string{},
-				},
-				CodeParser: "ctags",
-				Archs:      make(map[Arch]ArchImplementation),
-			},
+			Implementation: []Implementation{},
 		},
 		{
 			Path: "TEST-137-SRD.md",
@@ -119,16 +110,7 @@ func TestConfig_ParseConfig(t *testing.T) {
 					},
 				},
 			},
-			Implementation: Implementation{
-				ArchImplementation: ArchImplementation{
-					CodeFiles:           []string{},
-					TestFiles:           []string{},
-					CompilationDatabase: "",
-					CompilerArguments:   []string{},
-				},
-				CodeParser: "ctags",
-				Archs:      make(map[Arch]ArchImplementation),
-			},
+			Implementation: []Implementation{},
 		},
 	})
 
@@ -168,14 +150,15 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Type:  AttributeRequired,
 		},
 	)
-	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation.CodeFiles,
+	assert.Equal(t, len(config.Repos["projectB"].Documents[0].Implementation), 1)
+	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation[0].CodeFiles,
 		[]string{
 			"code/a.cc",
 			"code/include/a.hh",
 		},
 	)
 
-	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation.TestFiles,
+	assert.ElementsMatch(t, config.Repos["projectB"].Documents[0].Implementation[0].TestFiles,
 		[]string{
 			"test/a/a_test.cc",
 		},
@@ -217,14 +200,15 @@ func TestConfig_ParseConfig(t *testing.T) {
 			Type:  AttributeRequired,
 		},
 	)
-	assert.ElementsMatch(t, config.Repos["projectC"].Documents[0].Implementation.CodeFiles,
+	assert.Equal(t, len(config.Repos["projectC"].Documents[0].Implementation), 1)
+	assert.ElementsMatch(t, config.Repos["projectC"].Documents[0].Implementation[0].CodeFiles,
 		[]string{
 			"code/a.cc",
 			"code/include/a.hh",
 		},
 	)
 
-	assert.ElementsMatch(t, config.Repos["projectC"].Documents[0].Implementation.TestFiles,
+	assert.ElementsMatch(t, config.Repos["projectC"].Documents[0].Implementation[0].TestFiles,
 		[]string{
 			"test/a/a_test.cc",
 		},
@@ -285,16 +269,7 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 					},
 				},
 			},
-			Implementation: Implementation{
-				ArchImplementation: ArchImplementation{
-					CodeFiles:           []string{},
-					TestFiles:           []string{},
-					CompilationDatabase: "",
-					CompilerArguments:   []string{},
-				},
-				CodeParser: "ctags",
-				Archs:      make(map[Arch]ArchImplementation),
-			},
+			Implementation: []Implementation{},
 		},
 		{
 			Path: "TEST-137-SRD.md",
@@ -340,16 +315,7 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 					},
 				},
 			},
-			Implementation: Implementation{
-				ArchImplementation: ArchImplementation{
-					CodeFiles:           []string{},
-					TestFiles:           []string{},
-					CompilationDatabase: "",
-					CompilerArguments:   []string{},
-				},
-				CodeParser: "ctags",
-				Archs:      make(map[Arch]ArchImplementation),
-			},
+			Implementation: []Implementation{},
 		},
 	})
 
@@ -389,14 +355,15 @@ func TestConfig_ParseConfigOnlyDirectDeps(t *testing.T) {
 			Type:  AttributeRequired,
 		},
 	)
-	assert.ElementsMatch(t, parsedConfig.Repos["projectB"].Documents[0].Implementation.CodeFiles,
+	assert.Equal(t, len(parsedConfig.Repos["projectB"].Documents), 1)
+	assert.ElementsMatch(t, parsedConfig.Repos["projectB"].Documents[0].Implementation[0].CodeFiles,
 		[]string{
 			"code/a.cc",
 			"code/include/a.hh",
 		},
 	)
 
-	assert.ElementsMatch(t, parsedConfig.Repos["projectB"].Documents[0].Implementation.TestFiles,
+	assert.ElementsMatch(t, parsedConfig.Repos["projectB"].Documents[0].Implementation[0].TestFiles,
 		[]string{
 			"test/a/a_test.cc",
 		},
@@ -455,16 +422,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 					},
 				},
 			},
-			Implementation: Implementation{
-				ArchImplementation: ArchImplementation{
-					CodeFiles:           []string{},
-					TestFiles:           []string{},
-					CompilationDatabase: "",
-					CompilerArguments:   []string{},
-				},
-				CodeParser: "ctags",
-				Archs:      make(map[Arch]ArchImplementation),
-			},
+			Implementation: []Implementation{},
 		})
 
 	assert.Contains(t, config.Repos["libclangtest"].Documents,
@@ -508,16 +466,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 					},
 				},
 			},
-			Implementation: Implementation{
-				ArchImplementation: ArchImplementation{
-					CodeFiles:           []string{},
-					TestFiles:           []string{},
-					CompilationDatabase: "",
-					CompilerArguments:   []string{},
-				},
-				CodeParser: "ctags",
-				Archs:      make(map[Arch]ArchImplementation),
-			},
+			Implementation: []Implementation{},
 		})
 
 	assert.Equal(t, len(config.Repos["libclangtest"].Documents), 3)
@@ -551,21 +500,22 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			Type:  AttributeAny,
 		},
 	})
-	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation.CodeFiles,
+	assert.Equal(t, len(config.Repos["libclangtest"].Documents[2].Implementation), 1)
+	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation[0].CodeFiles,
 		[]string{
 			"code/a.cc",
 			"code/include/a.hh",
 		},
 	)
 
-	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation.TestFiles,
+	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation[0].TestFiles,
 		[]string{
 			"test/a/a_test.cc",
 		},
 	)
-	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CodeParser, "clang")
-	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CompilationDatabase, "compile_commands.json")
-	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation.CompilerArguments, []string{
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation[0].CodeParser, "clang")
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation[0].CompilationDatabase, "compile_commands.json")
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation[0].CompilerArguments, []string{
 		"-std=c++20",
 		"-Icode/include",
 	})
