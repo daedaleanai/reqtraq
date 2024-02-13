@@ -366,6 +366,7 @@ func (op *jsonParents) UnmarshalJSON(data []byte) error {
 
 // UnmarshalJSON implements the Unmarshaler interface for the jsonDoc type, allowing the
 // 'Implementation' field to be a single struct or array of structs when defined in the config file.
+// @llr REQ-TRAQ-SWL-87
 func (doc *jsonDoc) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("no bytes to unmarshal")
