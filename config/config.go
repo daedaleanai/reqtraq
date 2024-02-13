@@ -69,6 +69,16 @@ type jsonParent struct {
 type jsonParents []jsonParent
 
 type jsonDoc struct {
+	Path           string
+	Prefix         ReqPrefix
+	Level          ReqLevel
+	Parent         jsonParents
+	Attributes     []jsonAttribute
+	AsmAttributes  []jsonAttribute
+	Implementation []jsonImplementation
+}
+
+type jsonDocMultipleImpls struct {
 	Path           string               `json:"path"`
 	Prefix         ReqPrefix            `json:"prefix"`
 	Level          ReqLevel             `json:"level"`
@@ -76,6 +86,16 @@ type jsonDoc struct {
 	Attributes     []jsonAttribute      `json:"attributes"`
 	AsmAttributes  []jsonAttribute      `json:"asmAttributes"`
 	Implementation []jsonImplementation `json:"implementation"`
+}
+
+type jsonDocSingleImpl struct {
+	Path           string             `json:"path"`
+	Prefix         ReqPrefix          `json:"prefix"`
+	Level          ReqLevel           `json:"level"`
+	Parent         jsonParents        `json:"parent"`
+	Attributes     []jsonAttribute    `json:"attributes"`
+	AsmAttributes  []jsonAttribute    `json:"asmAttributes"`
+	Implementation jsonImplementation `json:"implementation"`
 }
 
 type jsonConfig struct {
@@ -342,6 +362,49 @@ func (op *jsonParents) UnmarshalJSON(data []byte) error {
 	}
 
 	return fmt.Errorf("malformed JSON, expected '[' or '{' in parents field, got %c", data[0])
+}
+
+// UnmarshalJSON implements the Unmarshaler interface for the jsonDoc type, allowing the
+// 'Implementation' field to be a single struct or array of structs when defined in the config file.
+func (doc *jsonDoc) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("no bytes to unmarshal")
+	}
+
+	*doc = jsonDoc{}
+
+	var ngDoc jsonDocMultipleImpls
+	{
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		if err := decoder.Decode(&ngDoc); err == nil {
+			doc.Path = ngDoc.Path
+			doc.Prefix = ngDoc.Prefix
+			doc.Level = ngDoc.Level
+			doc.Parent = ngDoc.Parent
+			doc.Attributes = ngDoc.Attributes
+			doc.AsmAttributes = ngDoc.AsmAttributes
+			doc.Implementation = ngDoc.Implementation
+			return nil
+		}
+	}
+
+	// Fall back to the legacy format and try again
+	var legacyDoc jsonDocSingleImpl
+	{
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		if err := decoder.Decode(&legacyDoc); err == nil {
+			doc.Path = legacyDoc.Path
+			doc.Prefix = legacyDoc.Prefix
+			doc.Level = legacyDoc.Level
+			doc.Parent = legacyDoc.Parent
+			doc.Attributes = legacyDoc.Attributes
+			doc.AsmAttributes = legacyDoc.AsmAttributes
+			doc.Implementation = []jsonImplementation{legacyDoc.Implementation}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("malformed JSON, Unable to parse document")
 }
 
 // Parses an a single attribute from its json description
