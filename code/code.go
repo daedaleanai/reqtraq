@@ -18,8 +18,10 @@ import (
 )
 
 var (
-	// To detect a line containing low-level requirements
-	reLLRReferenceLine = regexp.MustCompile(`^[ \*\/-]*(?:@|\\)llr +(?:REQ-\w+-\w+-\d+[, ]*)+$`)
+	// To detect a line containing low-level requirements. Can contain any of
+	// " */#" before the llr link to accomodate for languages with C-style code
+	// comments and python-style comments.
+	reLLRReferenceLine = regexp.MustCompile(`^[ \*#\/-]*(?:@|\\)llr +(?:REQ-\w+-\w+-\d+[, ]*)+$`)
 	// To capture requirements out of the line
 	reLLRReferences = regexp.MustCompile(`(REQ-\w+-\w+-\d+)`)
 	// Blank line to stop search
@@ -324,6 +326,7 @@ var SourceCodeFileExtensions = map[string][]string{
 	"SystemVerilog": {".sv", ".svh"},
 	"Verilog":       {".v", ".vh"},
 	"VHDL":          {".vhd", ".vhdl"},
+	"Robot":         {".robot"},
 }
 
 // parseComments updates the specified tags with the requirement IDs discovered in the codeFiles.

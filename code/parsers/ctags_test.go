@@ -76,11 +76,11 @@ func TestTagCode(t *testing.T) {
 	repoName := repos.RepoName("cproject1")
 	repos.RegisterRepository(repoName, repos.RepoPath(filepath.Join(string(repos.BaseRepoPath()), "testdata/cproject1")))
 
-	tags, err := ctagsCodeParser{}.TagCode(repoName, []code.CodeFile{{Path: "a.cc", RepoName: repoName, Type: code.CodeTypeTests}}, "", []string{})
+	tags, err := ctagsCodeParser{}.TagCode(repoName, []code.CodeFile{{Path: "a.cc", RepoName: repoName, Type: code.CodeTypeTests}, {Path: "testdata/a.robot", RepoName: repoName, Type: code.CodeTypeTests}}, "", []string{})
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, 1, len(tags))
+	assert.Equal(t, 2, len(tags))
 
 	expectedTags := []TagMatch{
 		{"SeparateCommentsForLLrs",
@@ -100,6 +100,16 @@ func TestTagCode(t *testing.T) {
 			nil, false},
 	}
 	LookFor(t, repoName, "a.cc", code.CodeTypeTests, tags, expectedTags)
+
+	expectedRobotTags := []TagMatch{
+		{"A Robot Test Case",
+			16,
+			nil, false},
+		{"Another Robot Test Case",
+			21,
+			nil, false},
+	}
+	LookFor(t, repoName, "testdata/a.robot", code.CodeTypeTests, tags, expectedRobotTags)
 }
 
 // @llr REQ-TRAQ-SWL-8, REQ-TRAQ-SWL-9, REQ-TRAQ-SWL-75
