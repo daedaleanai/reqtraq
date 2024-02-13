@@ -1041,9 +1041,9 @@ but ignore children repositories.
 - Verification: Test
 - Safety Impact: None
 
-#### REQ-TRAQ-SWL-87 Support multiple implementations and parses in a document
+#### REQ-TRAQ-SWL-87 Support multiple implementations and parsers per implementation
 
-Reqtraq SHALL support multiple implementations and code parsers in a single document.
+Reqtraq SHALL support multiple implementations and code parsers for each implementation.
 
 ##### Attributes:
 - Parents:

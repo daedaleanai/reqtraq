@@ -53,6 +53,12 @@
                         "-std=c++20",
                         "-Icode/include"
                     ]
+                },
+                {
+                    "tests": {
+                        "paths": ["test"],
+                        "matchingPattern": ".*\\.robot$"
+                    }
                 }
             ]
         }

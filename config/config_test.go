@@ -500,7 +500,7 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 			Type:  AttributeAny,
 		},
 	})
-	assert.Equal(t, len(config.Repos["libclangtest"].Documents[2].Implementation), 1)
+	assert.Equal(t, len(config.Repos["libclangtest"].Documents[2].Implementation), 2)
 	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation[0].CodeFiles,
 		[]string{
 			"code/a.cc",
@@ -519,4 +519,17 @@ func TestConfig_ParseConfigLibClang(t *testing.T) {
 		"-std=c++20",
 		"-Icode/include",
 	})
+
+	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation[1].CodeFiles,
+		[]string{},
+	)
+
+	assert.ElementsMatch(t, config.Repos["libclangtest"].Documents[2].Implementation[1].TestFiles,
+		[]string{
+			"test/myrobot.robot",
+		},
+	)
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation[1].CodeParser, "ctags")
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation[1].CompilationDatabase, "")
+	assert.Equal(t, config.Repos["libclangtest"].Documents[2].Implementation[1].CompilerArguments, []string{})
 }
