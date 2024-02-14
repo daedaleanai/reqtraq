@@ -112,12 +112,14 @@ func TestReqGraph_ParseCode(t *testing.T) {
 		Schema: config.Schema{
 			Requirements: regexp.MustCompile("REQ-TEST-SWL-(\\d+)"),
 		},
-		Implementation: config.Implementation{
-			ArchImplementation: config.ArchImplementation{
-				CodeFiles: []string{"a.cc"},
-				TestFiles: []string{"testdata/a.c"},
+		Implementation: []config.Implementation{
+			{
+				ArchImplementation: config.ArchImplementation{
+					CodeFiles: []string{"a.cc"},
+					TestFiles: []string{"testdata/a.c"},
+				},
+				CodeParser: "ctags",
 			},
-			CodeParser: "ctags",
 		},
 	}
 

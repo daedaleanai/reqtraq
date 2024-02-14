@@ -158,15 +158,15 @@ func (a byFilenameTag) Less(i, j int) bool {
 // of CodeFile structs, and a slice of CodeFile structs for files that match the default matching rules,
 // but no architecture-specific rule
 // @llr REQ-TRAQ-SWL-78
-func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[config.Arch][]CodeFile, []CodeFile, error) {
+func extractCodeFiles(repoName repos.RepoName, impl *config.Implementation) (map[config.Arch][]CodeFile, []CodeFile, error) {
 	archFilesMap := make(map[config.Arch][]CodeFile)
 	fileToArchMap := make(map[string]config.Arch)
-	for arch := range document.Implementation.Archs {
+	for arch := range impl.Archs {
 		archFiles := make([]CodeFile, 0)
 		var otherArch config.Arch
 		var exists bool
 
-		for _, implFile := range document.Implementation.Archs[arch].CodeFiles {
+		for _, implFile := range impl.Archs[arch].CodeFiles {
 			otherArch, exists = fileToArchMap[implFile]
 			if exists {
 				message := fmt.Sprintf("The file %q is matched both by the rules of %q and %q", implFile, arch, otherArch)
@@ -181,7 +181,7 @@ func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[c
 			})
 		}
 
-		for _, testFile := range document.Implementation.Archs[arch].TestFiles {
+		for _, testFile := range impl.Archs[arch].TestFiles {
 			otherArch, exists = fileToArchMap[testFile]
 			if exists {
 				message := fmt.Sprintf("The file %q is matched both by the rules of %q and %q", testFile, arch, otherArch)
@@ -201,7 +201,7 @@ func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[c
 
 	// Do the same thing for the arch-unaware matching rules
 	noArchFiles := make([]CodeFile, 0)
-	for _, implFile := range document.Implementation.CodeFiles {
+	for _, implFile := range impl.CodeFiles {
 		var exists bool
 		_, exists = fileToArchMap[implFile]
 		if !exists {
@@ -213,7 +213,7 @@ func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[c
 		}
 	}
 
-	for _, testFile := range document.Implementation.TestFiles {
+	for _, testFile := range impl.TestFiles {
 		var exists bool
 		_, exists = fileToArchMap[testFile]
 		if !exists {
@@ -233,7 +233,7 @@ func extractCodeFiles(repoName repos.RepoName, document *config.Document) (map[c
 // The return value is the same as the one of ParseCode, a map from each discovered source code file to
 // a slice of Code structs representing the functions found within.
 // @llr REQ-TRAQ-SWL-79
-func parseCodeForArch(repoName repos.RepoName, document *config.Document, codeFiles []CodeFile, compDb string, compArgs []string) (map[CodeFile][]*Code, error) {
+func parseCodeForArch(repoName repos.RepoName, document *config.Document, codeFiles []CodeFile, parser string, compDb string, compArgs []string) (map[CodeFile][]*Code, error) {
 	if len(codeFiles) == 0 {
 		// In order to avoid calling TagCode and having the default ctags parser
 		// check that ctags is installed we can simply return here.
@@ -244,9 +244,9 @@ func parseCodeForArch(repoName repos.RepoName, document *config.Document, codeFi
 	var tags map[CodeFile][]*Code
 	var err error
 
-	codeParser, ok := codeParsers[document.Implementation.CodeParser]
+	codeParser, ok := codeParsers[parser]
 	if !ok {
-		return nil, fmt.Errorf("No built-in support for code parser `%s`. Try maybe `go install --tags %s`. flag\n\tAvailable parsers: %s", document.Implementation.CodeParser, document.Implementation.CodeParser, strings.Join(availableCodeParsers(), ", "))
+		return nil, fmt.Errorf("No built-in support for code parser `%s`. Try maybe `go install --tags %s`. flag\n\tAvailable parsers: %s", parser, parser, strings.Join(availableCodeParsers(), ", "))
 	}
 
 	tags, err = codeParser.TagCode(repoName, codeFiles, compDb, compArgs)
@@ -277,33 +277,32 @@ func ParseCode(repoName repos.RepoName, document *config.Document) (map[CodeFile
 	var noArchCodeFiles []CodeFile
 	var err error
 
-	archCodeFiles, noArchCodeFiles, err = extractCodeFiles(repoName, document)
-	if err != nil {
-		return nil, err
-	}
-
 	tags := make(map[CodeFile][]*Code)
-	var archTags map[CodeFile][]*Code
-	var noArchTags map[CodeFile][]*Code
-
-	// First parse architecture specific code
-	for arch := range document.Implementation.Archs {
-		archTags, err = parseCodeForArch(repoName, document, archCodeFiles[arch], document.Implementation.Archs[arch].CompilationDatabase, document.Implementation.Archs[arch].CompilerArguments)
+	for _, impl := range document.Implementation {
+		archCodeFiles, noArchCodeFiles, err = extractCodeFiles(repoName, &impl)
 		if err != nil {
 			return nil, err
 		}
-		for k, v := range archTags {
+
+		// First parse architecture specific code
+		for arch := range impl.Archs {
+			archTags, err := parseCodeForArch(repoName, document, archCodeFiles[arch], impl.CodeParser, impl.Archs[arch].CompilationDatabase, impl.Archs[arch].CompilerArguments)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range archTags {
+				tags[k] = v
+			}
+		}
+
+		// Do the same thing for code that is independent of the architecture
+		noArchTags, err := parseCodeForArch(repoName, document, noArchCodeFiles, impl.CodeParser, impl.CompilationDatabase, impl.CompilerArguments)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range noArchTags {
 			tags[k] = v
 		}
-	}
-
-	// Do the same thing for code that is independent of the architecture
-	noArchTags, err = parseCodeForArch(repoName, document, noArchCodeFiles, document.Implementation.CompilationDatabase, document.Implementation.CompilerArguments)
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range noArchTags {
-		tags[k] = v
 	}
 
 	return tags, nil

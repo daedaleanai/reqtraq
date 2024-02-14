@@ -87,9 +87,7 @@ func TestValidateMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 							},
 						},
-						Implementation: config.Implementation{
-							CodeParser: "ctags",
-						},
+						Implementation: []config.Implementation{},
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-137-SRD.md",
@@ -121,9 +119,7 @@ func TestValidateMarkdown(t *testing.T) {
 								},
 							},
 						},
-						Implementation: config.Implementation{
-							CodeParser: "ctags",
-						},
+						Implementation: []config.Implementation{},
 					},
 					{
 						Path: "testdata/TestValidateCreateReqGraphMarkdown/TEST-138-SDD.md",
@@ -155,9 +151,7 @@ func TestValidateMarkdown(t *testing.T) {
 								},
 							},
 						},
-						Implementation: config.Implementation{
-							CodeParser: "ctags",
-						},
+						Implementation: []config.Implementation{},
 					},
 				},
 			},
@@ -225,9 +219,7 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
 							},
 						},
-						Implementation: config.Implementation{
-							CodeParser: "ctags",
-						},
+						Implementation: []config.Implementation{},
 					},
 					{
 						Path: "testdata/TestValidateCheckReqReferencesMarkdown/TEST-137-SRD.md",
@@ -259,9 +251,7 @@ func TestValidateCheckReqReferencesMarkdown(t *testing.T) {
 								},
 							},
 						},
-						Implementation: config.Implementation{
-							CodeParser: "ctags",
-						},
+						Implementation: []config.Implementation{},
 					},
 				},
 			},
@@ -408,9 +398,7 @@ func TestValidateDataControlFlow(t *testing.T) {
 								},
 							},
 						},
-						Implementation: config.Implementation{
-							CodeParser: "ctags",
-						},
+						Implementation: []config.Implementation{},
 					},
 				},
 			},

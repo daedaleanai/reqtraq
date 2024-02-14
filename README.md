@@ -29,7 +29,7 @@ Reqtraq has two main use-cases:
 ### Installation
 Basic installation can be done with:
 ```
-$ go install github.com/daedaleanai/reqtraq@latest 
+$ go install github.com/daedaleanai/reqtraq@latest
 $ export PATH=$PATH:$GOPATH/bin
 ```
 
@@ -38,7 +38,7 @@ For repos having requirements documents defined in `reqtraq_config.json` with `"
 $ LLVM_LIB=/usr/lib/llvm-14/lib
 $ LLVM_LIB=~/clang+llvm-14.0.0-x86_64-linux-gnu-ubuntu-18.04/lib
 $ export CGO_LDFLAGS="-L${LLVM_LIB} -Wl,-rpath=${LLVM_LIB}"
-$ go install --tags clang github.com/daedaleanai/reqtraq@latest 
+$ go install --tags clang github.com/daedaleanai/reqtraq@latest
 $ export PATH=$PATH:$GOPATH/bin
 ```
 
@@ -119,57 +119,59 @@ Reqtraq is configured using a `reqtraq_config.json` file in the root of the repo
                 "prefix": "TRAQ",
                 "level": "SWH"
             },
-            "implementation": {
-                "archs": {
-                    "armv6m": {
-                        "compilationDatabase": "",
-                        "compilerArguments": ["--target=thumbv6m-linux-eabi"]
-                    },
-                    "linux-x64": {
-                        "compilationDatabase": "/BUILD/OUTPUT/compile_commands.json",
-                        "compilerArguments": []
-                    }
-                },
-                "code": {
-                    "paths": ["."],
-                    "matchingPattern": ".*\\.go$",
-                    "ignoredPatterns": [".*_test\\.go$"],
-                    "archPatterns": {
+            "implementation": [
+                {
+                    "archs": {
                         "armv6m": {
-                            "paths": ["src", "include"],
-                            "matchingPattern": ".*/armv6m/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
-                            "ignoredPatterns": [".*_test\\.cc$"]
+                            "compilationDatabase": "",
+                            "compilerArguments": ["--target=thumbv6m-linux-eabi"]
                         },
                         "linux-x64": {
-                            "paths": ["src", "include"],
-                            "matchingPattern": ".*/linux-x64/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
-                            "ignoredPatterns": [".*_test\\.cc$"]
+                            "compilationDatabase": "/BUILD/OUTPUT/compile_commands.json",
+                            "compilerArguments": []
                         }
-                    }
-                },
-                "tests": {
-                    "paths": ["."],
-                    "matchingPattern": ".*_test\\.go$",
-                     "archPatterns": {
-                        "armv6m": {
-                            "paths": ["src"],
-                            "matchingPattern": ".*/armv6m/.*_test\\.cc$"
-                        },
-                        "linux-x64": {
-                            "paths": ["src"],
-                            "matchingPattern": ".*/linux-x64/.*_test\\.cc$"
+                    },
+                    "code": {
+                        "paths": ["."],
+                        "matchingPattern": ".*\\.go$",
+                        "ignoredPatterns": [".*_test\\.go$"],
+                        "archPatterns": {
+                            "armv6m": {
+                                "paths": ["src", "include"],
+                                "matchingPattern": ".*/armv6m/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                                "ignoredPatterns": [".*_test\\.cc$"]
+                            },
+                            "linux-x64": {
+                                "paths": ["src", "include"],
+                                "matchingPattern": ".*/linux-x64/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                                "ignoredPatterns": [".*_test\\.cc$"]
+                            }
+                        }
+                    },
+                    "tests": {
+                        "paths": ["."],
+                        "matchingPattern": ".*_test\\.go$",
+                         "archPatterns": {
+                            "armv6m": {
+                                "paths": ["src"],
+                                "matchingPattern": ".*/armv6m/.*_test\\.cc$"
+                            },
+                            "linux-x64": {
+                                "paths": ["src"],
+                                "matchingPattern": ".*/linux-x64/.*_test\\.cc$"
+                            }
                         }
                     }
                 }
-            }
+            ]
         }
     ]
 }
 ```
 
-All document paths are specified with respect to the root of the repository they belong to. It is possible 
-to separate code and requirements across multiple repositories with reqtraq by specifying parent 
-and children repositories in its configuration file. 
+All document paths are specified with respect to the root of the repository they belong to. It is possible
+to separate code and requirements across multiple repositories with reqtraq by specifying parent
+and children repositories in its configuration file.
 
 There must always be a top level repository that contains a configuration file with no parents.
 
@@ -197,50 +199,52 @@ Child repository configuration:
                     "value": "REQ-TEST-SWH-(\\d+)"
                 }
             ],
-            "implementation": {
-                "archs": {
-                    "armv6m": {
-                        "compilationDatabase": "",
-                        "compilerArguments": ["--target=thumbv6m-linux-eabi"]
-                    },
-                    "linux-x64": {
-                        "compilationDatabase": "/BUILD/OUTPUT/compile_commands.json",
-                        "compilerArguments": []
-                    }
-                },
-                "code": {
-                    "paths": ["code"],
-                    "matchingPattern": ".*\\.(cc|c|h|hh)$",
-                    "ignoredPatterns": [".*_test\\.(cc|c|h|hh)$"],
-                    "archPatterns": {
+            "implementation": [
+                {
+                    "archs": {
                         "armv6m": {
-                            "paths": ["src", "include"],
-                            "matchingPattern": ".*/armv6m/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
-                            "ignoredPatterns": [".*_test\\.cc$"]
+                            "compilationDatabase": "",
+                            "compilerArguments": ["--target=thumbv6m-linux-eabi"]
                         },
                         "linux-x64": {
-                            "paths": ["src", "include"],
-                            "matchingPattern": ".*/linux-x64/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
-                            "ignoredPatterns": [".*_test\\.cc$"]
+                            "compilationDatabase": "/BUILD/OUTPUT/compile_commands.json",
+                            "compilerArguments": []
                         }
-                    }
-                },
-                "tests": {
-                    "paths": ["."],
-                    "matchingPattern": ".*_test\\.(cc|c|h|hh)$",
-                    "ignoredPatterns": [],
-                     "archPatterns": {
-                        "armv6m": {
-                            "paths": ["src"],
-                            "matchingPattern": ".*/armv6m/.*_test\\.cc$"
-                        },
-                        "linux-x64": {
-                            "paths": ["src"],
-                            "matchingPattern": ".*/linux-x64/.*_test\\.cc$"
+                    },
+                    "code": {
+                        "paths": ["code"],
+                        "matchingPattern": ".*\\.(cc|c|h|hh)$",
+                        "ignoredPatterns": [".*_test\\.(cc|c|h|hh)$"],
+                        "archPatterns": {
+                            "armv6m": {
+                                "paths": ["src", "include"],
+                                "matchingPattern": ".*/armv6m/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                                "ignoredPatterns": [".*_test\\.cc$"]
+                            },
+                            "linux-x64": {
+                                "paths": ["src", "include"],
+                                "matchingPattern": ".*/linux-x64/.*((.*\\.cc$)|(.*\\.c$)|(.*\\.hh$))",
+                                "ignoredPatterns": [".*_test\\.cc$"]
+                            }
+                        }
+                    },
+                    "tests": {
+                        "paths": ["."],
+                        "matchingPattern": ".*_test\\.(cc|c|h|hh)$",
+                        "ignoredPatterns": [],
+                         "archPatterns": {
+                            "armv6m": {
+                                "paths": ["src"],
+                                "matchingPattern": ".*/armv6m/.*_test\\.cc$"
+                            },
+                            "linux-x64": {
+                                "paths": ["src"],
+                                "matchingPattern": ".*/linux-x64/.*_test\\.cc$"
+                            }
                         }
                     }
                 }
-            }
+            ]
         }
     ]
 }

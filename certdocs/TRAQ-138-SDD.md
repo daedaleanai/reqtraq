@@ -1041,6 +1041,17 @@ but ignore children repositories.
 - Verification: Test
 - Safety Impact: None
 
+#### REQ-TRAQ-SWL-87 Support multiple implementations and parsers per implementation
+
+Reqtraq SHALL support multiple implementations and code parsers for each implementation.
+
+##### Attributes:
+- Parents:
+- Rationale: This functionality is needed in some cases where the code or tests are implemented in
+multiple languages.
+- Verification: Test
+- Safety Impact: None
+
 ### cmd/completion_cmd.go
 
 The `completion` command takes advantage of the underlying cobra infrastructure to print completion
