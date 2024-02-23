@@ -30,9 +30,9 @@ var (
 	reATXHeading = regexp.MustCompile(`^ {0,3}(#{1,6})( +(.*)( #* *)?)?$`)
 
 	// For detecting the first row and delimiter of data/control flow table
-	cfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Description *\|$`)
-	dfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Direction *\| *Description *\|$`)
-	dcfTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)+$`)
+	cfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Description *\|?$`)
+	dfTableHeader     = regexp.MustCompile(`^\| *Caller *\| *Flow Tag *\| *Callee *\| *Direction *\| *Description *\|?$`)
+	dcfTableDelimiter = regexp.MustCompile(`^\|(?: *-+ *\|)* *-+ *\|?$`)
 	dfId              = regexp.MustCompile(`^DF-(\w+)-(\d+)(-DELETED)?$`)
 	cfId              = regexp.MustCompile(`^CF-(\w+)-(\d+)(-DELETED)?$`)
 
