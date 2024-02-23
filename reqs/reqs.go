@@ -323,7 +323,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 				Path:        f.Document.Path,
 				RepoName:    f.RepoName,
 				Description: fmt.Sprintf("Data/control flow tag '%s' has no linked requirements", f.ID),
-				Severity:    diagnostics.IssueSeverityMinor,
+				Severity:    diagnostics.IssueSeverityNote,
 				Type:        diagnostics.IssueTypeFlowNotImplemented,
 			})
 		}
