@@ -102,6 +102,21 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) error
 		case diagnostics.IssueTypeShallInRationale:
 			name = "Shall statement in rationale attribute"
 			code = "REQ14"
+		case diagnostics.IssueTypeInvalidFlowId:
+			name = "Invalid Flow tag identifier"
+			code = "REQ15"
+		case diagnostics.IssueTypeFlowNotImplemented:
+			name = "Flow tag is not linked to a requirement"
+			code = "REQ16"
+		case diagnostics.IssueTypeDuplicateFlowId:
+			name = "Duplicate Flow tag identifier"
+			code = "REQ17"
+		case diagnostics.IssueTypeMissingFlowId:
+			name = "Missing Flow tag identifier"
+			code = "REQ18"
+		case diagnostics.IssueTypeInvalidFlowDirection:
+			name = "Invalid flow direction"
+			code = "REQ19"
 		default:
 			log.Fatal("Unhandled IssueType: %r", issue.Type)
 		}

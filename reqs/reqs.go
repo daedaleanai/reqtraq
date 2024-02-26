@@ -210,6 +210,7 @@ func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
 		} else {
 			parts := strings.Split(f.ID, "-")
 
+			direction := strings.Trim(f.Direction, "`")
 			if parts[1] != string(documentConfig.ReqSpec.Prefix) {
 				rg.Issues = append(rg.Issues, diagnostics.Issue{
 					Line:        f.Position,
@@ -219,7 +220,7 @@ func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
 					Severity:    diagnostics.IssueSeverityMajor,
 					Type:        diagnostics.IssueTypeInvalidFlowId,
 				})
-			} else if parts[0] == "DF" && f.Direction != "In" && f.Direction != "Out" && f.Direction != "In/Out" {
+			} else if parts[0] == "DF" && direction != "In" && direction != "Out" && direction != "In/Out" {
 				rg.Issues = append(rg.Issues, diagnostics.Issue{
 					Line:        f.Position,
 					Path:        f.Document.Path,
@@ -323,7 +324,7 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 				Path:        f.Document.Path,
 				RepoName:    f.RepoName,
 				Description: fmt.Sprintf("Data/control flow tag '%s' has no linked requirements", f.ID),
-				Severity:    diagnostics.IssueSeverityMinor,
+				Severity:    diagnostics.IssueSeverityNote,
 				Type:        diagnostics.IssueTypeFlowNotImplemented,
 			})
 		}

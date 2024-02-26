@@ -282,7 +282,7 @@ func checkValidate(t *testing.T, config *config.Config, expectedCriticalRaw, exp
 	expectedCritical := splitLines(expectedCriticalRaw)
 	expectedLint := splitLines(expectedLintRaw)
 
-	checkValidateOutput(t, config, true, expectedCritical, []string{})
+	checkValidateOutput(t, config, true, expectedCritical, expectedLint)
 	checkValidateOutput(t, config, false, expectedCritical, expectedLint)
 }
 
@@ -293,7 +293,10 @@ func checkValidateOutput(t *testing.T, config *config.Config, onlyErrors bool, e
 	assert.Equal(t, lintCount, len(expectedLint), output)
 
 	reportedErrors := splitLines(output)
-	expected := append(expectedCritical, expectedLint...)
+	expected := expectedCritical
+	if !onlyErrors {
+		expected = append(expected, expectedLint...)
+	}
 	for _, m := range expected {
 		found := false
 		for i, e := range reportedErrors {
@@ -407,12 +410,13 @@ func TestValidateDataControlFlow(t *testing.T) {
 
 	expected := `Duplicate data/control flow tag 'CF-TEST-2'
 Unknown data/control flow tag 'CF-TEST-3' in requirement 'REQ-TEST-SWL-2'
-Data/control flow tag 'CF-TEST-2' has no linked requirements
-Data/control flow tag 'DF-TEST-2' has no linked requirements
 Missing flow tag 'CF-TEST-3'
 Invalid data/control flow tag prefix in 'DF-TST-1'
 Invalid direction 'Bad' for data flow tag 'DF-TEST-4'. Allowed values are 'In', 'Out' and 'In/Out'
 `
+	expectedLints := `Data/control flow tag 'CF-TEST-2' has no linked requirements
+Data/control flow tag 'DF-TEST-2' has no linked requirements
+`
 
-	checkValidate(t, &config, expected, "")
+	checkValidate(t, &config, expected, expectedLints)
 }
