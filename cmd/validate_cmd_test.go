@@ -289,8 +289,8 @@ func checkValidate(t *testing.T, config *config.Config, expectedCriticalRaw, exp
 func checkValidateOutput(t *testing.T, config *config.Config, onlyErrors bool, expectedCritical, expectedLint []string) {
 	output, criticalCount, lintCount, err := RunValidate(t, config, onlyErrors)
 	assert.Empty(t, err, "Failed to validate")
-	assert.Equal(t, criticalCount, len(expectedCritical), output)
-	assert.Equal(t, lintCount, len(expectedLint), output)
+	assert.Equal(t, len(expectedCritical), criticalCount, output)
+	assert.Equal(t, len(expectedLint), lintCount, output)
 
 	reportedErrors := splitLines(output)
 	expected := expectedCritical
@@ -403,6 +403,34 @@ func TestValidateDataControlFlow(t *testing.T) {
 						},
 						Implementation: []config.Implementation{},
 					},
+					{
+						Path: "testdata/TestValidateDataControlFlow/OTH-138-SDD.md",
+						ReqSpec: config.ReqSpec{
+							Prefix: "OTH",
+							Level:  "SWL",
+						},
+						LinkSpecs: []config.LinkSpec{
+							{
+								Child: config.ReqSpec{
+									Re:      regexp.MustCompile("REQ-OTH-SWL-(\\d+)"),
+									AttrKey: "",
+									AttrVal: regexp.MustCompile(".*")},
+							},
+						},
+						Schema: config.Schema{
+							Requirements: regexp.MustCompile(`REQ-OTH-SWL-(\d+)`),
+							Attributes: map[string]*config.Attribute{
+								"RATIONALE":     commonAttributes["RATIONALE"],
+								"VERIFICATION":  commonAttributes["VERIFICATION"],
+								"SAFETY IMPACT": commonAttributes["SAFETY IMPACT"],
+								"FLOW": {
+									Type:  config.AttributeAny,
+									Value: regexp.MustCompile(`.*`),
+								},
+							},
+						},
+						Implementation: []config.Implementation{},
+					},
 				},
 			},
 		},
@@ -413,9 +441,12 @@ Unknown data/control flow tag 'CF-TEST-3' in requirement 'REQ-TEST-SWL-2'
 Missing flow tag 'CF-TEST-3'
 Invalid data/control flow tag prefix in 'DF-TST-1'
 Invalid direction 'Bad' for data flow tag 'DF-TEST-4'. Allowed values are 'In', 'Out' and 'In/Out'
+Link to existing flow tag 'DF-OTH-1' that belongs to a different item in requirement 'REQ-TEST-SWL-2'
 `
 	expectedLints := `Data/control flow tag 'CF-TEST-2' has no linked requirements
 Data/control flow tag 'DF-TEST-2' has no linked requirements
+Data/control flow tag 'DF-TEST-4' has no linked requirements
+Data/control flow tag 'DF-OTH-1' has no linked requirements
 `
 
 	checkValidate(t, &config, expected, expectedLints)

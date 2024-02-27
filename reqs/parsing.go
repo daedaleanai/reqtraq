@@ -459,7 +459,6 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 
 	// Split the table into rows and loop through
 	for rowIndex, row := range strings.Split(txt, "\n") {
-
 		// The first row contains the attribute names for each column, the first column must be "ID"
 		if rowIndex == 0 {
 			if header.MatchString(row) {
@@ -487,7 +486,7 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 				return flow, fmt.Errorf("too few cells on row %d of %s table", rowIndex+1, typ)
 			}
 
-			r := &Flow{}
+			f := &Flow{}
 
 			// For each attribute in the first row, read in the associated value on this row
 			for i, k := range attributes {
@@ -497,25 +496,25 @@ func parseFlowTable(txt string, reqLine int, flow []*Flow, reqType ReqFormatType
 					}
 
 					if strings.HasSuffix(values[i], "-DELETED") {
-						r.ID = strings.TrimSuffix(values[i], "-DELETED")
-						r.Deleted = true
+						f.ID = strings.TrimSuffix(values[i], "-DELETED")
+						f.Deleted = true
 					} else {
-						r.ID = values[i]
+						f.ID = values[i]
 					}
 				} else if k == "CALLER" {
-					r.Caller = values[i]
+					f.Caller = values[i]
 				} else if k == "CALLEE" {
-					r.Callee = values[i]
+					f.Callee = values[i]
 				} else if k == "DESCRIPTION" {
-					r.Description = values[i]
+					f.Description = values[i]
 				} else if k == "DIRECTION" {
-					r.Direction = values[i]
+					f.Direction = values[i]
 				}
 
 			}
 
-			r.Position = rowIndex + reqLine
-			flow = append(flow, r)
+			f.Position = rowIndex + reqLine
+			flow = append(flow, f)
 		}
 	}
 
