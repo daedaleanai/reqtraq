@@ -519,7 +519,7 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 						Line:        req.Position,
 						Path:        req.Document.Path,
 						RepoName:    req.RepoName,
-						Description: fmt.Sprintf("Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted."),
+						Description: "Invalid parent of requirement " + req.ID + ": " + parentID + " is deleted.",
 						Severity:    diagnostics.IssueSeverityMajor,
 						Type:        diagnostics.IssueTypeInvalidParent,
 					}
