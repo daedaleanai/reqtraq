@@ -210,7 +210,6 @@ func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
 		} else {
 			parts := strings.Split(f.ID, "-")
 
-			direction := strings.Trim(f.Direction, "`")
 			if parts[1] != string(documentConfig.ReqSpec.Prefix) {
 				rg.Issues = append(rg.Issues, diagnostics.Issue{
 					Line:        f.Position,
@@ -219,15 +218,6 @@ func (rg *ReqGraph) processFlow(flow []*Flow, documentConfig *config.Document) {
 					Description: fmt.Sprintf("Invalid data/control flow tag prefix in '%s'", f.ID),
 					Severity:    diagnostics.IssueSeverityMajor,
 					Type:        diagnostics.IssueTypeInvalidFlowId,
-				})
-			} else if parts[0] == "DF" && direction != "In" && direction != "Out" && direction != "In/Out" {
-				rg.Issues = append(rg.Issues, diagnostics.Issue{
-					Line:        f.Position,
-					Path:        f.Document.Path,
-					RepoName:    f.RepoName,
-					Description: fmt.Sprintf("Invalid direction '%s' for data flow tag '%s'. Allowed values are 'In', 'Out' and 'In/Out'", f.Direction, f.ID),
-					Severity:    diagnostics.IssueSeverityMajor,
-					Type:        diagnostics.IssueTypeInvalidFlowDirection,
 				})
 			} else {
 				rg.FlowTags[f.ID] = f
@@ -267,6 +257,10 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	if reqs, flow, err = ParseMarkdown(repoName, documentConfig); err != nil {
 		return errors.Wrapf(err, "Error parsing `%s` in repo `%s`", documentConfig.Path, repoName)
 	}
+
+	// This needs to be done regardless of if there are requirements or not
+	rg.processFlow(flow, documentConfig)
+
 	if len(reqs) == 0 {
 		return nil
 	}
@@ -279,8 +273,6 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 	nextReqId := 1
 	nextAsmId := 1
 
-	rg.processFlow(flow, documentConfig)
-
 	for _, r := range reqs {
 		var newIssues []diagnostics.Issue
 		if r.Variant == ReqVariantRequirement {
@@ -291,23 +283,6 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 			nextAsmId = r.IDNumber + 1
 		}
 
-		if ft, ok := r.Attributes["FLOW"]; ok {
-			for _, tag := range strings.Split(ft, ",") {
-				if flowTag, ok := rg.FlowTags[strings.TrimSpace(tag)]; ok {
-					flowTag.Reqs = append(flowTag.Reqs, r)
-				} else {
-					newIssues = append(newIssues, diagnostics.Issue{
-						Line:        r.Position,
-						Path:        r.Document.Path,
-						RepoName:    r.RepoName,
-						Description: fmt.Sprintf("Unknown data/control flow tag '%s' in requirement '%s'", strings.TrimSpace(tag), r.ID),
-						Severity:    diagnostics.IssueSeverityMajor,
-						Type:        diagnostics.IssueTypeInvalidFlowId,
-					})
-				}
-			}
-		}
-
 		if len(newIssues) != 0 {
 			rg.Issues = append(rg.Issues, newIssues...)
 			continue
@@ -315,19 +290,6 @@ func (rg *ReqGraph) addCertdocToGraph(repoName repos.RepoName, documentConfig *c
 		r.RepoName = repoName
 		r.Document = documentConfig
 		rg.Reqs[r.ID] = r
-	}
-
-	for _, f := range rg.FlowTags {
-		if len(f.Reqs) == 0 && !f.Deleted {
-			rg.Issues = append(rg.Issues, diagnostics.Issue{
-				Line:        f.Position,
-				Path:        f.Document.Path,
-				RepoName:    f.RepoName,
-				Description: fmt.Sprintf("Data/control flow tag '%s' has no linked requirements", f.ID),
-				Severity:    diagnostics.IssueSeverityNote,
-				Type:        diagnostics.IssueTypeFlowNotImplemented,
-			})
-		}
 	}
 
 	return nil
@@ -616,6 +578,40 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 			}
 		}
 
+		// Validate flow tags linked in requirements
+
+		if ft, ok := req.Attributes["FLOW"]; ok {
+			for _, tag := range strings.Split(ft, ",") {
+				var flowTag *Flow
+				if flowTag, ok = rg.FlowTags[strings.TrimSpace(tag)]; !ok {
+					issues = append(issues, diagnostics.Issue{
+						Line:        req.Position,
+						Path:        req.Document.Path,
+						RepoName:    req.RepoName,
+						Description: fmt.Sprintf("Unknown data/control flow tag '%s' in requirement '%s'", strings.TrimSpace(tag), req.ID),
+						Severity:    diagnostics.IssueSeverityMajor,
+						Type:        diagnostics.IssueTypeInvalidFlowId,
+					})
+					continue
+				}
+
+				parts := strings.Split(tag, "-")
+				if string(req.Document.ReqSpec.Prefix) != parts[1] {
+					issues = append(issues, diagnostics.Issue{
+						Line:        req.Position,
+						Path:        req.Document.Path,
+						RepoName:    req.RepoName,
+						Description: fmt.Sprintf("Link to existing flow tag '%s' that belongs to a different item in requirement '%s'", strings.TrimSpace(tag), req.ID),
+						Severity:    diagnostics.IssueSeverityMajor,
+						Type:        diagnostics.IssueTypeFlowIdOfDifferentItem,
+					})
+					continue
+				}
+
+				flowTag.Reqs = append(flowTag.Reqs, req)
+			}
+		}
+
 		// TODO check for references to missing or deleted requirements in attribute text
 	}
 
@@ -744,6 +740,34 @@ func (rg *ReqGraph) Resolve() []diagnostics.Issue {
 				Type:        diagnostics.IssueTypeReqNotTested,
 			}
 			issues = append(issues, issue)
+		}
+	}
+
+	// Validate CF and DF tags that are not linked to requirements and flag them
+	for _, f := range rg.FlowTags {
+		if len(f.Reqs) == 0 && !f.Deleted {
+			issues = append(issues, diagnostics.Issue{
+				Line:        f.Position,
+				Path:        f.Document.Path,
+				RepoName:    f.RepoName,
+				Description: fmt.Sprintf("Data/control flow tag '%s' has no linked requirements", f.ID),
+				Severity:    diagnostics.IssueSeverityNote,
+				Type:        diagnostics.IssueTypeFlowNotImplemented,
+			})
+		}
+
+		direction := strings.Trim(f.Direction, "`")
+		parts := strings.Split(f.ID, "-")
+
+		if parts[0] == "DF" && direction != "In" && direction != "Out" && direction != "In/Out" {
+			issues = append(issues, diagnostics.Issue{
+				Line:        f.Position,
+				Path:        f.Document.Path,
+				RepoName:    f.RepoName,
+				Description: fmt.Sprintf("Invalid direction '%s' for data flow tag '%s'. Allowed values are 'In', 'Out' and 'In/Out'", f.Direction, f.ID),
+				Severity:    diagnostics.IssueSeverityMajor,
+				Type:        diagnostics.IssueTypeInvalidFlowDirection,
+			})
 		}
 	}
 

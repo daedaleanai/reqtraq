@@ -117,6 +117,9 @@ func buildJsonIssues(issues []diagnostics.Issue, jsonWriter *json.Encoder) error
 		case diagnostics.IssueTypeInvalidFlowDirection:
 			name = "Invalid flow direction"
 			code = "REQ19"
+		case diagnostics.IssueTypeFlowIdOfDifferentItem:
+			name = "Requirement references flow tag of a different item"
+			code = "REQ20"
 		default:
 			log.Fatal("Unhandled IssueType: %r", issue.Type)
 		}

@@ -24,6 +24,7 @@ const (
 	IssueTypeDuplicateFlowId
 	IssueTypeMissingFlowId
 	IssueTypeInvalidFlowDirection
+	IssueTypeFlowIdOfDifferentItem
 )
 
 type IssueSeverity uint

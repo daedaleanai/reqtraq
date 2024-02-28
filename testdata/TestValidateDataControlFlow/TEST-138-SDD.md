@@ -35,7 +35,7 @@ This is just a test. This text does not mean anything, must contain SHALL.
 This is just a test. This text does not mean anything, must contain SHALL.
 
 ###### Attributes:
-- Flow: CF-TEST-3, CF-TEST-4
+- Flow: CF-TEST-3, CF-TEST-4, DF-OTH-1
 - Rationale: This is just a test. This text does not mean anything.
 - Verification: Demonstration.
 - Safety impact: None.
